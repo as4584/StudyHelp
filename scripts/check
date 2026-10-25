@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# Canonical quality gate: "is the repository healthy enough to claim completion?"
+#
+#   scripts/check          full gate (requires the local Supabase stack: infra/ `supabase start`)
+#   scripts/check --fast   static checks + API tests only; prints exactly what was SKIPPED
+#
+# Exits nonzero on the first failing gate. A --fast pass is NOT full verification.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+ROOT="$(pwd)"
+
+FAST=0
+[[ "${1:-}" == "--fast" ]] && FAST=1
+
+step() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
+PASSED=()
+pass() { PASSED+=("$1"); }
+
+# ------------------------------------------------------------------ backend
+step "api: ruff format --check"; (cd api && uv run --frozen ruff format --check .); pass "ruff format"
+step "api: ruff check";          (cd api && uv run --frozen ruff check .);          pass "ruff lint"
+step "api: mypy --strict";       (cd api && uv run --frozen mypy app);              pass "mypy"
+step "api: env validation";      (cd api && uv run --frozen python scripts/env_check.py); pass "env validation"
+step "api: pytest (unit + integration + auth + RLS + payments + migrations)"
+(cd api && uv run --frozen pytest -q -p no:cacheprovider);                          pass "pytest"
+
+# ------------------------------------------------------------------ contract
+step "contract: OpenAPI schema and generated TS types are up to date"
+(cd api && uv run --frozen python scripts/export_openapi.py ../web/openapi.json >/dev/null)
+(cd web && npx --no-install openapi-typescript openapi.json -o src/lib/api-types.ts >/dev/null 2>&1)
+git diff --exit-code -- web/openapi.json web/src/lib/api-types.ts \
+  || { echo "OpenAPI drift: commit the regenerated web/openapi.json and api-types.ts"; exit 1; }
+pass "openapi drift"
+
+# ------------------------------------------------------------------ frontend
+step "web: prettier --check"; (cd web && npx --no-install prettier --check src e2e playwright.config.ts); pass "prettier"
+step "web: eslint";           (cd web && npx --no-install eslint .);                pass "eslint"
+step "web: tsc --noEmit";     (cd web && npx --no-install tsc --noEmit);            pass "tsc"
+
+# ------------------------------------------------------------------ secrets
+step "security: secret scan"; scripts/security; pass "secret scan"
+
+if [[ $FAST == 1 ]]; then
+  printf '\n\033[1;33mFAST MODE — NOT full verification. SKIPPED:\033[0m\n'
+  printf '  - next build (production artifact)\n  - Playwright E2E (desktop + mobile) against built artifact\n'
+  printf 'PASSED: %s\n' "${PASSED[*]}"
+  exit 0
+fi
+
+# ------------------------------------------------------------------ build once, test the artifact
+API_PORT="${CHECK_API_PORT:-8100}"
+WEB_PORT="${CHECK_WEB_PORT:-3100}"
+step "web: next build (artifact under test, API=:$API_PORT)"
+(cd web && NEXT_PUBLIC_API_URL="http://127.0.0.1:$API_PORT" npx --no-install next build >/dev/null)
+pass "next build"
+
+step "e2e: seed demo data, boot API + built web, run Playwright"
+(cd api && uv run --frozen alembic upgrade head >/dev/null 2>&1 && uv run --frozen python scripts/seed.py --reset >/dev/null)
+LOGS="$ROOT/artifacts/check"; mkdir -p "$LOGS"
+(cd api && CORS_ORIGINS="[\"http://localhost:$WEB_PORT\"]" WEB_BASE_URL="http://localhost:$WEB_PORT" \
+  GIT_SHA="$(git rev-parse --short HEAD)" \
+  uv run --frozen uvicorn app.main:app --host 127.0.0.1 --port "$API_PORT" >"$LOGS/api.log" 2>&1) &
+API_PID=$!
+(cd web && npx --no-install next start -p "$WEB_PORT" >"$LOGS/web.log" 2>&1) &
+WEB_PID=$!
+cleanup() {
+  kill "$API_PID" "$WEB_PID" 2>/dev/null || true
+  if command -v powershell >/dev/null 2>&1; then  # Windows: kill the real listeners
+    powershell -NoProfile -Command "foreach(\$p in $API_PORT,$WEB_PORT){Get-NetTCPConnection -LocalPort \$p -State Listen -ErrorAction SilentlyContinue | % { Stop-Process -Id \$_.OwningProcess -Force }}" || true
+  fi
+}
+trap cleanup EXIT
+for _ in $(seq 1 120); do
+  curl -sf "http://127.0.0.1:$API_PORT/ready" >/dev/null && curl -sf -o /dev/null "http://localhost:$WEB_PORT" && break
+  sleep 1
+done
+curl -sf "http://127.0.0.1:$API_PORT/ready" | tee "$LOGS/ready.json"; echo
+(cd web && E2E_BASE_URL="http://localhost:$WEB_PORT" E2E_API_URL="http://127.0.0.1:$API_PORT" \
+  npx --no-install playwright test)
+pass "playwright e2e"
+
+printf '\n\033[1;32mFULL CHECK PASSED:\033[0m %s\n' "${PASSED[*]}"
