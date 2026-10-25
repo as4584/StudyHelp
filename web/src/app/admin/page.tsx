@@ -4,7 +4,18 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { useRequireRole } from "@/components/auth";
-import { Badge, Button, Card, ErrorText, inputCls, useAction } from "@/components/ui";
+import {
+  Avatar,
+  Badge,
+  Button,
+  EmptyState,
+  ErrorText,
+  PageHeader,
+  Section,
+  Skeleton,
+  inputCls,
+  useAction,
+} from "@/components/ui";
 import { api, money, type Schemas } from "@/lib/api";
 
 type Revenue = Schemas["RevenueOut"];
@@ -14,7 +25,7 @@ type Payment = Schemas["PaymentOut"];
 type User = Schemas["AdminUserOut"];
 type Audit = Schemas["AuditOut"];
 
-export default function AdminPage() {
+export default function OperationsPage() {
   const { me } = useRequireRole("admin");
   const [rev, setRev] = useState<Revenue | null>(null);
   const [pending, setPending] = useState<Tutor[]>([]);
@@ -49,145 +60,201 @@ export default function AdminPage() {
       await load();
     });
 
-  if (!me || !rev) return <p className="text-muted">Loading…</p>;
-  const stats: [string, number, string][] = [
-    ["Platform fees earned", rev.platform_fees_earned_cents, "fees-earned"],
-    ["Fees pending (held)", rev.platform_fees_pending_cents, "fees-pending"],
-    ["Paid out to tutors", rev.tutor_payouts_cents, "payouts"],
-    ["Currently held", rev.gross_held_cents, "held"],
-    ["Tips", rev.tips_cents, "tips"],
-    ["Refunded", rev.refunded_cents, "refunded"],
-  ];
+  if (!me || !rev) return <Skeleton lines={5} />;
+  const openDisputes = disputes.filter((d) => d.status === "open");
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Admin</h1>
+    <div>
+      <PageHeader
+        title="Operations"
+        lede={`Commission ${rev.fee_bps / 100}% · ${rev.payments_count} ${rev.payments_count === 1 ? "payment" : "payments"} · ${pending.length} ${pending.length === 1 ? "application" : "applications"} waiting`}
+      />
       <ErrorText error={a.error} />
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {stats.map(([label, cents, id]) => (
-          <div key={id} className="rounded-2xl border border-border bg-surface p-4">
-            <p className="text-xs text-muted">{label}</p>
-            <p className="text-xl font-bold" data-testid={`stat-${id}`}>
-              {money(cents)}
-            </p>
-          </div>
-        ))}
-      </section>
-      <p className="text-xs text-muted">
-        Commission rate: {rev.fee_bps / 100}% · {rev.payments_count} payments
-      </p>
 
-      <Card title={`Tutor applications (${pending.length})`}>
-        {pending.length === 0 ? (
-          <p className="text-sm text-muted">No pending applications.</p>
-        ) : (
-          <ul className="space-y-2" data-testid="tutor-applications">
-            {pending.map((t) => (
-              <li key={t.user_id} className="rounded-xl border border-border p-3 text-sm">
-                <div className="font-medium">{t.display_name}</div>
-                <div className="text-muted">
-                  {t.subjects.join(", ")} · {money(t.hourly_rate_cents)}/hr
-                </div>
-                {t.bio && <p className="mt-1">{t.bio}</p>}
-                <div className="mt-2 flex gap-2">
-                  <Button
+      {/* Revenue: one headline figure, the rest as a quiet ledger line. */}
+      <section className="mb-12 grid gap-8 border-b border-rule pb-10 lg:grid-cols-[1fr_2fr]">
+        <div>
+          <div className="text-[13px] font-semibold text-muted">Platform fees earned</div>
+          <div
+            className={`tnum mt-1 font-serif text-[3rem] leading-none font-medium tracking-[-0.02em] ${rev.platform_fees_earned_cents ? "text-mastery" : "text-muted"}`}
+            data-testid="stat-fees-earned"
+          >
+            {money(rev.platform_fees_earned_cents)}
+          </div>
+          <p className="mt-2 text-[13px] text-muted">From released sessions only.</p>
+        </div>
+        <dl className="tnum grid grid-cols-2 gap-x-8 gap-y-5 self-end sm:grid-cols-3">
+          <Stat id="fees-pending" label="Fees on held payments" cents={rev.platform_fees_pending_cents} />
+          <Stat id="held" label="Currently held" cents={rev.gross_held_cents} />
+          <Stat id="payouts" label="Paid out to tutors" cents={rev.tutor_payouts_cents} />
+          <Stat id="tips" label="Tips (to tutors)" cents={rev.tips_cents} />
+          <Stat id="refunded" label="Refunded" cents={rev.refunded_cents} />
+        </dl>
+      </section>
+
+      <div className="grid gap-12 lg:grid-cols-2 lg:gap-14">
+        <Section title={`Tutor applications · ${pending.length}`}>
+          {pending.length === 0 ? (
+            <EmptyState>Every application has been reviewed.</EmptyState>
+          ) : (
+            <ul className="divide-y divide-rule" data-testid="tutor-applications">
+              {pending.map((t) => (
+                <li key={t.user_id} className="py-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <Avatar name={t.display_name} />
+                      <div className="min-w-0">
+                        <div className="truncate font-semibold text-ink">{t.display_name}</div>
+                        <div className="tnum text-[13px] text-muted">
+                          {t.subjects.join(", ")} · {money(t.hourly_rate_cents)}/hr
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      <Button
+                        disabled={a.pending}
+                        onClick={() => act(() => api(`/admin/tutors/${t.user_id}/approve`, { body: {} }))}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        disabled={a.pending}
+                        onClick={() => act(() => api(`/admin/tutors/${t.user_id}/reject`, { body: {} }))}
+                      >
+                        Reject
+                      </Button>
+                    </div>
+                  </div>
+                  {t.bio && <p className="mt-2 pl-[38px] font-serif text-[15px] leading-relaxed text-ink-2">{t.bio}</p>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+
+        <Section title={`Disputes · ${openDisputes.length} open`}>
+          {disputes.length === 0 ? (
+            <EmptyState>No disputes. Sessions are going smoothly.</EmptyState>
+          ) : (
+            <ul className="divide-y divide-rule">
+              {disputes.map((d) => (
+                <DisputeRow key={d.id} d={d} act={act} busy={a.pending} />
+              ))}
+            </ul>
+          )}
+        </Section>
+
+        <Section title="Payments" className="lg:col-span-2">
+          {payments.length === 0 ? (
+            <EmptyState>Payments appear here once students pay for sessions.</EmptyState>
+          ) : (
+            <div className="-mx-1 overflow-x-auto">
+              <table className="tnum w-full min-w-[34rem] text-left text-[14px]">
+                <thead className="text-[13px] text-muted">
+                  <tr>
+                    <th className="px-1 py-2 font-semibold">Session</th>
+                    <th className="px-1 py-2 text-right font-semibold">Paid</th>
+                    <th className="px-1 py-2 text-right font-semibold">Fee</th>
+                    <th className="px-1 py-2 text-right font-semibold">Tutor</th>
+                    <th className="px-1 py-2 pl-6 font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-rule border-t border-rule">
+                  {payments.map((p) => (
+                    <tr key={p.id}>
+                      <td className="px-1 py-2.5">
+                        <Link
+                          className="font-semibold text-tutor underline-offset-4 hover:underline"
+                          href={`/tasks/${p.task_id}`}
+                        >
+                          {p.task_id.slice(0, 8)}
+                        </Link>
+                      </td>
+                      <td className="px-1 py-2.5 text-right">{money(p.amount_cents)}</td>
+                      <td className="px-1 py-2.5 text-right text-ink-2">{money(p.platform_fee_cents)}</td>
+                      <td className="px-1 py-2.5 text-right text-ink-2">{money(p.tutor_net_cents)}</td>
+                      <td className="px-1 py-2.5 pl-6">
+                        <Badge status={p.status} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Section>
+
+        <Section title={`People · ${users.length}`}>
+          <ul className="divide-y divide-rule">
+            {users.map((u) => (
+              <li key={u.id} className="flex items-center justify-between gap-3 py-2.5">
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <Avatar name={u.display_name} tone={u.role === "tutor" ? "tutor" : "muted"} />
+                  <span className="min-w-0">
+                    <span className="block truncate text-[15px] font-semibold text-ink">{u.display_name}</span>
+                    <span className="text-[13px] text-muted capitalize">
+                      {u.role}
+                      {!u.is_active && <span className="text-danger"> · suspended</span>}
+                    </span>
+                  </span>
+                </span>
+                {u.id !== me.profile.id && (
+                  <button
                     disabled={a.pending}
-                    onClick={() => act(() => api(`/admin/tutors/${t.user_id}/approve`, { body: {} }))}
+                    className={`shrink-0 rounded-[6px] px-2.5 py-1.5 text-[13px] font-semibold transition-colors ${
+                      u.is_active
+                        ? "text-muted hover:bg-danger-soft hover:text-danger"
+                        : "text-tutor hover:bg-tutor-soft"
+                    }`}
+                    onClick={() =>
+                      act(() => api(`/admin/users/${u.id}/${u.is_active ? "suspend" : "reactivate"}`, { body: {} }))
+                    }
                   >
-                    Approve
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    disabled={a.pending}
-                    onClick={() => act(() => api(`/admin/tutors/${t.user_id}/reject`, { body: {} }))}
-                  >
-                    Reject
-                  </Button>
-                </div>
+                    {u.is_active ? "Suspend" : "Reactivate"}
+                  </button>
+                )}
               </li>
             ))}
           </ul>
-        )}
-      </Card>
+        </Section>
 
-      <Card title="Disputes">
-        {disputes.length === 0 ? (
-          <p className="text-sm text-muted">No disputes.</p>
-        ) : (
-          <ul className="space-y-2">
-            {disputes.map((d) => (
-              <DisputeRow key={d.id} d={d} act={act} busy={a.pending} />
-            ))}
-          </ul>
-        )}
-      </Card>
-
-      <Card title="Payments">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="text-xs text-muted">
-              <tr>
-                <th className="py-1">Task</th>
-                <th>Amount</th>
-                <th>Fee</th>
-                <th>Tutor</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {payments.map((p) => (
-                <tr key={p.id} className="border-t border-border">
-                  <td className="py-2">
-                    <Link className="text-brand" href={`/tasks/${p.task_id}`}>
-                      {p.task_id.slice(0, 8)}
-                    </Link>
-                  </td>
-                  <td>{money(p.amount_cents)}</td>
-                  <td>{money(p.platform_fee_cents)}</td>
-                  <td>{money(p.tutor_net_cents)}</td>
-                  <td>
-                    <Badge status={p.status} />
-                  </td>
-                </tr>
+        <Section title="Audit log">
+          {audit.length === 0 ? (
+            <EmptyState>Privileged actions are recorded here.</EmptyState>
+          ) : (
+            <ul className="divide-y divide-rule text-[14px]">
+              {audit.map((l) => (
+                <li key={l.id} className="flex items-baseline justify-between gap-3 py-2">
+                  <span className="text-ink">{l.action}</span>
+                  <time className="tnum shrink-0 text-[13px] text-muted">
+                    {new Date(l.created_at).toLocaleString([], {
+                      month: "short",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </time>
+                </li>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+            </ul>
+          )}
+        </Section>
+      </div>
+    </div>
+  );
+}
 
-      <Card title="Users">
-        <ul className="divide-y divide-border text-sm">
-          {users.map((u) => (
-            <li key={u.id} className="flex items-center justify-between gap-2 py-2">
-              <span>
-                {u.display_name} <span className="text-muted">· {u.role}</span>
-              </span>
-              {u.id !== me.profile.id && (
-                <Button
-                  variant="ghost"
-                  disabled={a.pending}
-                  onClick={() =>
-                    act(() => api(`/admin/users/${u.id}/${u.is_active ? "suspend" : "reactivate"}`, { body: {} }))
-                  }
-                >
-                  {u.is_active ? "Suspend" : "Reactivate"}
-                </Button>
-              )}
-            </li>
-          ))}
-        </ul>
-      </Card>
-
-      <Card title="Audit log">
-        <ul className="space-y-1 text-xs">
-          {audit.map((l) => (
-            <li key={l.id} className="flex justify-between gap-2">
-              <span className="font-mono">{l.action}</span>
-              <span className="text-muted">{new Date(l.created_at).toLocaleString()}</span>
-            </li>
-          ))}
-        </ul>
-      </Card>
+function Stat({ id, label, cents }: { id: string; label: string; cents: number }) {
+  return (
+    <div>
+      <dt className="text-[13px] text-muted">{label}</dt>
+      <dd
+        className={`mt-0.5 text-[1.25rem] font-semibold ${cents === 0 ? "text-muted" : "text-ink"}`}
+        data-testid={`stat-${id}`}
+      >
+        {money(cents)}
+      </dd>
     </div>
   );
 }
@@ -203,23 +270,26 @@ function DisputeRow({
 }) {
   const [note, setNote] = useState("");
   return (
-    <li className="rounded-xl border border-border p-3 text-sm">
-      <div className="flex items-center justify-between">
-        <Link className="text-brand" href={`/tasks/${d.task_id}`}>
-          Task {d.task_id.slice(0, 8)}
+    <li className="py-4 text-[14px]">
+      <div className="flex items-center justify-between gap-3">
+        <Link className="font-semibold text-tutor underline-offset-4 hover:underline" href={`/tasks/${d.task_id}`}>
+          Session {d.task_id.slice(0, 8)}
         </Link>
-        <Badge status={d.status === "open" ? "disputed" : d.status.replace("resolved_", "")} />
+        <Badge
+          status={d.status === "open" ? "disputed" : "completed"}
+          label={d.status === "open" ? "Open" : d.status.replace("resolved_", "Resolved · ")}
+        />
       </div>
-      <p className="mt-1">{d.reason}</p>
+      <p className="mt-1.5 font-serif text-[16px] leading-relaxed text-ink">{d.reason}</p>
       {d.status === "open" ? (
-        <div className="mt-2 space-y-2">
+        <div className="mt-3 space-y-2">
           <input
             className={inputCls}
             placeholder="Resolution note"
             value={note}
             onChange={(e) => setNote(e.target.value)}
           />
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               disabled={busy || !note}
               onClick={() => act(() => api(`/admin/disputes/${d.id}/resolve`, { body: { outcome: "release", note } }))}

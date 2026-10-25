@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { Button, Card, ErrorText, Field, inputCls, useAction } from "@/components/ui";
+import { AuthFrame } from "@/components/auth-frame";
+import { Button, ErrorText, Field, inputCls, useAction } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
 
 export default function SignupPage() {
@@ -13,45 +15,56 @@ export default function SignupPage() {
   const { pending, error, run } = useAction();
 
   return (
-    <div className="mx-auto max-w-sm">
-      <Card title="Create your account">
-        <form
-          className="space-y-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void run(async () => {
-              const { data, error } = await supabase().auth.signUp({ email, password });
-              if (error) throw error;
-              if (!data.session) throw new Error("Check your email to confirm your account.");
-              router.push("/onboard");
-            });
-          }}
-        >
-          <Field label="Email">
-            <input
-              className={inputCls}
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </Field>
-          <Field label="Password" hint="At least 8 characters">
-            <input
-              className={inputCls}
-              type="password"
-              minLength={8}
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </Field>
-          <ErrorText error={error} />
-          <Button type="submit" disabled={pending} className="w-full">
-            Continue
-          </Button>
-        </form>
-      </Card>
-    </div>
+    <AuthFrame
+      title="Open your study desk"
+      lede="One account for learning — or for teaching."
+      footer={
+        <>
+          Already have an account?{" "}
+          <Link className="font-semibold text-tutor underline-offset-4 hover:underline" href="/login">
+            Sign in
+          </Link>
+        </>
+      }
+    >
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void run(async () => {
+            const { data, error } = await supabase().auth.signUp({ email, password });
+            if (error) throw error;
+            if (!data.session) throw new Error("Check your email to confirm your account.");
+            router.push("/onboard");
+          });
+        }}
+      >
+        <Field label="Email">
+          <input
+            className={inputCls}
+            type="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </Field>
+        <Field label="Password" hint="At least 8 characters.">
+          <input
+            className={inputCls}
+            type="password"
+            autoComplete="new-password"
+            minLength={8}
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </Field>
+        <ErrorText error={error} />
+        <Button type="submit" disabled={pending} className="w-full">
+          Continue
+        </Button>
+      </form>
+    </AuthFrame>
   );
 }

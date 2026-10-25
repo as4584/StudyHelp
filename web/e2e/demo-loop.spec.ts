@@ -60,7 +60,7 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
 
   // --- Student posts a tutoring request ------------------------------------------------
   const student = await open("student@demo.gsht");
-  await student.getByRole("link", { name: "+ Request a tutor" }).click();
+  await student.getByRole("link", { name: "Request a tutor", exact: true }).click();
   const title = `Understand the chain rule ${Date.now()}`;
   await student.getByLabel("Subject").fill("Calculus");
   await student.getByLabel("What do you need help understanding?").fill(title);
@@ -132,7 +132,7 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
   // --- Premium AI assistant + escalation to a live expert ------------------------------
   await student.goto("/student");
   const upgrade = student.getByRole("button", { name: "Upgrade to Premium" });
-  await expect(upgrade.or(student.getByText("Premium is active ✓"))).toBeVisible();
+  await expect(upgrade.or(student.getByText("Premium is active"))).toBeVisible();
   if (await upgrade.isVisible()) {
     await upgrade.click();
     await student.getByRole("button", { name: "Pay now" }).click();

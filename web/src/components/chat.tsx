@@ -1,22 +1,24 @@
 "use client";
 
+import { ArrowUp, Languages } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { api, type Message } from "@/lib/api";
+import { api, LANGUAGES, type Message } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 
-import { Button, Card, ErrorText, inputCls, useAction } from "./ui";
+import { Button, ErrorText, Sheet, inputCls, useAction } from "./ui";
 
 /**
- * Translated task chat. Messages are always read from FastAPI; Supabase Realtime is only a
- * change signal (RLS limits who receives it). A slow poll is a fallback if the socket drops.
+ * Translated session conversation. Messages are always read from FastAPI; Supabase Realtime
+ * is only a change signal (RLS limits who receives it). A slow poll covers a dropped socket.
+ * The other person's voice is set in the reading face; yours sits quietly on the right.
  */
 export function Chat({ conversationId, meId, myLang }: { conversationId: string; meId: string; myLang: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [body, setBody] = useState("");
   const [showOriginal, setShowOriginal] = useState<Record<string, boolean>>({});
   const send = useAction();
-  const bottom = useRef<HTMLDivElement>(null);
+  const log = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     setMessages(await api<Message[]>(`/conversations/${conversationId}/messages`));
@@ -51,14 +53,23 @@ export function Chat({ conversationId, meId, myLang }: { conversationId: string;
   }, [conversationId, load]);
 
   useEffect(() => {
-    bottom.current?.scrollIntoView({ block: "nearest" });
+    const el = log.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [messages.length]);
 
   return (
-    <Card title="Chat · auto-translated" className="flex h-[32rem] flex-col">
-      <div className="-mx-1 flex-1 space-y-2 overflow-y-auto px-1" data-testid="chat-log">
+    <Sheet className="flex h-[min(38rem,75dvh)] flex-col">
+      <div className="flex items-center justify-between gap-3 border-b border-rule px-5 py-3.5">
+        <h2 className="font-serif text-[17px] font-medium text-ink">Conversation</h2>
+        <span className="flex items-center gap-1.5 text-[13px] text-muted">
+          <Languages size={14} strokeWidth={1.75} aria-hidden /> Shown in {LANGUAGES[myLang] ?? myLang}
+        </span>
+      </div>
+      <div ref={log} className="flex-1 space-y-5 overflow-y-auto px-5 py-5" data-testid="chat-log" aria-live="polite">
         {messages.length === 0 && (
-          <p className="text-sm text-muted">Say hello — messages are translated automatically.</p>
+          <p className="font-serif text-[16px] leading-relaxed text-ink-2 italic">
+            Say hello. Write in your own language — your messages are translated for the other person automatically.
+          </p>
         )}
         {messages.map((m) => {
           const mine = m.sender_id === meId;
@@ -66,32 +77,46 @@ export function Chat({ conversationId, meId, myLang }: { conversationId: string;
           const translated = !mine && tr?.status === "ok" && tr.translated_body;
           const failed = !mine && tr?.status === "failed";
           const text = translated && !showOriginal[m.id] ? tr!.translated_body! : m.body;
+          const time = new Date(m.created_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+          if (mine) {
+            return (
+              <div key={m.id} className="enter flex flex-col items-end" data-testid="chat-message">
+                <div className="max-w-[85%] rounded-[10px] bg-sunken px-3.5 py-2.5 text-[15px] whitespace-pre-wrap text-ink">
+                  {text}
+                </div>
+                <span className="mt-1 text-[12px] text-muted">{time}</span>
+              </div>
+            );
+          }
           return (
-            <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-              <div
-                data-testid="chat-message"
-                className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${mine ? "bg-brand text-brand-ink" : "bg-background"}`}
-              >
-                <p className="whitespace-pre-wrap">{text}</p>
+            <div key={m.id} className="enter max-w-[94%]" data-testid="chat-message">
+              <p className="font-serif text-[16.5px] leading-[1.6] whitespace-pre-wrap text-ink">{text}</p>
+              <div className="mt-1 flex flex-wrap items-center gap-x-2 text-[12px] text-muted">
+                <span>{time}</span>
                 {translated && (
-                  <button
-                    className="mt-1 text-[11px] underline opacity-70"
-                    onClick={() => setShowOriginal((s) => ({ ...s, [m.id]: !s[m.id] }))}
-                  >
-                    {showOriginal[m.id]
-                      ? "Show translation"
-                      : `Translated from ${m.source_language.toUpperCase()} · show original`}
-                  </button>
+                  <>
+                    <span aria-hidden>·</span>
+                    <button
+                      className="inline-flex items-center gap-1 font-semibold underline-offset-2 hover:text-ink hover:underline"
+                      onClick={() => setShowOriginal((s) => ({ ...s, [m.id]: !s[m.id] }))}
+                    >
+                      <Languages size={12} strokeWidth={1.75} aria-hidden />
+                      {showOriginal[m.id]
+                        ? "Show translation"
+                        : `Translated from ${LANGUAGES[m.source_language] ?? m.source_language.toUpperCase()} · show original`}
+                    </button>
+                  </>
                 )}
-                {failed && <p className="mt-1 text-[11px] text-red-600">Translation unavailable — showing original</p>}
+                {failed && (
+                  <span className="font-semibold text-danger">Translation unavailable — showing original</span>
+                )}
               </div>
             </div>
           );
         })}
-        <div ref={bottom} />
       </div>
       <form
-        className="mt-3 flex gap-2"
+        className="flex items-end gap-2 border-t border-rule p-3"
         onSubmit={(e) => {
           e.preventDefault();
           if (!body.trim()) return;
@@ -107,14 +132,18 @@ export function Chat({ conversationId, meId, myLang }: { conversationId: string;
           className={inputCls}
           value={body}
           maxLength={4000}
-          placeholder="Type a message"
+          placeholder="Write a message"
           onChange={(e) => setBody(e.target.value)}
         />
-        <Button type="submit" disabled={send.pending}>
-          Send
+        <Button type="submit" disabled={send.pending} aria-label="Send" className="size-11 shrink-0 px-0">
+          <ArrowUp size={18} strokeWidth={2.25} aria-hidden />
         </Button>
       </form>
-      <ErrorText error={send.error} />
-    </Card>
+      {send.error && (
+        <div className="px-4 pb-3">
+          <ErrorText error={send.error} />
+        </div>
+      )}
+    </Sheet>
   );
 }

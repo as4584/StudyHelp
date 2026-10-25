@@ -19,7 +19,8 @@ const read = Newsreader({
 
 export const metadata: Metadata = {
   title: "StudyHelp — your study desk with a tutor built in",
-  description: "AI study help with one-tap escalation to vetted tutors, translated chat and payments held until delivery.",
+  description:
+    "AI study help with one-tap escalation to vetted tutors, translated chat and payments held until delivery.",
   applicationName: "StudyHelp",
 };
 

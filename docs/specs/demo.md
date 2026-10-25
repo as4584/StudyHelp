@@ -5,9 +5,9 @@ Accounts (password `demo-password-123`, demo environment only):
 | Role | Email | Language |
 | --- | --- | --- |
 | Student | `student@demo.gsht` | English |
-| Tutor | `tutor@demo.gsht` (Prof. Diego) | Spanish |
-| Tutor | `tutor2@demo.gsht` (Dr. Aisha) | English |
-| Applicant | `applicant@demo.gsht` (pending) | Hindi |
+| Tutor | `tutor@demo.gsht` (Prof. Diego Ramírez) | Spanish |
+| Tutor | `tutor2@demo.gsht` (Dr. Aisha Bello) | English |
+| Applicant | `applicant@demo.gsht` (Ravi Kumar, pending) | Hindi |
 | Admin | `admin@demo.gsht` | English |
 
 Reset before each demo: `cd api && uv run python scripts/seed.py --reset`.

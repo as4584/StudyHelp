@@ -234,7 +234,7 @@ export function Badge({ status, label }: { status: string; label?: string }) {
   return (
     <span className={cx("inline-flex items-center gap-1.5 text-[13px] font-semibold", TONE_TEXT[tone])}>
       <span aria-hidden className={cx("size-1.5 rounded-full", TONE_DOT[tone])} />
-      <span data-testid="status" className="capitalize">
+      <span data-testid="status" className={label ? undefined : "capitalize"}>
         {label ?? status}
       </span>
     </span>
@@ -273,7 +273,10 @@ export function useAction() {
 export function Stars({ value, count }: { value: number; count?: number }) {
   if (count === 0) return <span className="text-[13px] text-muted">New tutor</span>;
   return (
-    <span className="tnum inline-flex items-center gap-1 text-[13px] font-semibold text-ink" aria-label={`Rated ${value.toFixed(1)} of 5`}>
+    <span
+      className="tnum inline-flex items-center gap-1 text-[13px] font-semibold text-ink"
+      aria-label={`Rated ${value.toFixed(1)} of 5`}
+    >
       <svg viewBox="0 0 20 20" className="size-3.5 fill-attention-mark" aria-hidden>
         <path d="M10 1.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.8z" />
       </svg>
@@ -284,10 +287,20 @@ export function Stars({ value, count }: { value: number; count?: number }) {
 }
 
 export function Avatar({ name, tone = "muted" }: { name: string; tone?: "tutor" | "muted" | "mastery" }) {
-  const initial = (name.trim()[0] ?? "?").toUpperCase();
-  const t = { tutor: "bg-tutor text-white", muted: "bg-sunken text-ink-2", mastery: "bg-mastery-soft text-mastery" }[tone];
+  // Initial of the given name, skipping honorifics ("Prof. Diego" -> "D").
+  const word = name.replace(/^(prof|dr|mr|mrs|ms)\.?\s+/i, "").trim();
+  const initial = (word[0] ?? "?").toUpperCase();
+  const t = { tutor: "bg-tutor text-white", muted: "bg-sunken text-ink-2", mastery: "bg-mastery-soft text-mastery" }[
+    tone
+  ];
   return (
-    <span aria-hidden className={cx("inline-flex size-7 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold", t)}>
+    <span
+      aria-hidden
+      className={cx(
+        "inline-flex size-7 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold",
+        t,
+      )}
+    >
       {initial}
     </span>
   );
@@ -325,6 +338,23 @@ export const TIMELINE = [
 export function Timeline({ status, compact = false }: { status: string; compact?: boolean }) {
   const idx = TIMELINE.findIndex((s) => s.key === status);
   const current = idx === -1 ? (status === "disputed" ? 3 : -1) : idx;
+  if (compact) {
+    // Dense lists: five segments; teal = done, indigo = current, rule = ahead.
+    const label = status === "completed" ? "All steps done" : `Step ${current + 1} of ${TIMELINE.length}`;
+    return (
+      <div className="flex w-full items-center gap-1" role="img" aria-label={label}>
+        {TIMELINE.map((s, i) => (
+          <span
+            key={s.key}
+            className={cx(
+              "h-1 flex-1 rounded-full",
+              status === "completed" || i < current ? "bg-mastery-mark" : i === current ? "bg-tutor" : "bg-rule",
+            )}
+          />
+        ))}
+      </div>
+    );
+  }
   const done = (i: number) => i < current || status === "completed";
   return (
     <ol className={cx("flex items-start", compact ? "gap-0" : "gap-0")} aria-label="Session progress">
@@ -332,7 +362,11 @@ export function Timeline({ status, compact = false }: { status: string; compact?
         const isDone = done(i);
         const isCurrent = i === current && status !== "completed";
         return (
-          <li key={s.key} className="relative flex min-w-0 flex-1 flex-col items-start" aria-current={isCurrent ? "step" : undefined}>
+          <li
+            key={s.key}
+            className="relative flex min-w-0 flex-1 flex-col items-start"
+            aria-current={isCurrent ? "step" : undefined}
+          >
             <div className="flex w-full items-center">
               <span
                 className={cx(
@@ -346,7 +380,12 @@ export function Timeline({ status, compact = false }: { status: string; compact?
                 {isCurrent && <span className="size-2 rounded-full bg-tutor" />}
               </span>
               {i < TIMELINE.length - 1 && (
-                <span className={cx("h-px flex-1 transition-colors duration-300", i < current || status === "completed" ? "bg-mastery" : "bg-rule-strong")} />
+                <span
+                  className={cx(
+                    "h-px flex-1 transition-colors duration-300",
+                    i < current || status === "completed" ? "bg-mastery" : "bg-rule-strong",
+                  )}
+                />
               )}
             </div>
             {!compact && (

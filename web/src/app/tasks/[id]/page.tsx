@@ -1,22 +1,28 @@
 "use client";
 
+import { ArrowLeft, CircleAlert, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { useRequireRole } from "@/components/auth";
 import { Chat } from "@/components/chat";
 import { TaskFiles } from "@/components/task-files";
-import { Badge, Button, Card, ErrorText, Field, inputCls, Stars, useAction } from "@/components/ui";
+import {
+  Avatar,
+  Badge,
+  Button,
+  ErrorText,
+  Field,
+  Section,
+  Sheet,
+  Skeleton,
+  Stars,
+  Timeline,
+  inputCls,
+  useAction,
+} from "@/components/ui";
 import { api, ApiError, money, type Bid, type PaymentState, type Task } from "@/lib/api";
-
-const STEPS = ["open", "hired", "paid", "delivered", "completed"];
-const STEP_LABEL: Record<string, string> = {
-  open: "Bidding",
-  hired: "Hired",
-  paid: "Paid (held)",
-  delivered: "Delivered",
-  completed: "Released",
-};
 
 export default function TaskPage() {
   const { id } = useParams<{ id: string }>();
@@ -38,7 +44,7 @@ export default function TaskPage() {
         setConversationId(conv?.id ?? null);
       }
     } catch (e) {
-      setLoadError(e instanceof ApiError && e.status === 404 ? "This task isn't available." : String(e));
+      setLoadError(e instanceof ApiError && e.status === 404 ? "This session isn't available to you." : String(e));
     }
   }, [id]);
 
@@ -47,101 +53,147 @@ export default function TaskPage() {
   }, [me, reload]);
 
   if (loadError) return <ErrorText error={loadError} />;
-  if (!me || !task) return <p className="text-muted">Loading…</p>;
+  if (!me || !task) return <Skeleton lines={5} />;
 
   const role = me.profile.role;
   const isStudent = role === "student" && task.student_id === me.profile.id;
   const isTutor = role === "tutor" && task.hired_tutor_id === me.profile.id;
-  const stepIdx = STEPS.indexOf(task.status);
+  const hiredBid = bids.find((b) => b.status === "accepted");
+  const back = role === "tutor" ? "/tutor" : role === "admin" ? "/admin" : "/student";
+  const hasChat = !!conversationId && (isStudent || isTutor);
 
   return (
-    <div className="space-y-4">
-      <div>
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-xl font-bold sm:text-2xl">{task.title}</h1>
+    <div>
+      <Link
+        href={back}
+        className="mb-6 inline-flex items-center gap-1.5 text-[14px] font-semibold text-muted hover:text-ink"
+      >
+        <ArrowLeft size={15} strokeWidth={2} aria-hidden />{" "}
+        {role === "tutor" ? "Tutor desk" : role === "admin" ? "Operations" : "Study desk"}
+      </Link>
+
+      <header className="mb-8">
+        <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted">
+          <span className="font-semibold text-ink-2">{task.subject}</span>
+          <span className="tnum">Budget {money(task.budget_cents)}</span>
           <Badge status={task.status} />
         </div>
-        <p className="text-sm text-muted">
-          {task.subject} · budget {money(task.budget_cents)}
-        </p>
-      </div>
+        <h1 className="max-w-[44rem] font-serif text-[1.75rem] leading-[1.15] font-medium tracking-[-0.015em] sm:text-[2.125rem]">
+          {task.title}
+        </h1>
+        {hiredBid && (
+          <div className="mt-3 flex items-center gap-2 text-[14px] text-ink-2">
+            <Avatar name={hiredBid.tutor_name} tone="tutor" />
+            <span>
+              with <span className="font-semibold text-ink">{hiredBid.tutor_name}</span>
+            </span>
+            <Stars value={hiredBid.tutor_rating_avg} count={hiredBid.tutor_rating_count} />
+          </div>
+        )}
+        <div className="mt-7 max-w-[40rem]">
+          <Timeline status={task.status} />
+        </div>
+      </header>
 
-      <ol className="grid grid-cols-5 gap-1 text-center text-[11px] sm:text-xs" aria-label="Progress">
-        {STEPS.map((s, i) => (
-          <li
-            key={s}
-            className={`rounded-lg px-1 py-2 ${stepIdx >= i ? "bg-brand text-brand-ink" : "bg-surface text-muted border border-border"}`}
-          >
-            {STEP_LABEL[s]}
-          </li>
-        ))}
-      </ol>
+      {/* DOM order is the mobile order: next step, conversation, then details. */}
+      <div
+        className={
+          hasChat ? "grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-x-10" : "grid max-w-[44rem] gap-10"
+        }
+      >
+        <div className="min-w-0 lg:col-start-1 lg:row-start-1">
+          {isStudent && <StudentActions task={task} bids={bids} pay={pay} reload={reload} />}
+          {role === "tutor" && <TutorActions task={task} bids={bids} isHired={isTutor} reload={reload} />}
+        </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
-        <div className="space-y-4">
-          <Card title="Request">
-            <p className="whitespace-pre-wrap text-sm">{task.description}</p>
+        {hasChat && (
+          <div className="min-w-0 lg:sticky lg:top-8 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
+            <Chat conversationId={conversationId!} meId={me.profile.id} myLang={me.profile.preferred_language} />
+          </div>
+        )}
+
+        <div className="min-w-0 space-y-10 lg:col-start-1 lg:row-start-2">
+          <Section title="Request">
+            <p className="max-w-[64ch] font-serif text-[17px] leading-[1.65] whitespace-pre-wrap text-ink">
+              {task.description}
+            </p>
             {task.delivery_note && (
-              <div className="mt-3 rounded-xl bg-violet-50 p-3 text-sm">
-                <strong>Tutor&apos;s delivery:</strong> {task.delivery_note}
+              <div className="mt-5 border-t border-rule pt-4">
+                <div className="mb-1 text-[13px] font-semibold text-mastery">Tutor&apos;s delivery</div>
+                <p className="font-serif text-[16px] leading-relaxed text-ink">{task.delivery_note}</p>
               </div>
             )}
-          </Card>
+          </Section>
+
           <TaskFiles
             taskId={task.id}
             canUploadRubric={isStudent}
             canUploadDeliverable={isTutor && task.status === "paid"}
           />
-          {isStudent && <StudentActions task={task} bids={bids} pay={pay} reload={reload} />}
-          {role === "tutor" && <TutorActions task={task} bids={bids} isHired={isTutor} reload={reload} />}
-          {pay?.payment && <PaymentCard pay={pay} />}
+
+          {pay?.payment && <Receipt pay={pay} />}
         </div>
-        {conversationId && (isStudent || isTutor) && (
-          <Chat conversationId={conversationId} meId={me.profile.id} myLang={me.profile.preferred_language} />
-        )}
       </div>
     </div>
   );
 }
 
-function PaymentCard({ pay }: { pay: PaymentState }) {
+function Receipt({ pay }: { pay: PaymentState }) {
   const p = pay.payment!;
   return (
-    <Card
-      title={
-        <span className="flex items-center gap-2">
-          Payment <Badge status={p.status} />
-        </span>
-      }
-    >
-      <dl className="grid grid-cols-2 gap-y-1 text-sm" data-testid="payment-card">
-        <dt className="text-muted">Paid by student</dt>
-        <dd className="text-right">{money(p.amount_cents)}</dd>
-        <dt className="text-muted">Platform fee ({p.platform_fee_bps / 100}%)</dt>
-        <dd className="text-right">{money(p.platform_fee_cents)}</dd>
-        <dt className="text-muted">Tutor receives</dt>
-        <dd className="text-right font-semibold">{money(p.tutor_net_cents)}</dd>
-        {pay.tips_cents > 0 && (
-          <>
-            <dt className="text-muted">Tips (100% to tutor)</dt>
-            <dd className="text-right">{money(pay.tips_cents)}</dd>
-          </>
-        )}
-        {pay.transfer && (
-          <>
-            <dt className="text-muted">Payout</dt>
-            <dd className="text-right">
-              <Badge status={pay.transfer.status === "created" ? "released" : pay.transfer.status} />
+    <Section title="Payment">
+      <Sheet className="px-5 py-4">
+        <dl className="tnum divide-y divide-rule text-[15px]" data-testid="payment-card">
+          <Row label="Paid by student" value={money(p.amount_cents)} />
+          <Row label={`Platform fee (${p.platform_fee_bps / 100}%)`} value={`− ${money(p.platform_fee_cents)}`} />
+          <Row label="Tutor receives" value={money(p.tutor_net_cents)} strong />
+          {pay.tips_cents > 0 && <Row label="Tips (100% to tutor)" value={money(pay.tips_cents)} />}
+          <div className="flex items-center justify-between gap-3 pt-3">
+            <dt className="text-muted">Status</dt>
+            <dd>
+              <Badge status={pay.transfer?.status === "created" ? "released" : p.status} />
             </dd>
-          </>
+          </div>
+        </dl>
+        {p.status === "held" && (
+          <p className="mt-3 flex items-start gap-2 border-t border-rule pt-3 text-[13px] text-ink-2">
+            <ShieldCheck size={15} strokeWidth={1.75} className="mt-0.5 shrink-0 text-mastery" aria-hidden />
+            Held by the platform. It reaches the tutor only after the student confirms delivery.
+          </p>
         )}
-      </dl>
-      {p.status === "held" && (
-        <p className="mt-2 text-xs text-muted">
-          Funds are held by the platform until the student releases them after delivery.
-        </p>
-      )}
-    </Card>
+      </Sheet>
+    </Section>
+  );
+}
+
+function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-2">
+      <dt className={strong ? "font-semibold text-ink" : "text-ink-2"}>{label}</dt>
+      <dd className={strong ? "font-semibold text-ink" : "text-ink-2"}>{value}</dd>
+    </div>
+  );
+}
+
+/** The one thing to do now, as the most prominent block on the left. */
+function ActionSheet({
+  title,
+  tone = "attention",
+  children,
+}: {
+  title: string;
+  tone?: "attention" | "tutor" | "mastery" | "muted";
+  children: React.ReactNode;
+}) {
+  const color = { attention: "text-attention", tutor: "text-tutor", mastery: "text-mastery", muted: "text-muted" }[
+    tone
+  ];
+  return (
+    <Sheet className="enter p-5 sm:p-6">
+      <div className={`mb-1 text-[13px] font-semibold ${color}`}>Next step</div>
+      <h2 className="mb-4 font-serif text-[1.25rem] leading-snug font-medium text-ink">{title}</h2>
+      <div className="space-y-4">{children}</div>
+    </Sheet>
   );
 }
 
@@ -169,133 +221,175 @@ function StudentActions({
       await fn();
       await reload();
     });
+  const accepted = bids.find((b) => b.status === "accepted");
 
-  return (
-    <Card title="Next step">
-      <div className="space-y-3">
-        <ErrorText error={a.error} />
-        {task.status === "open" &&
-          (bids.length === 0 ? (
-            <p className="text-sm text-muted">Waiting for tutors to bid…</p>
-          ) : (
-            <ul className="space-y-2" aria-label="Bids">
-              {bids.map((b) => (
-                <li key={b.id} className="rounded-xl border border-border p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium">{b.tutor_name}</span>
-                    <span className="font-semibold">{money(b.amount_cents)}</span>
+  const dispute = (task.status === "paid" || task.status === "delivered") && (
+    <details className="group border-t border-rule pt-4 text-[14px]">
+      <summary className="cursor-pointer list-none font-semibold text-muted hover:text-ink">
+        Problem with this session?
+      </summary>
+      <div className="mt-3 space-y-3">
+        <textarea
+          className={inputCls}
+          placeholder="Describe what went wrong"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+        />
+        <Button
+          variant="danger"
+          disabled={a.pending || reason.length < 3}
+          onClick={() => act(() => api(`/tasks/${task.id}/disputes`, { body: { reason } }))}
+        >
+          Open dispute
+        </Button>
+      </div>
+    </details>
+  );
+
+  let body: React.ReactNode = null;
+  if (task.status === "open") {
+    body =
+      bids.length === 0 ? (
+        <ActionSheet title="Waiting for tutors to send offers" tone="muted">
+          <p className="text-[15px] text-ink-2">
+            Vetted tutors in {task.subject} can see your request. Offers appear here.
+          </p>
+        </ActionSheet>
+      ) : (
+        <ActionSheet title={`Choose a tutor — ${bids.length} ${bids.length === 1 ? "offer" : "offers"}`}>
+          <ul className="divide-y divide-rule" aria-label="Bids">
+            {bids.map((b) => (
+              <li key={b.id} className="py-4 first:pt-0 last:pb-0">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <Avatar name={b.tutor_name} tone="tutor" />
+                    <div className="min-w-0">
+                      <div className="truncate font-semibold text-ink">{b.tutor_name}</div>
+                      <Stars value={b.tutor_rating_avg} count={b.tutor_rating_count} />
+                    </div>
                   </div>
-                  <div className="text-xs text-muted">
-                    <Stars value={b.tutor_rating_avg} /> ({b.tutor_rating_count})
-                  </div>
-                  {b.message && <p className="mt-1 text-sm">{b.message}</p>}
-                  <Button
-                    className="mt-2 w-full"
-                    disabled={a.pending}
-                    onClick={() => act(() => api(`/tasks/${task.id}/hire`, { body: { bid_id: b.id } }))}
-                  >
-                    Hire {b.tutor_name}
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          ))}
-        {task.status === "hired" && (
-          <Button
-            className="w-full"
-            disabled={a.pending}
-            onClick={() => a.run(() => redirect(`/tasks/${task.id}/checkout`))}
-          >
-            Pay {money(bids.find((b) => b.status === "accepted")?.amount_cents ?? task.budget_cents)} securely
-          </Button>
-        )}
-        {task.status === "paid" && (
-          <p className="text-sm text-muted">Payment held. Your tutor is working on your session.</p>
-        )}
-        {task.status === "delivered" && (
-          <Button
-            className="w-full"
-            disabled={a.pending}
-            onClick={() => act(() => api(`/tasks/${task.id}/release`, { body: {} }))}
-          >
-            Release payment to tutor
-          </Button>
-        )}
-        {task.status === "completed" && (
-          <>
-            <div>
-              <p className="mb-2 text-sm font-medium">Send a tip (100% goes to your tutor)</p>
-              <div className="grid grid-cols-3 gap-2">
-                {[200, 500, 1000].map((c) => (
-                  <Button
-                    key={c}
-                    variant="ghost"
-                    disabled={a.pending}
-                    onClick={() => a.run(() => redirect(`/tasks/${task.id}/tips`, { amount_cents: c }))}
-                  >
-                    Tip {money(c)}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <form
-              className="space-y-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                void act(() => api(`/tasks/${task.id}/review`, { body: { rating, comment } }));
-              }}
-            >
-              <Field label="Rate your tutor">
-                <select className={inputCls} value={rating} onChange={(e) => setRating(Number(e.target.value))}>
-                  {[5, 4, 3, 2, 1].map((n) => (
-                    <option key={n} value={n}>
-                      {"★".repeat(n)}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <textarea
-                className={inputCls}
-                placeholder="Optional comment"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-              />
-              <Button type="submit" variant="ghost" className="w-full" disabled={a.pending}>
-                Submit review
-              </Button>
-            </form>
-          </>
-        )}
-        {(task.status === "paid" || task.status === "delivered") && (
-          <details className="text-sm">
-            <summary className="cursor-pointer text-muted">Problem with this session?</summary>
-            <div className="mt-2 space-y-2">
-              <textarea
-                className={inputCls}
-                placeholder="Describe the issue"
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-              />
-              <Button
-                variant="danger"
-                disabled={a.pending || reason.length < 3}
-                onClick={() => act(() => api(`/tasks/${task.id}/disputes`, { body: { reason } }))}
-              >
-                Open dispute
-              </Button>
-            </div>
-          </details>
-        )}
-        {task.status === "disputed" && (
-          <p className="text-sm text-red-700">Under review by our team. Funds stay held until it&apos;s resolved.</p>
-        )}
-        {pay?.payment?.status === "pending" && task.status === "hired" && (
-          <p className="text-xs text-muted">
-            Checkout started — the payment is confirmed only after the payment provider notifies us.
+                  <div className="tnum font-serif text-[1.25rem] font-medium text-ink">{money(b.amount_cents)}</div>
+                </div>
+                {b.message && <p className="mt-2 font-serif text-[16px] leading-relaxed text-ink-2">“{b.message}”</p>}
+                <Button
+                  className="mt-3 w-full sm:w-auto"
+                  disabled={a.pending}
+                  onClick={() => act(() => api(`/tasks/${task.id}/hire`, { body: { bid_id: b.id } }))}
+                >
+                  Hire {b.tutor_name}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </ActionSheet>
+      );
+  } else if (task.status === "hired") {
+    body = (
+      <ActionSheet title="Pay to start the session">
+        <p className="text-[15px] text-ink-2">
+          Your payment is held by the platform and released to {accepted?.tutor_name ?? "your tutor"} only when you
+          confirm the session was delivered.
+        </p>
+        <Button
+          className="w-full"
+          disabled={a.pending}
+          onClick={() => a.run(() => redirect(`/tasks/${task.id}/checkout`))}
+        >
+          Pay {money(accepted?.amount_cents ?? task.budget_cents)} securely
+        </Button>
+        {pay?.payment?.status === "pending" && (
+          <p className="text-[13px] text-muted">
+            Checkout started — we confirm the payment directly with the payment provider.
           </p>
         )}
-      </div>
-    </Card>
+      </ActionSheet>
+    );
+  } else if (task.status === "paid") {
+    body = (
+      <ActionSheet title="In session" tone="tutor">
+        <p className="text-[15px] text-ink-2">
+          Payment is held safely. Work through it with your tutor in the conversation.
+        </p>
+        {dispute}
+      </ActionSheet>
+    );
+  } else if (task.status === "delivered") {
+    body = (
+      <ActionSheet title="Your tutor delivered — happy with it?">
+        <p className="text-[15px] text-ink-2">
+          Releasing sends the tutor their share. You can open a dispute instead if something&apos;s wrong.
+        </p>
+        <Button
+          className="w-full"
+          disabled={a.pending}
+          onClick={() => act(() => api(`/tasks/${task.id}/release`, { body: {} }))}
+        >
+          Release payment to tutor
+        </Button>
+        {dispute}
+      </ActionSheet>
+    );
+  } else if (task.status === "completed") {
+    body = (
+      <ActionSheet title="Session complete" tone="mastery">
+        <div>
+          <p className="mb-2 text-[14px] font-semibold text-ink">Say thanks with a tip — 100% goes to your tutor</p>
+          <div className="grid grid-cols-3 gap-2">
+            {[200, 500, 1000].map((c) => (
+              <Button
+                key={c}
+                variant="secondary"
+                disabled={a.pending}
+                onClick={() => a.run(() => redirect(`/tasks/${task.id}/tips`, { amount_cents: c }))}
+              >
+                Tip {money(c)}
+              </Button>
+            ))}
+          </div>
+        </div>
+        <form
+          className="space-y-3 border-t border-rule pt-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void act(() => api(`/tasks/${task.id}/review`, { body: { rating, comment } }));
+          }}
+        >
+          <Field label="Rate your tutor">
+            <select className={inputCls} value={rating} onChange={(e) => setRating(Number(e.target.value))}>
+              {[5, 4, 3, 2, 1].map((n) => (
+                <option key={n} value={n}>
+                  {n} — {["", "Poor", "Fair", "Good", "Great", "Excellent"][n]}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <textarea
+            className={inputCls}
+            placeholder="What helped most? (optional)"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+          />
+          <Button type="submit" variant="secondary" className="w-full" disabled={a.pending}>
+            Submit review
+          </Button>
+        </form>
+      </ActionSheet>
+    );
+  } else if (task.status === "disputed") {
+    body = (
+      <ActionSheet title="Under review" tone="muted">
+        <p className="flex items-start gap-2 text-[15px] text-ink-2">
+          <CircleAlert size={16} strokeWidth={1.75} className="mt-1 shrink-0 text-danger" aria-hidden />
+          Our team is reviewing this session. The payment stays held until it&apos;s resolved.
+        </p>
+      </ActionSheet>
+    );
+  }
+  return (
+    <div className="space-y-3">
+      {body}
+      <ErrorText error={a.error} />
+    </div>
   );
 }
 
@@ -321,75 +415,98 @@ function TutorActions({
       await reload();
     });
 
-  return (
-    <Card title={isHired ? "Your session" : "Your bid"}>
-      <div className="space-y-3">
-        <ErrorText error={a.error} />
-        {!isHired && task.status === "open" && !myBid && (
-          <form
-            className="space-y-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void act(() =>
-                api(`/tasks/${task.id}/bids`, { body: { amount_cents: Math.round(Number(amount) * 100), message } }),
-              );
-            }}
-          >
-            <Field label="Your price (USD)">
-              <input
-                className={inputCls}
-                type="number"
-                min={5}
-                step={1}
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
-            </Field>
-            <textarea
-              className={inputCls}
-              placeholder="How you'll help (approach, availability)"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
+  let body: React.ReactNode = null;
+  if (!isHired && task.status === "open" && !myBid) {
+    body = (
+      <ActionSheet title="Offer to help">
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void act(() =>
+              api(`/tasks/${task.id}/bids`, { body: { amount_cents: Math.round(Number(amount) * 100), message } }),
+            );
+          }}
+        >
+          <Field label="Your price (USD)" hint={`The student's budget is ${money(task.budget_cents)}.`}>
+            <input
+              className={`${inputCls} tnum`}
+              type="number"
+              min={5}
+              step={1}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
             />
-            <Button type="submit" className="w-full" disabled={a.pending}>
-              Submit bid
-            </Button>
-          </form>
-        )}
-        {myBid && !isHired && (
-          <p className="text-sm">
-            You bid {money(myBid.amount_cents)} — <Badge status={myBid.status} />
-          </p>
-        )}
-        {isHired && task.status === "hired" && (
-          <p className="text-sm text-muted">Hired! Waiting for the student&apos;s payment before you start.</p>
-        )}
-        {isHired && task.status === "paid" && (
-          <form
-            className="space-y-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void act(() => api(`/tasks/${task.id}/deliver`, { body: { note } }));
-            }}
-          >
-            <Field
-              label="Delivery note"
-              hint="Summarize the walkthrough, practice problems or study guide you provided."
-            >
-              <textarea className={inputCls} required value={note} onChange={(e) => setNote(e.target.value)} />
-            </Field>
-            <Button type="submit" className="w-full" disabled={a.pending}>
-              Mark as delivered
-            </Button>
-          </form>
-        )}
-        {isHired && task.status === "delivered" && (
-          <p className="text-sm text-muted">Delivered. The student will release your payment.</p>
-        )}
-        {isHired && task.status === "completed" && (
-          <p className="text-sm text-emerald-700">Payment released to your payout account 🎉</p>
-        )}
-      </div>
-    </Card>
+          </Field>
+          <textarea
+            className={`${inputCls} min-h-24`}
+            placeholder="How you'll help — your approach and availability"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+          />
+          <Button type="submit" className="w-full" disabled={a.pending}>
+            Submit bid
+          </Button>
+        </form>
+      </ActionSheet>
+    );
+  } else if (myBid && !isHired) {
+    body = (
+      <ActionSheet title="Your offer is in" tone="muted">
+        <p className="tnum text-[15px] text-ink-2">
+          You bid {money(myBid.amount_cents)} — <Badge status={myBid.status} />
+        </p>
+      </ActionSheet>
+    );
+  } else if (isHired && task.status === "hired") {
+    body = (
+      <ActionSheet title="You're hired" tone="tutor">
+        <p className="text-[15px] text-ink-2">
+          Waiting for the student&apos;s payment before you start. Say hello in the meantime.
+        </p>
+      </ActionSheet>
+    );
+  } else if (isHired && task.status === "paid") {
+    body = (
+      <ActionSheet title="Deliver the session">
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void act(() => api(`/tasks/${task.id}/deliver`, { body: { note } }));
+          }}
+        >
+          <Field label="Delivery note" hint="Summarise the walkthrough, practice problems or study guide you provided.">
+            <textarea
+              className={`${inputCls} min-h-24`}
+              required
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </Field>
+          <Button type="submit" className="w-full" disabled={a.pending}>
+            Mark as delivered
+          </Button>
+        </form>
+      </ActionSheet>
+    );
+  } else if (isHired && task.status === "delivered") {
+    body = (
+      <ActionSheet title="Delivered" tone="mastery">
+        <p className="text-[15px] text-ink-2">Delivered. The student will release your payment.</p>
+      </ActionSheet>
+    );
+  } else if (isHired && task.status === "completed") {
+    body = (
+      <ActionSheet title="Paid out" tone="mastery">
+        <p className="text-[15px] text-ink-2">The payment was released to your payout account.</p>
+      </ActionSheet>
+    );
+  }
+  return (
+    <div className="space-y-3">
+      {body}
+      <ErrorText error={a.error} />
+    </div>
   );
 }
