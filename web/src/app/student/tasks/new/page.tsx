@@ -214,7 +214,12 @@ function NewTaskForm() {
 
           <div className="space-y-3 sm:pl-[5rem]">
             <ErrorText error={error} />
-            <Button type="submit" disabled={pending || !ack} className="h-12 w-full px-6 text-[16px] sm:w-auto">
+            <Button
+              type="submit"
+              disabled={pending || !ack}
+              loading={pending}
+              className="h-12 w-full px-6 text-[16px] sm:w-auto"
+            >
               Post request <ArrowRight size={17} strokeWidth={2} aria-hidden />
             </Button>
           </div>

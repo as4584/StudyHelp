@@ -3,6 +3,7 @@ import { Hanken_Grotesk, Newsreader } from "next/font/google";
 
 import { AppShell } from "@/components/shell";
 import { AuthProvider } from "@/components/auth";
+import { ToastProvider } from "@/components/toast";
 
 import "./globals.css";
 
@@ -31,7 +32,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" className={`${ui.variable} ${read.variable}`}>
       <body>
         <AuthProvider>
-          <AppShell>{children}</AppShell>
+          <ToastProvider>
+            <AppShell>{children}</AppShell>
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>

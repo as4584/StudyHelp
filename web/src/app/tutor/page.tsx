@@ -23,6 +23,7 @@ import {
 import { api, money, type PaymentState, type Task } from "@/lib/api";
 import { accentFor } from "@/lib/subjects";
 import { uploadToSignedUrl } from "@/lib/upload";
+import { useToast } from "@/components/toast";
 
 /*
  * Tutor desk — the professional counterpart of the student Study desk. One headline sentence about
@@ -256,6 +257,7 @@ function Application({
   const [rate, setRate] = useState(String((existing?.hourly_rate_cents ?? 2000) / 100));
   const [doc, setDoc] = useState<File | null>(null);
   const a = useAction();
+  const toast = useToast();
   const [open, setOpen] = useState(startOpen);
 
   if (!open) {
@@ -294,6 +296,7 @@ function Application({
             if (doc) await uploadToSignedUrl("/tutors/me/documents", doc);
             await onSaved();
             setOpen(false);
+            toast(existing ? "Application saved" : "Application submitted — we'll review it soon");
           });
         }}
       >
@@ -324,7 +327,7 @@ function Application({
           hint="Degree, transcript or certificate. Private — only admins can view it."
         />
         <ErrorText error={a.error} />
-        <Button type="submit" disabled={a.pending} className="w-full">
+        <Button type="submit" disabled={a.pending} loading={a.pending} className="w-full">
           {existing ? "Save" : "Submit application"}
         </Button>
       </form>

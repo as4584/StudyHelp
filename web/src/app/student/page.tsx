@@ -31,12 +31,13 @@ export default function StudyDesk() {
   useEffect(() => {
     if (!me) return;
     api<Task[]>("/tasks?scope=mine").then(async (ts) => {
-      setTasks(ts);
       const open = ts.filter((t) => t.status === "open");
       const counts = await Promise.all(
         open.map((t) => api<Bid[]>(`/tasks/${t.id}/bids`).then((b) => [t.id, b.length] as const)),
       );
+      // Set together so "Today's focus" never flips headline after first paint.
       setBidCounts(Object.fromEntries(counts));
+      setTasks(ts);
     });
   }, [me]);
 
@@ -243,7 +244,7 @@ function Progress({ view }: { view: View }) {
                   <Link href={`/tasks/${t.id}`} className="group flex items-center gap-4 py-3.5">
                     <span className="size-2 shrink-0 rounded-full" style={{ background: a.mark }} aria-hidden />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-serif text-[17px] text-ink transition-colors group-hover:text-tutor">
+                      <span className="block line-clamp-2 font-serif text-[17px] leading-snug text-ink transition-colors group-hover:text-tutor">
                         {t.title}
                       </span>
                       <span className="text-[13px]" style={{ color: a.ink }}>

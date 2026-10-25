@@ -121,11 +121,30 @@ export function Chat({ conversationId, meId, myLang }: { conversationId: string;
         className="flex items-end gap-2 border-t border-rule p-3"
         onSubmit={(e) => {
           e.preventDefault();
-          if (!body.trim()) return;
+          const text = body.trim();
+          if (!text) return;
+          // Optimistic: show the message now; the server copy (with translation) replaces it.
+          setBody("");
+          setMessages((m) => [
+            ...m,
+            {
+              id: `pending-${Date.now()}`,
+              sender_id: meId,
+              body: text,
+              source_language: myLang,
+              created_at: new Date().toISOString(),
+              translations: [],
+            },
+          ]);
           void send.run(async () => {
-            await api(`/conversations/${conversationId}/messages`, { body: { body } });
-            setBody("");
-            await load();
+            try {
+              await api(`/conversations/${conversationId}/messages`, { body: { body: text } });
+            } catch (err) {
+              setBody(text); // give the words back if sending failed
+              throw err;
+            } finally {
+              await load();
+            }
           });
         }}
       >
@@ -137,7 +156,12 @@ export function Chat({ conversationId, meId, myLang }: { conversationId: string;
           placeholder="Write a message"
           onChange={(e) => setBody(e.target.value)}
         />
-        <Button type="submit" disabled={send.pending} aria-label="Send" className="size-11 shrink-0 px-0">
+        <Button
+          type="submit"
+          disabled={send.pending || !body.trim()}
+          aria-label="Send"
+          className="size-11 shrink-0 px-0"
+        >
           <ArrowUp size={18} strokeWidth={2.25} aria-hidden />
         </Button>
       </form>

@@ -73,7 +73,7 @@ export default function OnboardPage() {
           </select>
         </Field>
         <ErrorText error={error} />
-        <Button type="submit" disabled={pending} className="w-full">
+        <Button type="submit" disabled={pending} loading={pending} className="w-full">
           Finish
         </Button>
       </form>

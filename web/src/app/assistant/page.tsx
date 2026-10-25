@@ -220,7 +220,13 @@ function Workspace() {
                   }
                 }}
               />
-              <Button type="submit" disabled={a.pending} aria-label="Ask" className="size-11 shrink-0 px-0">
+              <Button
+                type="submit"
+                disabled={a.pending}
+                loading={a.pending}
+                aria-label="Ask"
+                className="size-11 shrink-0 px-0"
+              >
                 <ArrowUp size={18} strokeWidth={2.25} aria-hidden />
               </Button>
             </div>

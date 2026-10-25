@@ -16,6 +16,7 @@ import {
   inputCls,
   useAction,
 } from "@/components/ui";
+import { useToast } from "@/components/toast";
 import { api, money, type Schemas } from "@/lib/api";
 
 type Revenue = Schemas["RevenueOut"];
@@ -54,10 +55,12 @@ export default function OperationsPage() {
   useEffect(() => {
     if (me) void load();
   }, [me, load]);
-  const act = (fn: () => Promise<unknown>) =>
+  const toast = useToast();
+  const act = (fn: () => Promise<unknown>, ok?: string) =>
     a.run(async () => {
       await fn();
       await load();
+      if (ok) toast(ok);
     });
 
   if (!me || !rev) return <Skeleton lines={5} />;
@@ -113,14 +116,21 @@ export default function OperationsPage() {
                     <div className="flex shrink-0 gap-2">
                       <Button
                         disabled={a.pending}
-                        onClick={() => act(() => api(`/admin/tutors/${t.user_id}/approve`, { body: {} }))}
+                        onClick={() =>
+                          act(
+                            () => api(`/admin/tutors/${t.user_id}/approve`, { body: {} }),
+                            `${t.display_name} approved`,
+                          )
+                        }
                       >
                         Approve
                       </Button>
                       <Button
                         variant="secondary"
                         disabled={a.pending}
-                        onClick={() => act(() => api(`/admin/tutors/${t.user_id}/reject`, { body: {} }))}
+                        onClick={() =>
+                          act(() => api(`/admin/tutors/${t.user_id}/reject`, { body: {} }), "Application rejected")
+                        }
                       >
                         Reject
                       </Button>
@@ -208,7 +218,10 @@ export default function OperationsPage() {
                         : "text-tutor hover:bg-tutor-soft"
                     }`}
                     onClick={() =>
-                      act(() => api(`/admin/users/${u.id}/${u.is_active ? "suspend" : "reactivate"}`, { body: {} }))
+                      act(
+                        () => api(`/admin/users/${u.id}/${u.is_active ? "suspend" : "reactivate"}`, { body: {} }),
+                        u.is_active ? `${u.display_name} suspended` : `${u.display_name} reactivated`,
+                      )
                     }
                   >
                     {u.is_active ? "Suspend" : "Reactivate"}

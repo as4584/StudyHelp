@@ -25,7 +25,10 @@ async function probe(page, name, w) {
     const W = document.documentElement.clientWidth;
     const overflow = document.documentElement.scrollWidth - W;
     const clipped = [...document.querySelectorAll("h1,h2,h3,p,button,a,dd,span")]
-      .filter((el) => el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflow !== "visible")
+      .filter(
+        (el) =>
+          !el.closest(".sr-only") && el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflow !== "visible",
+      )
       .slice(0, 5)
       .map((el) => el.textContent.trim().slice(0, 40));
     return { overflow, clipped };

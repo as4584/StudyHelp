@@ -72,7 +72,7 @@ export default function SignupPage() {
           />
         </Field>
         <ErrorText error={error} />
-        <Button type="submit" disabled={pending} className="w-full">
+        <Button type="submit" disabled={pending} loading={pending} className="w-full">
           Continue
         </Button>
       </form>

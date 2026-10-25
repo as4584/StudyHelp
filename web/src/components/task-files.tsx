@@ -58,6 +58,7 @@ export function TaskFiles({
         <FileButton
           label={kind === "rubric" ? "Add a rubric or screenshot" : "Add a deliverable"}
           accept="image/*,.pdf,video/*"
+          busy={a.pending}
           hint={kind === "rubric" ? "Screenshots only — never share school portal logins." : undefined}
           onFile={(f) => {
             if (f)

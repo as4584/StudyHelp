@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import { useToast } from "@/components/toast";
+
 import { useRequireRole } from "@/components/auth";
 import { Chat } from "@/components/chat";
 import { SessionPath } from "@/components/study-path";
@@ -36,14 +38,17 @@ export default function TaskPage() {
 
   const reload = useCallback(async () => {
     try {
+      // Fetch everything, then render once — no content popping in after first paint.
       const t = await api<Task>(`/tasks/${id}`);
+      const [b, p, conv] = await Promise.all([
+        api<Bid[]>(`/tasks/${id}/bids`).catch(() => []),
+        t.hired_tutor_id ? api<PaymentState>(`/tasks/${id}/payment`).catch(() => null) : Promise.resolve(null),
+        t.hired_tutor_id ? api<{ id: string }>(`/tasks/${id}/conversation`).catch(() => null) : Promise.resolve(null),
+      ]);
+      setBids(b);
+      setPay(p);
+      setConversationId(conv?.id ?? null);
       setTask(t);
-      setBids(await api<Bid[]>(`/tasks/${id}/bids`).catch(() => []));
-      if (t.hired_tutor_id) {
-        setPay(await api<PaymentState>(`/tasks/${id}/payment`).catch(() => null));
-        const conv = await api<{ id: string }>(`/tasks/${id}/conversation`).catch(() => null);
-        setConversationId(conv?.id ?? null);
-      }
     } catch (e) {
       setLoadError(e instanceof ApiError && e.status === 404 ? "This session isn't available to you." : String(e));
     }
@@ -215,16 +220,19 @@ function StudentActions({
   const a = useAction();
   const router = useRouter();
   const [rating, setRating] = useState(5);
+  const [reviewed, setReviewed] = useState<number | null>(null);
   const [comment, setComment] = useState("");
   const [reason, setReason] = useState("");
   const redirect = async (path: string, body: unknown = {}) => {
     const { url } = await api<{ url: string }>(path, { body });
     window.location.href = url;
   };
-  const act = (fn: () => Promise<unknown>) =>
+  const toast = useToast();
+  const act = (fn: () => Promise<unknown>, ok?: string) =>
     a.run(async () => {
       await fn();
       await reload();
+      if (ok) toast(ok);
     });
   const accepted = bids.find((b) => b.status === "accepted");
 
@@ -243,7 +251,12 @@ function StudentActions({
         <Button
           variant="danger"
           disabled={a.pending || reason.length < 3}
-          onClick={() => act(() => api(`/tasks/${task.id}/disputes`, { body: { reason } }))}
+          onClick={() =>
+            act(
+              () => api(`/tasks/${task.id}/disputes`, { body: { reason } }),
+              "Dispute opened — our team will review it",
+            )
+          }
         >
           Open dispute
         </Button>
@@ -279,7 +292,9 @@ function StudentActions({
                 <Button
                   className="mt-3 w-full sm:w-auto"
                   disabled={a.pending}
-                  onClick={() => act(() => api(`/tasks/${task.id}/hire`, { body: { bid_id: b.id } }))}
+                  onClick={() =>
+                    act(() => api(`/tasks/${task.id}/hire`, { body: { bid_id: b.id } }), `You hired ${b.tutor_name}`)
+                  }
                 >
                   Hire {b.tutor_name}
                 </Button>
@@ -323,7 +338,7 @@ function StudentActions({
         <Button
           className="w-full"
           disabled={a.pending}
-          onClick={() => act(() => api(`/tasks/${task.id}/release`, { body: {} }))}
+          onClick={() => act(() => api(`/tasks/${task.id}/release`, { body: {} }), "Payment released to your tutor")}
         >
           Release payment to tutor
         </Button>
@@ -348,32 +363,42 @@ function StudentActions({
             ))}
           </div>
         </div>
-        <form
-          className="space-y-3 border-t border-rule pt-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void act(() => api(`/tasks/${task.id}/review`, { body: { rating, comment } }));
-          }}
-        >
-          <Field label="Rate your tutor">
-            <select className={inputCls} value={rating} onChange={(e) => setRating(Number(e.target.value))}>
-              {[5, 4, 3, 2, 1].map((n) => (
-                <option key={n} value={n}>
-                  {n} — {["", "Poor", "Fair", "Good", "Great", "Excellent"][n]}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <textarea
-            className={inputCls}
-            placeholder="What helped most? (optional)"
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-          />
-          <Button type="submit" variant="secondary" className="w-full" disabled={a.pending}>
-            Submit review
-          </Button>
-        </form>
+        {reviewed ? (
+          <p className="enter flex items-center gap-2 border-t border-rule pt-4 text-[15px] text-ink-2">
+            <Stars value={reviewed} /> You rated this session — thank you.
+          </p>
+        ) : (
+          <form
+            className="space-y-3 border-t border-rule pt-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void a.run(async () => {
+                await api(`/tasks/${task.id}/review`, { body: { rating, comment } });
+                setReviewed(rating);
+                toast("Thanks — your review is saved");
+              });
+            }}
+          >
+            <Field label="Rate your tutor">
+              <select className={inputCls} value={rating} onChange={(e) => setRating(Number(e.target.value))}>
+                {[5, 4, 3, 2, 1].map((n) => (
+                  <option key={n} value={n}>
+                    {n} — {["", "Poor", "Fair", "Good", "Great", "Excellent"][n]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <textarea
+              className={inputCls}
+              placeholder="What helped most? (optional)"
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+            />
+            <Button type="submit" variant="secondary" className="w-full" disabled={a.pending} loading={a.pending}>
+              Submit review
+            </Button>
+          </form>
+        )}
       </ActionSheet>
     );
   } else if (task.status === "disputed") {
@@ -410,10 +435,12 @@ function TutorActions({
   const [message, setMessage] = useState("");
   const [note, setNote] = useState("");
   const myBid = bids[0];
-  const act = (fn: () => Promise<unknown>) =>
+  const toast = useToast();
+  const act = (fn: () => Promise<unknown>, ok?: string) =>
     a.run(async () => {
       await fn();
       await reload();
+      if (ok) toast(ok);
     });
 
   let body: React.ReactNode = null;
@@ -424,8 +451,10 @@ function TutorActions({
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            void act(() =>
-              api(`/tasks/${task.id}/bids`, { body: { amount_cents: Math.round(Number(amount) * 100), message } }),
+            void act(
+              () =>
+                api(`/tasks/${task.id}/bids`, { body: { amount_cents: Math.round(Number(amount) * 100), message } }),
+              "Offer sent to the student",
             );
           }}
         >
@@ -445,7 +474,7 @@ function TutorActions({
             value={message}
             onChange={(e) => setMessage(e.target.value)}
           />
-          <Button type="submit" className="w-full" disabled={a.pending}>
+          <Button type="submit" className="w-full" disabled={a.pending} loading={a.pending}>
             Submit bid
           </Button>
         </form>
@@ -474,7 +503,7 @@ function TutorActions({
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            void act(() => api(`/tasks/${task.id}/deliver`, { body: { note } }));
+            void act(() => api(`/tasks/${task.id}/deliver`, { body: { note } }), "Marked as delivered");
           }}
         >
           <Field label="Delivery note" hint="Summarise the walkthrough, practice problems or study guide you provided.">
@@ -485,7 +514,7 @@ function TutorActions({
               onChange={(e) => setNote(e.target.value)}
             />
           </Field>
-          <Button type="submit" className="w-full" disabled={a.pending}>
+          <Button type="submit" className="w-full" disabled={a.pending} loading={a.pending}>
             Mark as delivered
           </Button>
         </form>

@@ -115,8 +115,51 @@ const BTN =
 
 type BtnProps = React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant };
 
-export function Button({ variant = "primary", className, ...props }: BtnProps) {
-  return <button {...props} className={cx(BTN, VARIANTS[variant], variant === "quiet" && "px-1", className)} />;
+/**
+ * A button that shows its own work. If onClick returns a promise (our `useAction().run`), only
+ * this button shows a spinner until it settles; `loading` does the same for submit buttons.
+ * The label stays in place (invisible) so the width never jumps.
+ */
+export function Button({
+  variant = "primary",
+  className,
+  loading,
+  onClick,
+  children,
+  disabled,
+  ...props
+}: BtnProps & { loading?: boolean }) {
+  const [own, setOwn] = useState(false);
+  const busy = !!loading || own;
+  return (
+    <button
+      {...props}
+      disabled={disabled || busy}
+      aria-busy={busy || undefined}
+      onClick={(e) => {
+        const r = onClick?.(e) as unknown;
+        if (r && typeof (r as Promise<unknown>).then === "function") {
+          setOwn(true);
+          void (r as Promise<unknown>).finally(() => setOwn(false));
+        }
+      }}
+      className={cx(
+        BTN,
+        VARIANTS[variant],
+        variant === "quiet" && "px-1",
+        "relative",
+        busy && "disabled:opacity-100",
+        className,
+      )}
+    >
+      <span className={cx("inline-flex items-center gap-2", busy && "invisible")}>{children}</span>
+      {busy && (
+        <span className="absolute inset-0 flex items-center justify-center" aria-hidden>
+          <span className="size-4 animate-spin rounded-full border-2 border-current border-r-transparent" />
+        </span>
+      )}
+    </button>
+  );
 }
 
 export function LinkButton({
@@ -156,11 +199,13 @@ export function FileButton({
   accept,
   onFile,
   hint,
+  busy,
 }: {
   label: string;
   accept?: string;
   onFile: (f: File | null) => void;
   hint?: string;
+  busy?: boolean;
 }) {
   const id = useId();
   const [name, setName] = useState<string | null>(null);
@@ -172,7 +217,7 @@ export function FileButton({
         className="flex min-h-11 cursor-pointer items-center gap-3 rounded-[6px] border border-dashed border-rule-strong bg-sheet px-3 text-[15px] text-ink-2 transition-colors hover:border-tutor hover:text-ink focus-within:border-tutor focus-within:ring-2 focus-within:ring-tutor/20"
       >
         <Paperclip size={16} strokeWidth={1.75} className="shrink-0 text-muted" aria-hidden />
-        <span className="truncate">{name ?? "Choose a file"}</span>
+        <span className="truncate">{busy ? `Uploading ${name ?? "file"}…` : (name ?? "Choose a file")}</span>
         <input
           id={id}
           type="file"
