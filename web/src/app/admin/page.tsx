@@ -81,7 +81,7 @@ export default function AdminPage() {
         {pending.length === 0 ? (
           <p className="text-sm text-muted">No pending applications.</p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="space-y-2" data-testid="tutor-applications">
             {pending.map((t) => (
               <li key={t.user_id} className="rounded-xl border border-border p-3 text-sm">
                 <div className="font-medium">{t.display_name}</div>
