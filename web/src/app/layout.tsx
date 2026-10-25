@@ -1,28 +1,36 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+import { Hanken_Grotesk, Newsreader } from "next/font/google";
 
+import { AppShell } from "@/components/shell";
 import { AuthProvider } from "@/components/auth";
-import { Nav } from "@/components/nav";
 
 import "./globals.css";
 
-const geist = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+// Interface voice: warm, highly legible grotesk with tabular figures (see DESIGN.md §3).
+const ui = Hanken_Grotesk({ variable: "--font-ui", subsets: ["latin"], display: "swap" });
+// Reading + display voice: book-like serif with optical sizes, for titles and explanations.
+const read = Newsreader({
+  variable: "--font-read",
+  subsets: ["latin"],
+  display: "swap",
+  style: ["normal", "italic"],
+  axes: ["opsz"],
+});
 
 export const metadata: Metadata = {
-  title: "Global Study Help Tutor",
-  description: "AI study help with 1-click escalation to vetted global tutors.",
-  applicationName: "Study Help Tutor",
+  title: "StudyHelp — your study desk with a tutor built in",
+  description: "AI study help with one-tap escalation to vetted tutors, translated chat and payments held until delivery.",
+  applicationName: "StudyHelp",
 };
 
-export const viewport: Viewport = { themeColor: "#4f46e5", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = { themeColor: "#f7f6f2", width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
-      <body className={`${geist.variable} antialiased`}>
+    <html lang="en" className={`${ui.variable} ${read.variable}`}>
+      <body>
         <AuthProvider>
-          <Nav />
-          <main className="mx-auto w-full max-w-5xl px-4 pb-16 pt-4 sm:pt-6">{children}</main>
+          <AppShell>{children}</AppShell>
         </AuthProvider>
       </body>
     </html>

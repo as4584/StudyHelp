@@ -1,29 +1,146 @@
 @import "tailwindcss";
 
+/* Tokens: see /DESIGN.md. Semantic roles only — never use a colour for decoration. */
 :root {
-  --background: #f7f8fb;
-  --surface: #ffffff;
-  --foreground: #111827;
-  --muted: #6b7280;
-  --border: #e5e7eb;
-  --brand: #4f46e5;
-  --brand-ink: #ffffff;
+  --paper: #f7f6f2;
+  --sheet: #ffffff;
+  --sunken: #efede7;
+  --rule: #e4e1d9;
+  --rule-strong: #cfcbc1;
+  --ink: #14161b;
+  --ink-2: #3c4049;
+  --muted: #636873;
+  --tutor: #4338ca;
+  --tutor-hover: #3730a3;
+  --tutor-soft: #eeeefb;
+  --mastery: #0f766e;
+  --mastery-mark: #14b8a6;
+  --mastery-soft: #e3f4f1;
+  --attention: #b45309;
+  --attention-mark: #f59e0b;
+  --attention-soft: #fdf3e1;
+  --danger: #b91c1c;
+  --danger-soft: #fdecec;
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-surface: var(--surface);
-  --color-foreground: var(--foreground);
+  --color-paper: var(--paper);
+  --color-sheet: var(--sheet);
+  --color-sunken: var(--sunken);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
   --color-muted: var(--muted);
-  --color-border: var(--border);
-  --color-brand: var(--brand);
-  --color-brand-ink: var(--brand-ink);
-  --font-sans: var(--font-geist-sans);
+  --color-tutor: var(--tutor);
+  --color-tutor-hover: var(--tutor-hover);
+  --color-tutor-soft: var(--tutor-soft);
+  --color-mastery: var(--mastery);
+  --color-mastery-mark: var(--mastery-mark);
+  --color-mastery-soft: var(--mastery-soft);
+  --color-attention: var(--attention);
+  --color-attention-mark: var(--attention-mark);
+  --color-attention-soft: var(--attention-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --font-sans: var(--font-ui), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-read), ui-serif, Georgia, serif;
+  --radius-control: 6px;
+  --radius-sheet: 10px;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
+  text-rendering: optimizeLegibility;
+  caret-color: var(--tutor);
+}
+
+::selection {
+  background: #d9d8f7;
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--tutor);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule-strong) transparent;
+}
+
+.font-serif {
+  font-optical-sizing: auto;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+h1,
+h2 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+/* Motion: one vocabulary, fast and physical. */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pulse-soft {
+  50% {
+    opacity: 0.45;
+  }
+}
+@keyframes ring {
+  0% {
+    box-shadow: 0 0 0 0 rgb(67 56 202 / 0.35);
+  }
+  100% {
+    box-shadow: 0 0 0 8px rgb(67 56 202 / 0);
+  }
+}
+.enter {
+  animation: rise-in 180ms var(--ease-out) both;
+}
+.skeleton {
+  background: var(--sunken);
+  border-radius: 4px;
+  animation: pulse-soft 1.2s ease-in-out infinite;
+}
+.current-ring {
+  animation: ring 1.6s var(--ease-out) 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
 }
