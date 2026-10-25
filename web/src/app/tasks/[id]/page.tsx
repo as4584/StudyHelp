@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { useRequireRole } from "@/components/auth";
 import { Chat } from "@/components/chat";
+import { SessionPath } from "@/components/study-path";
 import { TaskFiles } from "@/components/task-files";
 import {
   Avatar,
@@ -18,10 +19,10 @@ import {
   Sheet,
   Skeleton,
   Stars,
-  Timeline,
   inputCls,
   useAction,
 } from "@/components/ui";
+import { accentFor } from "@/lib/subjects";
 import { api, ApiError, money, type Bid, type PaymentState, type Task } from "@/lib/api";
 
 export default function TaskPage() {
@@ -74,11 +75,14 @@ export default function TaskPage() {
 
       <header className="mb-8">
         <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted">
-          <span className="font-semibold text-ink-2">{task.subject}</span>
+          <span className="flex items-center gap-1.5 font-semibold" style={{ color: accentFor(task.subject).ink }}>
+            <span className="size-1.5 rounded-full" style={{ background: accentFor(task.subject).mark }} />
+            {task.subject}
+          </span>
           <span className="tnum">Budget {money(task.budget_cents)}</span>
           <Badge status={task.status} />
         </div>
-        <h1 className="max-w-[44rem] font-serif text-[1.75rem] leading-[1.15] font-medium tracking-[-0.015em] sm:text-[2.125rem]">
+        <h1 className="max-w-[44rem] font-serif text-[2.1rem] leading-[1.05] font-medium tracking-[-0.025em] sm:text-[2.875rem]">
           {task.title}
         </h1>
         {hiredBid && !isTutor && (
@@ -90,8 +94,8 @@ export default function TaskPage() {
             <Stars value={hiredBid.tutor_rating_avg} count={hiredBid.tutor_rating_count} />
           </div>
         )}
-        <div className="mt-7 max-w-[40rem]">
-          <Timeline status={task.status} />
+        <div className="mt-8 max-w-[40rem] pb-6">
+          <SessionPath status={task.status} accent={accentFor(task.subject).mark} />
         </div>
       </header>
 

@@ -50,7 +50,9 @@ await student.goto(`${BASE}/student/tasks/new`);
 await shoot(student, "04-new-task");
 await student.getByLabel("Subject").fill("Calculus");
 await student.getByLabel(/What do you need help/).fill("Understand the chain rule for composite functions");
-await student.getByLabel("Details").fill("I keep mixing up the inner and outer functions when differentiating sin(x²).");
+await student
+  .getByLabel("Details")
+  .fill("I keep mixing up the inner and outer functions when differentiating sin(x²).");
 await student.getByLabel(/Budget/).fill("40");
 await student.getByRole("checkbox").check();
 await student.getByRole("button", { name: "Post request" }).click();
@@ -59,7 +61,10 @@ const taskUrl = student.url();
 
 const tutor = await login("tutor@demo.gsht");
 const setup = tutor.getByRole("button", { name: /Set up payouts/ });
-await setup.or(tutor.getByText(/payout account is connected/i)).first().waitFor();
+await setup
+  .or(tutor.getByText(/payout account is connected/i))
+  .first()
+  .waitFor();
 if (await setup.isVisible()) {
   await setup.click();
   await tutor.getByRole("button", { name: /Complete onboarding/ }).click();
@@ -71,7 +76,9 @@ await tutor.goto(taskUrl);
 await tutor.waitForLoadState("networkidle");
 await shoot(tutor, "06-tutor-task-open");
 await tutor.getByLabel(/Your price/).fill("40");
-await tutor.getByPlaceholder(/How you'll help/).fill("I'll walk you through five worked examples, then you try three on your own.");
+await tutor
+  .getByPlaceholder(/How you'll help/)
+  .fill("I'll walk you through five worked examples, then you try three on your own.");
 await tutor.getByRole("button", { name: /Submit bid/ }).click();
 
 await student.reload();
@@ -99,7 +106,7 @@ await shoot(tutor, "10-tutor-task-chat");
 // premium + assistant
 await student.goto(`${BASE}/student`);
 const up = student.getByRole("button", { name: "Upgrade to Premium" });
-await up.or(student.getByText(/Premium is active/)).first().waitFor();
+await up.or(student.getByText("AI tutor · Premium")).first().waitFor();
 if (await up.isVisible()) {
   await up.click();
   await student.getByRole("button", { name: "Pay now" }).click();
@@ -111,7 +118,7 @@ await shoot(student, "11-student-dashboard-active");
 await student.goto(`${BASE}/assistant`);
 await student.getByPlaceholder(/Subject/).fill("Physics");
 await student.getByLabel("Question").fill("Why doesn't a heavier object fall faster?");
-await student.getByRole("button", { name: "Ask" }).click();
+await student.getByRole("button", { name: "Ask", exact: true }).click();
 await student.getByText(/work through this/).waitFor();
 await shoot(student, "12-assistant");
 

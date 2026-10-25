@@ -102,12 +102,21 @@ class FakeLLMProvider:
     name = "fake"
 
     async def generate(self, *, system: str, turns: list[ChatTurn], max_tokens: int) -> LLMResult:
-        question = turns[-1].content if turns else ""
+        question = (turns[-1].content if turns else "").strip()[:200]
+        # Uses the same section labels the real system prompt asks for, so the structured
+        # answer UI renders identically with or without a provider key.
         text = (
-            "[Demo AI — no provider key configured] Let's work through this together. "
-            f"You asked: “{question[:200]}”. First, identify what the question gives you and "
-            "what it asks for. Try the first step yourself and tell me where you get stuck — "
-            "or tap “Ask a live expert” for 1-on-1 help."
+            "[Demo AI — no provider key configured] "
+            "Explanation: Let's work through this together. You asked: "
+            f"“{question}”. Start by naming the **key idea** the question is really about, "
+            "then separate what you are given from what you are asked to find.\n"
+            "Example: In a similar problem, write the givens in one column and the unknown in "
+            "another — the relationship between them is usually the concept to apply.\n"
+            "Hint: Try the very first step yourself and tell me exactly where it stops "
+            "making sense.\n"
+            "Check yourself: Can you explain the idea back in one sentence without notes?\n"
+            "Common mistake: Jumping to a formula before deciding which concept applies.\n"
+            "Still stuck? Tap “Ask a live expert” and a tutor gets this whole conversation."
         )
         return LLMResult(text=text, model="fake-tutor-1", input_tokens=None, output_tokens=None)
 

@@ -132,7 +132,7 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
   // --- Premium AI assistant + escalation to a live expert ------------------------------
   await student.goto("/student");
   const upgrade = student.getByRole("button", { name: "Upgrade to Premium" });
-  await expect(upgrade.or(student.getByText("Premium is active"))).toBeVisible();
+  await expect(upgrade.or(student.getByText("AI tutor · Premium"))).toBeVisible();
   if (await upgrade.isVisible()) {
     await upgrade.click();
     await student.getByRole("button", { name: "Pay now" }).click();
@@ -141,7 +141,7 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
   await student.goto("/assistant");
   await student.getByPlaceholder("Subject (e.g. Calculus)").fill("Physics");
   await student.getByLabel("Question").fill("Why does a heavier object not fall faster?");
-  await student.getByRole("button", { name: "Ask" }).click();
+  await student.getByRole("button", { name: "Ask", exact: true }).click();
   await expect(student.getByTestId("ai-log")).toContainText("Let's work through this together");
   await student.getByRole("button", { name: /Ask a live expert/ }).click();
   await student.waitForURL(/\/student\/tasks\/new\?/);

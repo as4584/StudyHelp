@@ -103,7 +103,7 @@ export function Card({
 
 type Variant = "primary" | "secondary" | "quiet" | "attention" | "danger" | "ghost";
 const VARIANTS: Record<Variant, string> = {
-  primary: "bg-tutor text-white hover:bg-tutor-hover",
+  primary: "btn-tactile bg-tutor text-white hover:bg-tutor-hover",
   secondary: "border border-rule-strong bg-sheet text-ink hover:border-ink-2/40 hover:bg-paper",
   ghost: "border border-rule-strong bg-sheet text-ink hover:border-ink-2/40 hover:bg-paper",
   quiet: "text-ink-2 underline-offset-4 hover:text-ink hover:underline",
@@ -111,7 +111,7 @@ const VARIANTS: Record<Variant, string> = {
   danger: "border border-danger/30 bg-sheet text-danger hover:bg-danger-soft",
 };
 const BTN =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-[6px] px-4 text-[15px] font-semibold whitespace-nowrap transition-[background-color,border-color,color,transform] duration-150 ease-[var(--ease-out)] active:translate-y-px disabled:pointer-events-none disabled:opacity-45 sm:min-h-10";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-[7px] px-4 text-[15px] font-semibold whitespace-nowrap transition-[background-color,border-color,color,transform] duration-150 ease-[var(--ease-out)] active:scale-[0.985] disabled:pointer-events-none disabled:opacity-45 sm:min-h-10";
 
 type BtnProps = React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant };
 

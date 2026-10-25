@@ -1,25 +1,21 @@
 "use client";
 
-import { ArrowUp, LifeBuoy, Sparkles } from "lucide-react";
+import { ArrowUp, BookOpenText, CircleHelp, LifeBuoy, Lightbulb, PencilRuler, Sparkles } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 import { useRequireRole } from "@/components/auth";
-import {
-  Button,
-  DemoTagged,
-  ErrorText,
-  LinkButton,
-  PageHeader,
-  Sheet,
-  Skeleton,
-  inputCls,
-  useAction,
-} from "@/components/ui";
+import { TutorAnswer } from "@/components/tutor-answer";
+import { Button, ErrorText, LinkButton, Skeleton, inputCls, useAction } from "@/components/ui";
 import { api } from "@/lib/api";
+import { accentFor } from "@/lib/subjects";
 
 type Msg = { id: string; role: string; content: string };
 
+/*
+ * Moment 2 — the AI tutor as a study environment: a reading column where answers arrive as
+ * annotated sections, and a context rail (subject, what the annotations mean, escalation).
+ */
 function Workspace() {
   const { me } = useRequireRole("student");
   const router = useRouter();
@@ -48,7 +44,6 @@ function Workspace() {
     [chatId, subject],
   );
 
-  // A question handed over from the study desk starts the conversation.
   useEffect(() => {
     const q = params.get("q");
     if (me?.premium && q && !started.current) {
@@ -61,130 +56,207 @@ function Workspace() {
     bottom.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [msgs.length, a.pending]);
 
+  const escalate = () =>
+    a.run(async () => {
+      const d = await api<{ subject: string; title: string; description: string }>(`/ai/chats/${chatId}/escalate`, {
+        body: {},
+      });
+      router.push(`/student/tasks/new?${new URLSearchParams(d).toString()}`);
+    });
+
   if (!me) return <Skeleton lines={4} />;
   if (!me.premium) {
     return (
-      <div className="max-w-[40rem]">
-        <PageHeader title="AI tutor" lede="Part of Premium — $9.99 a month." />
-        <p className="font-serif text-[18px] leading-relaxed text-ink-2">
-          A patient study coach that explains, asks the right questions and hands you to a live expert when you need
-          one.
+      <div className="max-w-[40rem] pt-4">
+        <div className="micro text-tutor">AI tutor · Premium</div>
+        <h1 className="mt-3 font-serif text-[2.75rem] leading-[1.04] font-medium tracking-[-0.03em]">
+          A patient study coach, any hour.
+        </h1>
+        <p className="mt-4 font-serif text-[19px] leading-relaxed text-ink-2">
+          It explains, gives worked examples and hints, checks your understanding — and hands you to a live expert when
+          you need one.
         </p>
-        <div className="mt-6">
+        <div className="mt-8">
           <LinkButton href="/student">Upgrade from your study desk</LinkButton>
         </div>
       </div>
     );
   }
 
+  const asked = msgs.filter((m) => m.role === "user").length;
+  const accent = accentFor(subject || "general");
+
   return (
-    <div className="mx-auto max-w-[46rem]">
-      <PageHeader
-        title="AI tutor"
-        lede="It guides you to the answer rather than handing it over."
-        action={
-          chatId ? (
-            <Button
-              variant="attention"
-              disabled={a.pending}
-              onClick={() =>
-                a.run(async () => {
-                  const d = await api<{ subject: string; title: string; description: string }>(
-                    `/ai/chats/${chatId}/escalate`,
-                    { body: {} },
-                  );
-                  router.push(`/student/tasks/new?${new URLSearchParams(d).toString()}`);
-                })
-              }
-            >
+    <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_16.5rem] lg:gap-14">
+      <div className="min-w-0">
+        <header className="mb-10">
+          <div className="flex items-center gap-2 text-tutor">
+            <Sparkles size={15} strokeWidth={1.9} aria-hidden />
+            <span className="micro">AI tutor{subject ? ` · ${subject}` : ""}</span>
+          </div>
+          <h1 className="mt-3 font-serif text-[2.4rem] leading-[1.04] font-medium tracking-[-0.03em] sm:text-[3rem]">
+            {asked === 0 ? "Think it through, out loud." : msgs.find((m) => m.role === "user")?.content}
+          </h1>
+          {chatId && (
+            <Button variant="attention" className="mt-5 lg:hidden" disabled={a.pending} onClick={escalate}>
               <LifeBuoy size={16} strokeWidth={1.9} aria-hidden /> Ask a live expert
             </Button>
-          ) : undefined
-        }
-      />
+          )}
+        </header>
 
-      <div className="space-y-7" data-testid="ai-log" aria-live="polite">
-        {msgs.length === 0 && !a.pending && (
-          <p className="font-serif text-[18px] leading-relaxed text-ink-2 italic">
-            Ask about any concept. If it still doesn&apos;t click, bring in a live expert with the whole conversation
-            attached.
-          </p>
-        )}
-        {msgs.map((m) =>
-          m.role === "user" ? (
-            <div
-              key={m.id}
-              className="enter ml-auto w-fit max-w-[85%] rounded-[10px] bg-sunken px-4 py-2.5 text-[15px] text-ink"
-            >
-              {m.content}
-            </div>
-          ) : (
-            <article key={m.id} className="enter">
-              <div className="mb-2 flex items-center gap-2 text-[13px]">
-                <span className="flex size-6 items-center justify-center rounded-full bg-tutor text-white">
-                  <Sparkles size={13} strokeWidth={2} aria-hidden />
-                </span>
-                <span className="font-semibold text-tutor">AI tutor</span>
+        <div className="space-y-10" data-testid="ai-log" aria-live="polite">
+          {msgs.length === 0 && !a.pending && (
+            <p className="max-w-[56ch] font-serif text-[19px] leading-relaxed text-ink-2 italic">
+              Ask about any concept. Answers come as explanations, worked examples, hints and a question to check
+              yourself — and if it still doesn&apos;t click, a live expert can pick up the whole conversation.
+            </p>
+          )}
+          {msgs.map((m, i) =>
+            m.role === "user" ? (
+              i === 0 ? null : (
+                <div key={m.id} className="enter border-t border-rule pt-8">
+                  <div className="micro mb-2 text-muted">You asked</div>
+                  <p className="font-serif text-[1.5rem] leading-snug font-medium tracking-[-0.015em] text-ink">
+                    {m.content}
+                  </p>
+                </div>
+              )
+            ) : (
+              <article key={m.id} aria-label="AI tutor answer">
+                <TutorAnswer content={m.content} />
+              </article>
+            ),
+          )}
+          {a.pending && (
+            <div className="grid gap-x-5 sm:grid-cols-[9.5rem_1fr]" role="status">
+              <div className="flex items-center gap-1.5 text-tutor sm:justify-end">
+                <Sparkles size={14} strokeWidth={2} className="animate-pulse" aria-hidden />
+                <span className="micro">Thinking</span>
               </div>
-              <p className="max-w-[64ch] font-serif text-[17px] leading-[1.65] whitespace-pre-wrap text-ink">
-                <DemoTagged text={m.content} />
-              </p>
-            </article>
-          ),
-        )}
-        {a.pending && (
-          <div className="flex items-center gap-2 text-[14px] text-tutor" role="status">
-            <Sparkles size={15} strokeWidth={1.75} className="animate-pulse" aria-hidden /> Thinking it through…
-          </div>
-        )}
-        <div ref={bottom} />
+              <div className="space-y-2.5 pt-1 pl-4">
+                <div className="skeleton h-3.5 w-[86%]" />
+                <div className="skeleton h-3.5 w-[72%]" />
+                <div className="skeleton h-3.5 w-[54%]" />
+              </div>
+            </div>
+          )}
+          <div ref={bottom} />
+        </div>
+
+        <div className="sticky bottom-4 mt-12">
+          <form
+            className="rounded-[14px] border border-rule bg-sheet/95 p-2.5 shadow-[0_1px_2px_rgb(20_22_27/0.05),0_24px_48px_-24px_rgb(30_27_75/0.35)] backdrop-blur"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const q = question.trim();
+              if (!q) return;
+              setQuestion("");
+              void ask(q);
+            }}
+          >
+            {!chatId && (
+              <input
+                className={`${inputCls} mb-2 min-h-10 border-transparent bg-paper`}
+                placeholder="Subject (e.g. Calculus)"
+                value={subject}
+                maxLength={60}
+                onChange={(e) => setSubject(e.target.value)}
+              />
+            )}
+            <div className="flex items-end gap-2">
+              <textarea
+                aria-label="Question"
+                className="min-h-12 w-full resize-none bg-transparent px-2.5 py-2 font-serif text-[17px] text-ink outline-none placeholder:font-sans placeholder:text-[15px] placeholder:text-muted"
+                rows={2}
+                required
+                value={question}
+                placeholder={chatId ? "Ask a follow-up, or try the next step yourself…" : "What are you stuck on?"}
+                onChange={(e) => setQuestion(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    e.currentTarget.form?.requestSubmit();
+                  }
+                }}
+              />
+              <Button type="submit" disabled={a.pending} aria-label="Ask" className="size-11 shrink-0 px-0">
+                <ArrowUp size={18} strokeWidth={2.25} aria-hidden />
+              </Button>
+            </div>
+            <ErrorText error={a.error} />
+          </form>
+        </div>
       </div>
 
-      <Sheet className="sticky bottom-4 mt-8 p-3">
-        <form
-          className="space-y-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const q = question.trim();
-            if (!q) return;
-            setQuestion("");
-            void ask(q);
-          }}
-        >
-          {!chatId && (
-            <input
-              className={`${inputCls} min-h-10`}
-              placeholder="Subject (e.g. Calculus)"
-              value={subject}
-              maxLength={60}
-              onChange={(e) => setSubject(e.target.value)}
-            />
-          )}
-          <div className="flex items-end gap-2">
-            <textarea
-              aria-label="Question"
-              className={`${inputCls} min-h-11 resize-none`}
-              rows={2}
-              required
-              value={question}
-              placeholder="What are you stuck on?"
-              onChange={(e) => setQuestion(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  e.currentTarget.form?.requestSubmit();
-                }
-              }}
-            />
-            <Button type="submit" disabled={a.pending} aria-label="Ask" className="size-11 shrink-0 px-0 sm:size-11">
-              <ArrowUp size={18} strokeWidth={2.25} aria-hidden />
-              <span className="sr-only">Ask</span>
+      <aside className="hidden lg:block">
+        <div className="sticky top-12 space-y-10">
+          <div>
+            <div className="micro text-muted">This session</div>
+            <dl className="mt-3 space-y-3">
+              <div className="flex items-baseline justify-between">
+                <dt className="text-[14px] text-ink-2">Subject</dt>
+                <dd className="flex items-center gap-1.5 text-[14px] font-semibold" style={{ color: accent.ink }}>
+                  <span className="size-1.5 rounded-full" style={{ background: accent.mark }} />
+                  {subject || "Not set"}
+                </dd>
+              </div>
+              <div className="flex items-baseline justify-between">
+                <dt className="text-[14px] text-ink-2">Questions asked</dt>
+                <dd className="tnum font-serif text-[1.5rem] leading-none font-medium text-ink">{asked}</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div>
+            <div className="micro text-muted">How answers are marked</div>
+            <ul className="mt-3 space-y-2.5 text-[14px]">
+              <Legend icon={BookOpenText} className="text-tutor" label="Explanation" body="the core idea" />
+              <Legend icon={PencilRuler} className="text-tutor" label="Worked example" body="a similar problem" />
+              <Legend icon={Lightbulb} className="text-attention" label="Hint" body="your next move" />
+              <Legend icon={CircleHelp} className="text-mastery" label="Check yourself" body="prove you've got it" />
+            </ul>
+          </div>
+
+          <div className="rounded-[12px] bg-attention-soft p-5">
+            <div className="flex items-center gap-2 text-attention">
+              <LifeBuoy size={16} strokeWidth={1.9} aria-hidden />
+              <span className="micro">Still stuck?</span>
+            </div>
+            <p className="mt-2 font-serif text-[16px] leading-snug text-ink">
+              A vetted tutor picks up exactly where you are — with this conversation attached.
+            </p>
+            <Button
+              variant="attention"
+              className="mt-4 w-full bg-white hover:bg-white/80"
+              disabled={a.pending || !chatId}
+              onClick={escalate}
+            >
+              Ask a live expert
             </Button>
           </div>
-          <ErrorText error={a.error} />
-        </form>
-      </Sheet>
+        </div>
+      </aside>
     </div>
+  );
+}
+
+function Legend({
+  icon: Icon,
+  className,
+  label,
+  body,
+}: {
+  icon: typeof Sparkles;
+  className: string;
+  label: string;
+  body: string;
+}) {
+  return (
+    <li className="flex items-center gap-2.5">
+      <Icon size={15} strokeWidth={2} className={className} aria-hidden />
+      <span className="font-semibold text-ink">{label}</span>
+      <span className="text-muted">· {body}</span>
+    </li>
   );
 }
 
