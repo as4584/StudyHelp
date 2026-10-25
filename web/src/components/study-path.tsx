@@ -21,13 +21,16 @@ export function SessionPath({ status, accent }: { status: string; accent: string
     const y = H / 2 + Math.sin((i / (TIMELINE.length - 1)) * Math.PI * 1.15 - 0.5) * 18;
     return [x, y] as const;
   });
-  const d = pts.reduce((acc, [x, y], i) => {
-    if (i === 0) return `M${x},${y}`;
-    const [px, py] = pts[i - 1];
-    const cx = (px + x) / 2;
-    return `${acc} C${cx},${py} ${cx},${y} ${x},${y}`;
-  }, "");
-  const doneFrac = Math.min(current, TIMELINE.length - 1) / (TIMELINE.length - 1);
+  const curve = (upto: number) =>
+    pts.slice(0, upto + 1).reduce((acc, [x, y], i, arr) => {
+      if (i === 0) return `M${x},${y}`;
+      const [px, py] = arr[i - 1];
+      const cx = (px + x) / 2;
+      return `${acc} C${cx},${py} ${cx},${y} ${x},${y}`;
+    }, "");
+  const d = curve(pts.length - 1);
+  // The travelled line is its own path ending exactly on the current stop.
+  const travelled = current > 0 ? curve(Math.min(current, pts.length - 1)) : null;
 
   return (
     <div
@@ -46,17 +49,19 @@ export function SessionPath({ status, accent }: { status: string; accent: string
           strokeLinecap="round"
         />
         {/* travelled: drawn ink */}
-        <path
-          d={d}
-          fill="none"
-          stroke="var(--mastery-mark)"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          pathLength={1}
-          strokeDasharray={`${doneFrac} 1`}
-          className="path-draw"
-          style={{ ["--f" as string]: doneFrac }}
-        />
+        {travelled && (
+          <path
+            d={travelled}
+            fill="none"
+            stroke="var(--mastery-mark)"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            pathLength={1}
+            strokeDasharray="1 1"
+            className="path-draw"
+            style={{ ["--f" as string]: 1 }}
+          />
+        )}
       </svg>
       <ol className="absolute inset-0">
         {TIMELINE.map((s, i) => {
@@ -100,48 +105,87 @@ export function SessionPath({ status, accent }: { status: string; accent: string
   );
 }
 
-/** Every session as a stop on one path, coloured by subject; fill shows how far it got. */
+/**
+ * Every session as a stop on one continuous path (oldest → newest), coloured by subject; each
+ * ring fills with how far that session got. The path ends in a dashed "next stop".
+ */
 export function PathHistory({
   stops,
+  nextHref,
 }: {
   stops: { id: string; title: string; subject: string; accent: string; progress: number; done: boolean }[];
+  nextHref: string;
 }) {
   if (!stops.length) return null;
+  // Teal runs along the unbroken streak of finished sessions from the start of the path.
+  const firstOpen = stops.findIndex((s) => !s.done);
+  const lead = firstOpen === -1 ? stops.length : firstOpen;
   return (
-    <ol className="relative flex items-center gap-0" aria-label="Your sessions on the study path">
-      {stops.map((s, i) => (
-        <li key={s.id} className="flex min-w-0 flex-1 items-center last:flex-none" title={`${s.title} · ${s.subject}`}>
-          <span className="relative flex size-9 shrink-0 items-center justify-center">
-            <svg viewBox="0 0 36 36" className="absolute inset-0 -rotate-90" aria-hidden>
-              <circle cx="18" cy="18" r="15" fill="var(--sheet)" stroke="var(--rule)" strokeWidth="2.5" />
-              <circle
-                cx="18"
-                cy="18"
-                r="15"
-                fill="none"
-                stroke={s.done ? "var(--mastery-mark)" : s.accent}
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                pathLength={1}
-                strokeDasharray={`${s.progress} 1`}
-                className="path-draw"
-                style={{ ["--f" as string]: s.progress, animationDelay: `${i * 90}ms` }}
-              />
-            </svg>
-            {s.done ? (
-              <Check size={13} strokeWidth={3} className="relative text-mastery" aria-hidden />
-            ) : (
-              <span className="relative size-2 rounded-full" style={{ background: s.accent }} />
-            )}
-            <span className="sr-only">
-              {s.title}: {s.done ? "completed" : `${Math.round(s.progress * 100)}% through`}
+    <div className="relative">
+      <span
+        aria-hidden
+        className="absolute top-[18px] right-6 left-4 h-px border-t-[1.5px] border-dashed border-rule-strong"
+      />
+      {lead > 1 && (
+        <span
+          aria-hidden
+          className="path-grow absolute top-[17px] left-4 h-[2.5px] rounded-full bg-mastery-mark"
+          style={{ width: `calc(${(lead - 1) / (stops.length + 1)} * (100% + 0.75rem))` }}
+        />
+      )}
+      <ol
+        className="relative grid gap-3"
+        style={{ gridTemplateColumns: `repeat(${stops.length + 1}, minmax(0, 1fr))` }}
+        aria-label="Your sessions on the study path"
+      >
+        {stops.map((s, i) => (
+          <li key={s.id} className="min-w-0">
+            <a href={`/tasks/${s.id}`} className="group block">
+              <span className="relative flex size-9 items-center justify-center">
+                <svg viewBox="0 0 36 36" className="absolute inset-0 -rotate-90" aria-hidden>
+                  <circle cx="18" cy="18" r="15" fill="var(--sheet)" stroke="var(--rule)" strokeWidth="2.5" />
+                  <circle
+                    cx="18"
+                    cy="18"
+                    r="15"
+                    fill="none"
+                    stroke={s.done ? "var(--mastery-mark)" : s.accent}
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    pathLength={1}
+                    strokeDasharray={`${s.progress} 1`}
+                    className="path-draw"
+                    style={{ ["--f" as string]: s.progress, animationDelay: `${i * 90}ms` }}
+                  />
+                </svg>
+                {s.done ? (
+                  <Check size={13} strokeWidth={3} className="relative text-mastery" aria-hidden />
+                ) : (
+                  <span className="relative size-2 rounded-full" style={{ background: s.accent }} />
+                )}
+              </span>
+              <span className="micro mt-3 block truncate" style={{ color: s.accent }}>
+                {s.subject}
+              </span>
+              <span className="mt-0.5 line-clamp-2 block font-serif text-[14px] leading-snug text-ink-2 transition-colors group-hover:text-tutor">
+                {s.title}
+              </span>
+              <span className="sr-only">{s.done ? "completed" : `${Math.round(s.progress * 100)}% through`}</span>
+            </a>
+          </li>
+        ))}
+        <li className="min-w-0">
+          <a href={nextHref} className="group block">
+            <span className="flex size-9 items-center justify-center rounded-full border-[1.5px] border-dashed border-rule-strong bg-paper text-[18px] text-muted transition-colors group-hover:border-tutor group-hover:text-tutor">
+              +
             </span>
-          </span>
-          {i < stops.length - 1 && (
-            <span className="mx-1 h-px flex-1 border-t border-dashed border-rule-strong" aria-hidden />
-          )}
+            <span className="micro mt-3 block text-muted">Next stop</span>
+            <span className="mt-0.5 block font-serif text-[14px] leading-snug text-ink-2 group-hover:text-tutor">
+              Start a new session
+            </span>
+          </a>
         </li>
-      ))}
-    </ol>
+      </ol>
+    </div>
   );
 }

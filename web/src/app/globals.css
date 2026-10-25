@@ -152,6 +152,16 @@ p {
   animation: draw 1100ms cubic-bezier(0.65, 0, 0.35, 1) 150ms both;
 }
 
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+.path-grow {
+  transform-origin: left;
+  animation: grow 900ms cubic-bezier(0.65, 0, 0.35, 1) 200ms both;
+}
+
 /* Staggered reveal for composed moments (hero, tutor answer sections). */
 @keyframes reveal {
   from {

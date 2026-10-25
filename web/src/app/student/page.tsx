@@ -105,8 +105,8 @@ function Focus({ task, bids }: { task: Task; bids: number }) {
     >
       <span
         aria-hidden
-        className="pointer-events-none absolute -top-10 right-2 -z-10 font-serif text-[15rem] leading-none italic select-none sm:-top-16 sm:right-8 sm:text-[22rem]"
-        style={{ color: accent.mark, opacity: 0.09 }}
+        className="pointer-events-none absolute top-1/2 right-4 -z-10 -translate-y-[46%] font-serif text-[13rem] leading-none italic select-none sm:right-14 sm:text-[19rem]"
+        style={{ color: accent.mark, opacity: 0.11 }}
       >
         {GLYPH[family]}
       </span>
@@ -230,7 +230,7 @@ function Progress({ view }: { view: View }) {
           </dl>
 
           <div className="mt-8">
-            <PathHistory stops={stops} />
+            <PathHistory stops={stops} nextHref="/student/tasks/new" />
           </div>
 
           <ul className="mt-8 divide-y divide-rule border-t border-rule">

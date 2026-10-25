@@ -193,9 +193,9 @@ function ActionSheet({
     tone
   ];
   return (
-    <Sheet className="enter p-5 sm:p-6">
-      <div className={`mb-1 text-[13px] font-semibold ${color}`}>Next step</div>
-      <h2 className="mb-4 font-serif text-[1.25rem] leading-snug font-medium text-ink">{title}</h2>
+    <Sheet className="enter p-6 shadow-[0_1px_2px_rgb(20_22_27/0.05),0_24px_48px_-28px_rgb(30_27_75/0.28)] sm:p-7">
+      <div className={`micro mb-2 ${color}`}>Next step</div>
+      <h2 className="mb-5 font-serif text-[1.75rem] leading-[1.1] font-medium tracking-[-0.02em] text-ink">{title}</h2>
       <div className="space-y-4">{children}</div>
     </Sheet>
   );

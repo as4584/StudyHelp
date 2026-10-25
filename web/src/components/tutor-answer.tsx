@@ -60,7 +60,7 @@ function Inline({ text }: { text: string }) {
           return (
             <mark
               key={i}
-              className="rounded-[3px] bg-[linear-gradient(transparent_58%,#dcdaf9_58%)] px-0.5 font-semibold text-ink"
+              className="rounded-[2px] bg-transparent bg-[linear-gradient(transparent_60%,#d9d7f8_60%)] px-0.5 font-semibold text-ink"
             >
               {t.slice(2, -2)}
             </mark>
