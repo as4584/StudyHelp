@@ -4,6 +4,7 @@ import asyncio
 import logging
 import time
 from typing import Any
+from urllib.parse import urlencode
 
 import stripe
 
@@ -40,11 +41,14 @@ class StripeGateway:
                 duration_ms=round((time.perf_counter() - start) * 1000, 1),
             )
 
-    def _return_urls(self) -> dict[str, str]:
+    def _return_urls(self, metadata: dict[str, str] | None = None) -> dict[str, str]:
         base = self._s.web_base_url
+        meta = metadata or {}
+        extra = urlencode([(k, meta[k]) for k in ("kind", "task_id") if k in meta])
+        extra = f"&{extra}" if extra else ""
         return {
-            "success_url": f"{base}/payments/return?status=success",
-            "cancel_url": f"{base}/payments/return?status=cancel",
+            "success_url": f"{base}/payments/return?status=success{extra}",
+            "cancel_url": f"{base}/payments/return?status=cancel{extra}",
         }
 
     async def create_payment_checkout(
@@ -71,7 +75,7 @@ class StripeGateway:
             ],
             "payment_intent_data": {"transfer_group": transfer_group, "metadata": metadata},
             "metadata": metadata,
-            **self._return_urls(),
+            **self._return_urls(metadata),
         }
         if customer_email:
             params["customer_email"] = customer_email
@@ -93,7 +97,7 @@ class StripeGateway:
             "line_items": [{"price": self._s.stripe_premium_price_id, "quantity": 1}],
             "metadata": metadata,
             "subscription_data": {"metadata": metadata},
-            **self._return_urls(),
+            **self._return_urls(metadata),
         }
         if customer_email:
             params["customer_email"] = customer_email

@@ -107,11 +107,13 @@ class FakeLLMProvider:
         # answer UI renders identically with or without a provider key.
         text = (
             "[Demo AI — no provider key configured] "
+            "Key idea: Name the concept first — the method follows from it.\n"
             "Explanation: Let's work through this together. You asked: "
             f"“{question}”. Start by naming the **key idea** the question is really about, "
             "then separate what you are given from what you are asked to find.\n"
             "Example: In a similar problem, write the givens in one column and the unknown in "
             "another — the relationship between them is usually the concept to apply.\n"
+            "Try this: Write one line: “I am given ___ and I need ___.”\n"
             "Hint: Try the very first step yourself and tell me exactly where it stops "
             "making sense.\n"
             "Check yourself: Can you explain the idea back in one sentence without notes?\n"

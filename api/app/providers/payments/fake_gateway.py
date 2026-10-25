@@ -10,6 +10,7 @@ import hmac
 import json
 import uuid
 from typing import Any
+from urllib.parse import urlencode
 
 from app.core.config import Settings
 from app.providers.payments.base import CheckoutSession, ConnectOnboarding
@@ -29,9 +30,12 @@ class FakeGateway:
             self._idem[key] = f"{prefix}_fake_{uuid.uuid4().hex[:16]}"
         return self._idem[key]
 
-    def _checkout(self, key: str) -> CheckoutSession:
+    def _checkout(self, key: str, metadata: dict[str, str] | None = None) -> CheckoutSession:
         sid = self._id("cs", key)
-        return CheckoutSession(id=sid, url=f"{self._s.web_base_url}/checkout/simulated/{sid}")
+        meta = metadata or {}
+        query = urlencode([(k, meta[k]) for k in ("kind", "task_id") if k in meta])
+        url = f"{self._s.web_base_url}/checkout/simulated/{sid}" + (f"?{query}" if query else "")
+        return CheckoutSession(id=sid, url=url)
 
     async def create_payment_checkout(
         self,
@@ -43,12 +47,12 @@ class FakeGateway:
         customer_email: str | None,
         idempotency_key: str,
     ) -> CheckoutSession:
-        return self._checkout(idempotency_key)
+        return self._checkout(idempotency_key, metadata)
 
     async def create_subscription_checkout(
         self, *, metadata: dict[str, str], customer_email: str | None, idempotency_key: str
     ) -> CheckoutSession:
-        return self._checkout(idempotency_key)
+        return self._checkout(idempotency_key, metadata)
 
     async def create_transfer(
         self,

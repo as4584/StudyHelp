@@ -49,7 +49,7 @@ async def test_frontend_cannot_fake_payment(flow: Flow, db) -> None:  # type: ig
 async def test_duplicate_webhook_event_is_ignored(flow: Flow, db) -> None:  # type: ignore[no-untyped-def]
     await flow.to("hired")
     r = await flow.client.post(f"/tasks/{flow.task_id}/checkout", headers=flow.student.h)
-    sid = r.json()["url"].rsplit("/", 1)[1]
+    sid = r.json()["url"].split("?")[0].rsplit("/", 1)[1]
     p = await _payment(db, flow.task_id)
     from app.core.db import get_sessionmaker
     from app.providers.payments import get_gateway
@@ -173,7 +173,7 @@ async def test_tips_go_fully_to_tutor_and_are_validated(flow: Flow, db) -> None:
     r = await c.post(
         f"/tasks/{flow.task_id}/tips", headers=flow.student.h, json={"amount_cents": 500}
     )
-    sid = r.json()["url"].rsplit("/", 1)[1]
+    sid = r.json()["url"].split("?")[0].rsplit("/", 1)[1]
     r = await c.post(f"/simulated/checkout/{sid}/complete", headers=flow.student.h)
     assert r.status_code == 200
     tip = await db.fetchrow("select * from tips")
@@ -189,7 +189,7 @@ async def test_other_student_cannot_complete_someone_elses_checkout(
 ) -> None:
     await flow.to("hired")
     r = await flow.client.post(f"/tasks/{flow.task_id}/checkout", headers=flow.student.h)
-    sid = r.json()["url"].rsplit("/", 1)[1]
+    sid = r.json()["url"].split("?")[0].rsplit("/", 1)[1]
     other = await make_user("student")
     r = await flow.client.post(f"/simulated/checkout/{sid}/complete", headers=other.h)
     assert r.status_code == 404
@@ -201,7 +201,7 @@ async def test_subscription_activates_and_deactivates_premium(
     s = await make_user("student")
     assert (await client.get("/me", headers=s.h)).json()["premium"] is False
     r = await client.post("/premium/checkout", headers=s.h)
-    sid = r.json()["url"].rsplit("/", 1)[1]
+    sid = r.json()["url"].split("?")[0].rsplit("/", 1)[1]
     await client.post(f"/simulated/checkout/{sid}/complete", headers=s.h)
     assert (await client.get("/me", headers=s.h)).json()["premium"] is True
     assert (await client.post("/premium/checkout", headers=s.h)).status_code == 409
@@ -273,3 +273,24 @@ async def test_webhook_endpoint_rejects_unsigned(client) -> None:  # type: ignor
     assert (await client.post("/webhooks/stripe", content=b"{}")).status_code == 400
     r = await client.post("/webhooks/stripe", content=b"{}", headers={"stripe-signature": "bad"})
     assert r.status_code == 400
+
+
+async def test_quote_is_server_computed_and_owner_only(flow: Flow, make_user: UserFactory) -> None:
+    await flow.to("hired", amount=4000)
+    r = await flow.client.get(f"/tasks/{flow.task_id}/quote", headers=flow.student.h)
+    assert r.status_code == 200
+    q = r.json()
+    assert (q["amount_cents"], q["platform_fee_cents"], q["tutor_net_cents"]) == (4000, 1000, 3000)
+    other = await make_user("student")
+    assert (
+        await flow.client.get(f"/tasks/{flow.task_id}/quote", headers=other.h)
+    ).status_code == 404
+    assert (
+        await flow.client.get(f"/tasks/{flow.task_id}/quote", headers=flow.tutor.h)
+    ).status_code == 403
+
+
+async def test_checkout_url_carries_task_context(flow: Flow) -> None:
+    await flow.to("hired")
+    r = await flow.client.post(f"/tasks/{flow.task_id}/checkout", headers=flow.student.h)
+    assert f"task_id={flow.task_id}" in r.json()["url"] and "kind=task_payment" in r.json()["url"]

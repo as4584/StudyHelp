@@ -557,6 +557,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tasks/{task_id}/quote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Task Quote */
+        get: operations["task_quote_tasks__task_id__quote_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tasks/{task_id}/release": {
         parameters: {
             query?: never;
@@ -1113,6 +1130,22 @@ export interface components {
              * Format: uuid
              */
             user_id: string;
+        };
+        /** QuoteOut */
+        QuoteOut: {
+            /** Amount Cents */
+            amount_cents: number;
+            /** Platform Fee Bps */
+            platform_fee_bps: number;
+            /** Platform Fee Cents */
+            platform_fee_cents: number;
+            /**
+             * Task Id
+             * Format: uuid
+             */
+            task_id: string;
+            /** Tutor Net Cents */
+            tutor_net_cents: number;
         };
         /** RedirectOut */
         RedirectOut: {
@@ -2461,6 +2494,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TaskPaymentState"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    task_quote_tasks__task_id__quote_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteOut"];
                 };
             };
             /** @description Validation Error */

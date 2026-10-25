@@ -257,7 +257,7 @@ class Flow:
     async def pay(self) -> str:
         r = await self.client.post(f"/tasks/{self.task_id}/checkout", headers=self.student.h)
         assert r.status_code == 200, r.text
-        session_id = r.json()["url"].rsplit("/", 1)[1]
+        session_id = r.json()["url"].split("?")[0].rsplit("/", 1)[1]
         r = await self.client.post(
             f"/simulated/checkout/{session_id}/complete", headers=self.student.h
         )

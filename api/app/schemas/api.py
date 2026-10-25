@@ -170,6 +170,14 @@ class PaymentOut(ORM):
     created_at: datetime
 
 
+class QuoteOut(BaseModel):
+    task_id: uuid.UUID
+    amount_cents: int
+    platform_fee_bps: int
+    platform_fee_cents: int
+    tutor_net_cents: int
+
+
 class TransferOut(ORM):
     id: uuid.UUID
     amount_cents: int

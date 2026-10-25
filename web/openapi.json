@@ -793,6 +793,40 @@
         "title": "PublicTutorOut",
         "type": "object"
       },
+      "QuoteOut": {
+        "properties": {
+          "amount_cents": {
+            "title": "Amount Cents",
+            "type": "integer"
+          },
+          "platform_fee_bps": {
+            "title": "Platform Fee Bps",
+            "type": "integer"
+          },
+          "platform_fee_cents": {
+            "title": "Platform Fee Cents",
+            "type": "integer"
+          },
+          "task_id": {
+            "format": "uuid",
+            "title": "Task Id",
+            "type": "string"
+          },
+          "tutor_net_cents": {
+            "title": "Tutor Net Cents",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "task_id",
+          "amount_cents",
+          "platform_fee_bps",
+          "platform_fee_cents",
+          "tutor_net_cents"
+        ],
+        "title": "QuoteOut",
+        "type": "object"
+      },
       "RedirectOut": {
         "properties": {
           "url": {
@@ -3155,6 +3189,54 @@
           }
         ],
         "summary": "Payment State",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/tasks/{task_id}/quote": {
+      "get": {
+        "operationId": "task_quote_tasks__task_id__quote_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Task Quote",
         "tags": [
           "payments"
         ]

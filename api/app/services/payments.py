@@ -98,6 +98,19 @@ async def start_premium_checkout(
 # --------------------------------------------------------------------------- task payment
 
 
+async def quote_task(
+    session: AsyncSession, student: CurrentUser, task_id: uuid.UUID
+) -> tuple[Task, int, int, int, int]:
+    """Server-computed price split shown before checkout (amount, bps, fee, tutor net)."""
+    task = await get_visible_task(session, student, task_id)
+    if task.student_id != student.id:
+        raise NotFound("task not found")
+    if task.hired_tutor_id is None:
+        raise InvalidState("hire a tutor first")
+    split = split_payment(await accepted_amount(session, task), get_settings().platform_fee_bps)
+    return task, split.amount_cents, split.fee_bps, split.platform_fee_cents, split.tutor_net_cents
+
+
 async def start_task_checkout(
     session: AsyncSession, gateway: PaymentGateway, student: CurrentUser, task_id: uuid.UUID
 ) -> str:

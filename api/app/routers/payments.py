@@ -13,6 +13,7 @@ from app.providers.payments import get_gateway
 from app.providers.payments.base import PaymentGateway
 from app.schemas.api import (
     PaymentOut,
+    QuoteOut,
     RedirectOut,
     TaskPaymentState,
     TipIn,
@@ -30,6 +31,18 @@ async def task_checkout(
     task_id: uuid.UUID, student: StudentDep, session: SessionDep, gateway: GatewayDep
 ) -> RedirectOut:
     return RedirectOut(url=await payments.start_task_checkout(session, gateway, student, task_id))
+
+
+@router.get("/tasks/{task_id}/quote", response_model=QuoteOut)
+async def task_quote(task_id: uuid.UUID, student: StudentDep, session: SessionDep) -> QuoteOut:
+    task, amount, bps, fee, net = await payments.quote_task(session, student, task_id)
+    return QuoteOut(
+        task_id=task.id,
+        amount_cents=amount,
+        platform_fee_bps=bps,
+        platform_fee_cents=fee,
+        tutor_net_cents=net,
+    )
 
 
 @router.post("/tasks/{task_id}/release", response_model=TransferOut)
