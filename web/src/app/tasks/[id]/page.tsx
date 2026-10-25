@@ -81,7 +81,7 @@ export default function TaskPage() {
         <h1 className="max-w-[44rem] font-serif text-[1.75rem] leading-[1.15] font-medium tracking-[-0.015em] sm:text-[2.125rem]">
           {task.title}
         </h1>
-        {hiredBid && (
+        {hiredBid && !isTutor && (
           <div className="mt-3 flex items-center gap-2 text-[14px] text-ink-2">
             <Avatar name={hiredBid.tutor_name} tone="tutor" />
             <span>

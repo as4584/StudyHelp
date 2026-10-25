@@ -92,3 +92,31 @@ non-demo users. Demo-day risk → fix in seed (dev-only script).
 API calls, payloads, routes, auth flow, role guards, business rules, data-testids/labels used by
 `web/e2e/demo-loop.spec.ts` (labels may only change together with the test, behaviour never), the
 honor-code requirement, DEMO MODE labelling, and the honest fee breakdown.
+
+---
+
+## After — UI refinement (branch `ui-refinement`)
+
+Evidence: `artifacts/design/round1`, `round2`, `round3` (same 13 screens × 3 widths).
+
+| Before | After |
+| --- | --- |
+| Purple gradient hero, eyebrow, 6 numbered cards | Editorial headline in Newsreader beside the product's real working surface (translated exchange + held-payment receipt); session sequence as one timeline |
+| Every block a rounded card | Paper ground; sheets only for things you work in (next step, conversation, receipt, forms); hairline-ruled sections elsewhere |
+| Dashboard greeting + upsell first | "Study desk": the **Next up** block is computed from real task state and is the largest thing on the screen; the AI tutor is one textarea away |
+| Solid indigo stepper blocks | Quiet timeline: teal = done, indigo ring = current, rule = ahead; segmented bar in dense lists |
+| Pastel pills everywhere | Dot + text in semantic tone, stated once per screen |
+| Generic chat bubbles | Other person's voice in the reading serif; yours in a quiet sunken bubble; translation and demo labels as small tags |
+| Equal KPI tiles | One headline figure (fees earned) + a ledger line of the rest; muted when zero |
+| Native file input, unicode icons | Designed file picker; lucide icon set at one stroke |
+
+Critique rounds (three most important tells each round, all fixed):
+1. Dead right rail before hire · mobile buried the conversation under details · seed names with
+   role suffixes and honorific initials ("P").
+2. Fixed-height chat with a void · demo-adapter prefixes inside reading text · truncated names /
+   stale seed subjects.
+3. Duplicate status statement on tutor desk (caught by E2E) · tutor shown "with" themself.
+
+Remaining weaknesses: no dark theme; demo adapters' bracketed labels still visible (intentional
+honesty); no illustrations/photography (deliberately none rather than stock); video sessions
+absent (Phase 1b); compact timeline has no tooltip per step.
