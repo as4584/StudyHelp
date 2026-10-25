@@ -54,3 +54,6 @@ asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
 markers = ["integration: needs the local Postgres (Supabase) stack"]
+
+[tool.ruff.lint.isort]
+known-third-party = ["alembic"]
