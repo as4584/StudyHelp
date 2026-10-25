@@ -28,18 +28,35 @@ export default function LoginPage() {
           }}
         >
           <Field label="Email">
-            <input className={inputCls} type="email" autoComplete="email" required value={email}
-              onChange={(e) => setEmail(e.target.value)} />
+            <input
+              className={inputCls}
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
           </Field>
           <Field label="Password">
-            <input className={inputCls} type="password" autoComplete="current-password" required
-              value={password} onChange={(e) => setPassword(e.target.value)} />
+            <input
+              className={inputCls}
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
           </Field>
           <ErrorText error={error} />
-          <Button type="submit" disabled={pending} className="w-full">{pending ? "Signing in…" : "Sign in"}</Button>
+          <Button type="submit" disabled={pending} className="w-full">
+            {pending ? "Signing in…" : "Sign in"}
+          </Button>
         </form>
         <p className="mt-4 text-center text-sm text-muted">
-          New here? <Link className="text-brand" href="/signup">Create an account</Link>
+          New here?{" "}
+          <Link className="text-brand" href="/signup">
+            Create an account
+          </Link>
         </p>
       </Card>
     </div>

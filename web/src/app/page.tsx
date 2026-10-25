@@ -15,15 +15,21 @@ export default function Home() {
       <section className="rounded-3xl bg-gradient-to-br from-indigo-600 to-violet-600 px-5 py-10 text-white sm:px-10 sm:py-14">
         <p className="text-sm font-medium uppercase tracking-wide text-indigo-100">Global Study Help Tutor</p>
         <h1 className="mt-2 text-3xl font-bold leading-tight sm:text-5xl">
-          AI answers in seconds.<br />Real experts when you need them.
+          AI answers in seconds.
+          <br />
+          Real experts when you need them.
         </h1>
         <p className="mt-4 max-w-xl text-indigo-100">
-          Affordable 1-on-1 tutoring and concept walkthroughs from vetted global experts — with
-          built-in translation and payments held until your session is delivered.
+          Affordable 1-on-1 tutoring and concept walkthroughs from vetted global experts — with built-in translation and
+          payments held until your session is delivered.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link href="/signup" className="rounded-xl bg-white px-5 py-3 font-semibold text-indigo-700">Get started</Link>
-          <Link href="/login" className="rounded-xl border border-white/40 px-5 py-3 font-semibold">Sign in</Link>
+          <Link href="/signup" className="rounded-xl bg-white px-5 py-3 font-semibold text-indigo-700">
+            Get started
+          </Link>
+          <Link href="/login" className="rounded-xl border border-white/40 px-5 py-3 font-semibold">
+            Sign in
+          </Link>
         </div>
       </section>
 
@@ -41,9 +47,8 @@ export default function Home() {
       </section>
 
       <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-        <strong>Learning, not shortcuts.</strong> Tutors explain concepts, review your reasoning and
-        create practice material. Never share school portal logins — upload a screenshot of your
-        rubric instead.
+        <strong>Learning, not shortcuts.</strong> Tutors explain concepts, review your reasoning and create practice
+        material. Never share school portal logins — upload a screenshot of your rubric instead.
       </section>
     </div>
   );

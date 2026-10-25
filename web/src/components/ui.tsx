@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 
-export function Card({ title, action, children, className = "" }: {
+export function Card({
+  title,
+  action,
+  children,
+  className = "",
+}: {
   title?: React.ReactNode;
   action?: React.ReactNode;
   children: React.ReactNode;
@@ -38,14 +43,21 @@ export function Button({ variant = "primary", className = "", ...props }: BtnPro
   );
 }
 
-export function LinkButton({ href, children, variant = "primary" }: {
+export function LinkButton({
+  href,
+  children,
+  variant = "primary",
+}: {
   href: string;
   children: React.ReactNode;
   variant?: "primary" | "ghost";
 }) {
   const styles = variant === "primary" ? "bg-brand text-brand-ink" : "border border-border bg-surface";
   return (
-    <Link href={href} className={`inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-medium ${styles}`}>
+    <Link
+      href={href}
+      className={`inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-medium ${styles}`}
+    >
       {children}
     </Link>
   );
@@ -83,7 +95,10 @@ const STATUS_STYLES: Record<string, string> = {
 
 export function Badge({ status }: { status: string }) {
   return (
-    <span data-testid="status" className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${STATUS_STYLES[status] ?? "bg-gray-100"}`}>
+    <span
+      data-testid="status"
+      className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${STATUS_STYLES[status] ?? "bg-gray-100"}`}
+    >
       {status}
     </span>
   );
@@ -91,7 +106,11 @@ export function Badge({ status }: { status: string }) {
 
 export function ErrorText({ error }: { error: string | null }) {
   if (!error) return null;
-  return <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>;
+  return (
+    <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+      {error}
+    </p>
+  );
 }
 
 /** Wraps an async action with pending + error state. */

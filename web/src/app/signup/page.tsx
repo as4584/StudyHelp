@@ -28,14 +28,28 @@ export default function SignupPage() {
           }}
         >
           <Field label="Email">
-            <input className={inputCls} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input
+              className={inputCls}
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
           </Field>
           <Field label="Password" hint="At least 8 characters">
-            <input className={inputCls} type="password" minLength={8} required value={password}
-              onChange={(e) => setPassword(e.target.value)} />
+            <input
+              className={inputCls}
+              type="password"
+              minLength={8}
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
           </Field>
           <ErrorText error={error} />
-          <Button type="submit" disabled={pending} className="w-full">Continue</Button>
+          <Button type="submit" disabled={pending} className="w-full">
+            Continue
+          </Button>
         </form>
       </Card>
     </div>
