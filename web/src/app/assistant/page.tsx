@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 import { useRequireRole } from "@/components/auth";
+import { PathLine } from "@/components/path-line";
 import { TutorAnswer } from "@/components/tutor-answer";
 import { Button, ErrorText, LinkButton, Skeleton, inputCls, useAction } from "@/components/ui";
 import { api } from "@/lib/api";
@@ -27,6 +28,7 @@ function Workspace() {
   const a = useAction();
   const started = useRef(false);
   const bottom = useRef<HTMLDivElement>(null);
+  const composer = useRef<HTMLTextAreaElement>(null);
 
   const ask = useCallback(
     (q: string) =>
@@ -84,21 +86,53 @@ function Workspace() {
   }
 
   const asked = msgs.filter((m) => m.role === "user").length;
+  // Practice is real: the student sent their own attempt (via "Write my attempt").
+  const attempted = msgs.some((m) => m.role === "user" && /^my attempt/i.test(m.content));
   const accent = accentFor(subject || "general");
 
   return (
     <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_16.5rem] lg:gap-14">
       <div className="min-w-0">
-        <header className="mb-10">
-          <div className="flex items-center gap-2 text-tutor">
+        <header className="relative isolate mb-12 overflow-hidden rounded-[16px] bg-tutor-deep px-6 pt-7 pb-8 text-white shadow-[0_30px_60px_-30px_rgb(30_27_75/0.6)] sm:px-9 sm:pt-9 sm:pb-10">
+          <div
+            aria-hidden
+            className="absolute inset-0 -z-10"
+            style={{
+              background:
+                "radial-gradient(60% 70% at 100% 0%, rgb(129 140 248 / 0.45), transparent 70%), radial-gradient(50% 60% at 0% 100%, rgb(20 184 166 / 0.16), transparent 70%)",
+            }}
+          />
+          <div className="flex items-center gap-2 text-lavender">
             <Sparkles size={15} strokeWidth={1.9} aria-hidden />
             <span className="micro">AI tutor{subject ? ` · ${subject}` : ""}</span>
           </div>
-          <h1 className="mt-3 font-serif text-[2.4rem] leading-[1.04] font-medium tracking-[-0.03em] sm:text-[3rem]">
+          <h1 className="mt-3 max-w-[22ch] font-serif text-[2.2rem] leading-[1.05] font-medium tracking-[-0.03em] sm:text-[3rem]">
             {asked === 0 ? "Think it through, out loud." : msgs.find((m) => m.role === "user")?.content}
           </h1>
+          <div className="mt-7 max-w-[30rem]">
+            <PathLine
+              tone="dark"
+              stages={[
+                { label: "Question", state: asked ? "done" : "current" },
+                {
+                  label: "Understand",
+                  state: attempted ? "done" : msgs.some((m) => m.role === "assistant") ? "current" : "upcoming",
+                },
+                {
+                  label: "Practice",
+                  state: attempted ? "done" : "upcoming",
+                  note: attempted ? undefined : "send an attempt",
+                },
+              ]}
+            />
+          </div>
           {chatId && (
-            <Button variant="attention" className="mt-5 lg:hidden" disabled={a.pending} onClick={escalate}>
+            <Button
+              variant="attention"
+              className="mt-7 bg-white text-attention hover:bg-attention-soft lg:hidden"
+              disabled={a.pending}
+              onClick={escalate}
+            >
               <LifeBuoy size={16} strokeWidth={1.9} aria-hidden /> Ask a live expert
             </Button>
           )}
@@ -123,7 +157,13 @@ function Workspace() {
               )
             ) : (
               <article key={m.id} aria-label="AI tutor answer">
-                <TutorAnswer content={m.content} />
+                <TutorAnswer
+                  content={m.content}
+                  onTry={(prefix) => {
+                    setQuestion(prefix);
+                    composer.current?.focus();
+                  }}
+                />
               </article>
             ),
           )}
@@ -165,6 +205,7 @@ function Workspace() {
             )}
             <div className="flex items-end gap-2">
               <textarea
+                ref={composer}
                 aria-label="Question"
                 className="min-h-12 w-full resize-none bg-transparent px-2.5 py-2 font-serif text-[17px] text-ink outline-none placeholder:font-sans placeholder:text-[15px] placeholder:text-muted"
                 rows={2}
