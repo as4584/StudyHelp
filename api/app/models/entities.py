@@ -195,9 +195,7 @@ class Subscription(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("profiles.id"), unique=True
     )
-    provider_subscription_id: Mapped[str | None] = mapped_column(
-        String, nullable=True, unique=True
-    )
+    provider_subscription_id: Mapped[str | None] = mapped_column(String, nullable=True, unique=True)
     status: Mapped[str] = mapped_column(String)
     current_period_end: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

@@ -74,7 +74,9 @@ class Settings(BaseSettings):
             self.storage_provider,
         ):
             raise ValueError("Fake adapters are not allowed in production")
-        if self.llm_provider == "anthropic" and not (self.anthropic_api_key and self.anthropic_model):
+        if self.llm_provider == "anthropic" and not (
+            self.anthropic_api_key and self.anthropic_model
+        ):
             raise ValueError("ANTHROPIC_API_KEY and ANTHROPIC_MODEL are required")
         if self.llm_provider == "openai" and not (self.openai_api_key and self.openai_model):
             raise ValueError("OPENAI_API_KEY and OPENAI_MODEL are required")

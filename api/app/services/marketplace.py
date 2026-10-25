@@ -38,11 +38,7 @@ async def get_visible_task(
         raise NotFound("task not found")
     if user.role == "admin" or _is_party(user, task):
         return task
-    if (
-        user.role == "tutor"
-        and task.status == "open"
-        and await tutor_is_approved(session, user.id)
-    ):
+    if user.role == "tutor" and task.status == "open" and await tutor_is_approved(session, user.id):
         return task
     raise NotFound("task not found")
 
@@ -151,9 +147,7 @@ async def accepted_amount(session: AsyncSession, task: Task) -> int:
     return bid.amount_cents
 
 
-async def deliver(
-    session: AsyncSession, tutor: CurrentUser, task_id: uuid.UUID, note: str
-) -> Task:
+async def deliver(session: AsyncSession, tutor: CurrentUser, task_id: uuid.UUID, note: str) -> Task:
     task = await get_visible_task(session, tutor, task_id, for_update=True)
     if task.hired_tutor_id != tutor.id:
         raise Forbidden("only the hired tutor can deliver")
@@ -216,7 +210,9 @@ async def open_dispute(
     if not _is_party(user, task):
         raise Forbidden("only the student or hired tutor can open a dispute")
     ensure_transition(task.status, "disputed")
-    dispute = Dispute(task_id=task.id, opened_by=user.id, reason=reason, prior_task_status=task.status)
+    dispute = Dispute(
+        task_id=task.id, opened_by=user.id, reason=reason, prior_task_status=task.status
+    )
     task.status = "disputed"
     session.add(dispute)
     audit(session, actor=user.id, action="dispute.opened", entity_type="task", entity_id=task.id)

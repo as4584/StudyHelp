@@ -53,7 +53,11 @@ class SupabaseStorage:
 
 class FakeStorage:
     async def signed_upload(self, bucket: str, path: str) -> SignedUpload:
-        return SignedUpload(url=f"https://storage.invalid/{bucket}/{path}?token=t", token="t", path=path)
+        return SignedUpload(
+            url=f"https://storage.invalid/{bucket}/{path}?token=fake",
+            token="fake",
+            path=path,
+        )
 
     async def signed_download(self, bucket: str, path: str, expires_in: int = 300) -> str:
         return f"https://storage.invalid/{bucket}/{path}?sig=fake"

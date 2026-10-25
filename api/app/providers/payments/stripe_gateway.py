@@ -178,9 +178,7 @@ class StripeGateway:
 
     def parse_webhook(self, payload: bytes, signature: str) -> dict[str, Any]:
         try:
-            evt = stripe.Webhook.construct_event(
-                payload, signature, self._s.stripe_webhook_secret
-            )
+            evt = stripe.Webhook.construct_event(payload, signature, self._s.stripe_webhook_secret)
         except (stripe.SignatureVerificationError, ValueError) as exc:
             raise ValueError("invalid stripe webhook") from exc
         result: dict[str, Any] = evt.to_dict()

@@ -65,9 +65,18 @@ async def ask(
     chat = await _owned_chat(session, user, chat_id)
     premium = await is_premium(session, user.id)
     if not premium:
-        session.add(AiUsage(user_id=user.id, chat_id=chat.id, provider=llm.name, model="-",
-                            status="denied", latency_ms=0, premium=False,
-                            request_id=request_id_var.get()))
+        session.add(
+            AiUsage(
+                user_id=user.id,
+                chat_id=chat.id,
+                provider=llm.name,
+                model="-",
+                status="denied",
+                latency_ms=0,
+                premium=False,
+                request_id=request_id_var.get(),
+            )
+        )
         await session.commit()
         raise Forbidden("the AI study assistant is a Premium feature")
 
@@ -84,22 +93,48 @@ async def ask(
         )
     except LLMError as exc:
         latency = round((time.perf_counter() - start) * 1000)
-        session.add(AiUsage(user_id=user.id, chat_id=chat.id, provider=llm.name, model="-",
-                            status="error", latency_ms=latency, premium=True,
-                            request_id=request_id_var.get()))
+        session.add(
+            AiUsage(
+                user_id=user.id,
+                chat_id=chat.id,
+                provider=llm.name,
+                model="-",
+                status="error",
+                latency_ms=latency,
+                premium=True,
+                request_id=request_id_var.get(),
+            )
+        )
         await session.commit()
         event(log, "llm.failed", logging.WARNING, provider=llm.name, error=str(exc))
         raise ProviderError("the AI assistant is temporarily unavailable") from exc
     latency = round((time.perf_counter() - start) * 1000)
     reply = AiMessage(chat_id=chat.id, role="assistant", content=result.text)
     session.add(reply)
-    session.add(AiUsage(user_id=user.id, chat_id=chat.id, provider=llm.name, model=result.model,
-                        status="ok", latency_ms=latency, input_tokens=result.input_tokens,
-                        output_tokens=result.output_tokens, premium=True,
-                        request_id=request_id_var.get()))
+    session.add(
+        AiUsage(
+            user_id=user.id,
+            chat_id=chat.id,
+            provider=llm.name,
+            model=result.model,
+            status="ok",
+            latency_ms=latency,
+            input_tokens=result.input_tokens,
+            output_tokens=result.output_tokens,
+            premium=True,
+            request_id=request_id_var.get(),
+        )
+    )
     await session.commit()
-    event(log, "llm.ok", provider=llm.name, model=result.model, latency_ms=latency,
-          input_tokens=result.input_tokens, output_tokens=result.output_tokens)
+    event(
+        log,
+        "llm.ok",
+        provider=llm.name,
+        model=result.model,
+        latency_ms=latency,
+        input_tokens=result.input_tokens,
+        output_tokens=result.output_tokens,
+    )
     return reply
 
 

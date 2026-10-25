@@ -91,18 +91,40 @@ async def send_message(
         start = time.perf_counter()
         try:
             text = await translator.translate(body, source=source, target=target)
-            tr = MessageTranslation(message_id=msg.id, conversation_id=conv.id,
-                                    target_language=target, translated_body=text,
-                                    provider=translator.name, status="ok")
+            tr = MessageTranslation(
+                message_id=msg.id,
+                conversation_id=conv.id,
+                target_language=target,
+                translated_body=text,
+                provider=translator.name,
+                status="ok",
+            )
         except TranslationError as exc:
-            event(log, "translation.failed", logging.WARNING, provider=translator.name,
-                  error=str(exc), message_id=str(msg.id))
-            tr = MessageTranslation(message_id=msg.id, conversation_id=conv.id,
-                                    target_language=target, translated_body=None,
-                                    provider=translator.name, status="failed", error=str(exc)[:200])
+            event(
+                log,
+                "translation.failed",
+                logging.WARNING,
+                provider=translator.name,
+                error=str(exc),
+                message_id=str(msg.id),
+            )
+            tr = MessageTranslation(
+                message_id=msg.id,
+                conversation_id=conv.id,
+                target_language=target,
+                translated_body=None,
+                provider=translator.name,
+                status="failed",
+                error=str(exc)[:200],
+            )
         tr.latency_ms = round((time.perf_counter() - start) * 1000)
-        event(log, "translation.done", provider=translator.name, status=tr.status,
-              latency_ms=tr.latency_ms)
+        event(
+            log,
+            "translation.done",
+            provider=translator.name,
+            status=tr.status,
+            latency_ms=tr.latency_ms,
+        )
         session.add(tr)
         await session.commit()
         results.append(tr)

@@ -153,7 +153,8 @@ async def _tutor_payout_account(session: AsyncSession, tutor_id: uuid.UUID) -> s
 async def _held_payment(session: AsyncSession, task: Task) -> Payment:
     payment = (
         await session.execute(
-            select(Payment).where(Payment.task_id == task.id, Payment.status == "held")
+            select(Payment)
+            .where(Payment.task_id == task.id, Payment.status == "held")
             .with_for_update()
         )
     ).scalar_one_or_none()
@@ -196,8 +197,14 @@ async def _transfer_payment(
         transfer_id=transfer.provider_transfer_id,
         platform_fee_cents=payment.platform_fee_cents,
     )
-    audit(session, actor=actor, action="payment.released", entity_type="payment",
-          entity_id=payment.id, metadata={"tutor_net_cents": payment.tutor_net_cents})
+    audit(
+        session,
+        actor=actor,
+        action="payment.released",
+        entity_type="payment",
+        entity_id=payment.id,
+        metadata={"tutor_net_cents": payment.tutor_net_cents},
+    )
     return transfer
 
 
@@ -237,10 +244,20 @@ async def admin_refund(
     )
     payment.status = "refunded"
     task.status = "refunded"
-    _ledger(session, "payment.refunded", payment=payment, amount_cents=payment.amount_cents,
-            refund_id=refund_id)
-    audit(session, actor=admin.id, action="payment.refunded", entity_type="payment",
-          entity_id=payment.id)
+    _ledger(
+        session,
+        "payment.refunded",
+        payment=payment,
+        amount_cents=payment.amount_cents,
+        refund_id=refund_id,
+    )
+    audit(
+        session,
+        actor=admin.id,
+        action="payment.refunded",
+        entity_type="payment",
+        entity_id=payment.id,
+    )
     return payment
 
 
@@ -260,8 +277,12 @@ async def start_tip_checkout(
         raise NotFound("task not found")
     if task.status != "completed" or task.hired_tutor_id is None:
         raise InvalidState("tips are available after the session is completed")
-    tip = Tip(task_id=task.id, student_id=student.id, tutor_id=task.hired_tutor_id,
-              amount_cents=amount_cents)
+    tip = Tip(
+        task_id=task.id,
+        student_id=student.id,
+        tutor_id=task.hired_tutor_id,
+        amount_cents=amount_cents,
+    )
     session.add(tip)
     await session.flush()
     _ledger(session, "tip.created", tip=tip, amount_cents=amount_cents)
@@ -284,8 +305,12 @@ async def _transfer_tip(session: AsyncSession, gateway: PaymentGateway, tip: Tip
     if tp is None or not tp.stripe_account_id or not tp.payouts_enabled:
         event(log, "tip.transfer_deferred", tip_id=str(tip.id))
         return
-    transfer = Transfer(tip_id=tip.id, tutor_id=tip.tutor_id, amount_cents=tip.amount_cents,
-                        idempotency_key=f"tip-transfer:{tip.id}")
+    transfer = Transfer(
+        tip_id=tip.id,
+        tutor_id=tip.tutor_id,
+        amount_cents=tip.amount_cents,
+        idempotency_key=f"tip-transfer:{tip.id}",
+    )
     session.add(transfer)
     await session.flush()
     transfer.provider_transfer_id = await gateway.create_transfer(
@@ -297,8 +322,13 @@ async def _transfer_tip(session: AsyncSession, gateway: PaymentGateway, tip: Tip
     )
     transfer.status = "created"
     tip.status = "transferred"
-    _ledger(session, "tip.transferred", tip=tip, amount_cents=tip.amount_cents,
-            transfer_id=transfer.provider_transfer_id)
+    _ledger(
+        session,
+        "tip.transferred",
+        tip=tip,
+        amount_cents=tip.amount_cents,
+        transfer_id=transfer.provider_transfer_id,
+    )
 
 
 # --------------------------------------------------------------------------- connect
@@ -321,9 +351,7 @@ async def start_connect_onboarding(
 # --------------------------------------------------------------------------- webhooks
 
 
-async def process_event(
-    session: AsyncSession, gateway: PaymentGateway, evt: dict[str, Any]
-) -> str:
+async def process_event(session: AsyncSession, gateway: PaymentGateway, evt: dict[str, Any]) -> str:
     """Apply one verified provider event exactly once. Returns 'processed' or 'duplicate'.
 
     The idempotency row is inserted in the SAME transaction as the effects: if handling
@@ -375,8 +403,13 @@ async def _on_checkout_completed(
         assert task is not None
         ensure_transition(task.status, "paid")
         task.status = "paid"
-        _ledger(session, "payment.held", payment=payment, amount_cents=payment.amount_cents,
-                provider_event_id=event_id)
+        _ledger(
+            session,
+            "payment.held",
+            payment=payment,
+            amount_cents=payment.amount_cents,
+            provider_event_id=event_id,
+        )
     elif kind == "tip":
         tip = (
             await session.execute(
@@ -388,23 +421,33 @@ async def _on_checkout_completed(
         pi = obj.get("payment_intent")
         tip.charge_id = await gateway.resolve_charge(pi) if pi else None
         tip.status = "paid"
-        _ledger(session, "tip.paid", tip=tip, amount_cents=tip.amount_cents,
-                provider_event_id=event_id)
+        _ledger(
+            session, "tip.paid", tip=tip, amount_cents=tip.amount_cents, provider_event_id=event_id
+        )
         await _transfer_tip(session, gateway, tip)
     elif kind == "subscription":
         user_id = uuid.UUID(meta["user_id"])
         await session.execute(
             insert(Subscription)
-            .values(user_id=user_id, provider_subscription_id=obj.get("subscription"),
-                    status="active")
+            .values(
+                user_id=user_id, provider_subscription_id=obj.get("subscription"), status="active"
+            )
             .on_conflict_do_update(
                 index_elements=["user_id"],
-                set_={"provider_subscription_id": obj.get("subscription"), "status": "active",
-                      "updated_at": func.now()},
+                set_={
+                    "provider_subscription_id": obj.get("subscription"),
+                    "status": "active",
+                    "updated_at": func.now(),
+                },
             )
         )
-        audit(session, actor=None, action="subscription.activated", entity_type="profile",
-              entity_id=user_id)
+        audit(
+            session,
+            actor=None,
+            action="subscription.activated",
+            entity_type="profile",
+            entity_id=user_id,
+        )
 
 
 async def _on_checkout_expired(

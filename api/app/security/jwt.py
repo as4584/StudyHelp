@@ -50,9 +50,7 @@ class RemoteKeySource:
 
 
 class TokenVerifier:
-    def __init__(
-        self, keys: KeySource, issuer: str, audience: str, algorithms: list[str]
-    ) -> None:
+    def __init__(self, keys: KeySource, issuer: str, audience: str, algorithms: list[str]) -> None:
         # Symmetric algorithms are never accepted: they would let anyone holding the
         # legacy shared secret mint tokens, and enable alg-confusion attacks.
         allowed = [a for a in algorithms if not a.startswith("HS")]

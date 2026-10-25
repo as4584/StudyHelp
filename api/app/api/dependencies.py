@@ -87,7 +87,7 @@ async def get_current_user(claims: ClaimsDep, session: SessionDep) -> CurrentUse
 UserDep = Annotated[CurrentUser, Depends(get_current_user)]
 
 
-def require_role(*roles: str) -> Callable[[CurrentUser], Awaitable[CurrentUser]]:
+def require_role(*roles: str) -> Callable[..., Awaitable[CurrentUser]]:
     async def guard(user: UserDep, request: Request) -> CurrentUser:
         if user.role not in roles:
             event(

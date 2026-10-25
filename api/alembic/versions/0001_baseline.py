@@ -5,6 +5,8 @@ Revises:
 Create Date: 2026-10-25
 """
 
+from sqlalchemy.util import await_
+
 from alembic import op
 
 revision = "0001_baseline"
@@ -104,12 +106,14 @@ create table bids (
   tutor_id uuid not null references profiles(id),
   amount_cents integer not null check (amount_cents between 500 and 500000),
   message text not null default '' check (length(message) <= 2000),
-  status text not null default 'pending' check (status in ('pending','accepted','rejected','withdrawn')),
+  status text not null default 'pending'
+    check (status in ('pending','accepted','rejected','withdrawn')),
   created_at timestamptz not null default now(),
   unique (task_id, tutor_id)
 );
 create unique index bids_one_accepted_per_task on bids(task_id) where status = 'accepted';
-alter table tasks add constraint tasks_accepted_bid_fk foreign key (accepted_bid_id) references bids(id);
+alter table tasks add constraint tasks_accepted_bid_fk
+  foreign key (accepted_bid_id) references bids(id);
 
 create table payments (
   id uuid primary key default gen_random_uuid(),
@@ -377,15 +381,21 @@ end $$;
 """
 
 
+def _script(sql: str) -> None:
+    """Run a multi-statement SQL script (asyncpg prepared statements allow only one)."""
+    adapted = op.get_bind().connection.dbapi_connection
+    await_(adapted.driver_connection.execute(sql))
+
+
 def upgrade() -> None:
-    op.execute(SCHEMA)
-    op.execute(RLS % {"tables": ", ".join(f"'{t}'" for t in TABLES)})
-    op.execute(STORAGE)
-    op.execute(REALTIME)
+    _script(SCHEMA)
+    _script(RLS % {"tables": ", ".join(f"'{t}'" for t in TABLES)})
+    _script(STORAGE)
+    _script(REALTIME)
 
 
 def downgrade() -> None:
-    op.execute(
+    _script(
         """
         do $$
         begin

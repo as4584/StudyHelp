@@ -23,8 +23,14 @@ async def set_tutor_status(
         raise NotFound("tutor application not found")
     before = tp.status
     tp.status = status
-    audit(session, actor=admin.id, action=f"tutor.{status}", entity_type="tutor_profile",
-          entity_id=tutor_id, metadata={"before": before, "after": status})
+    audit(
+        session,
+        actor=admin.id,
+        action=f"tutor.{status}",
+        entity_type="tutor_profile",
+        entity_id=tutor_id,
+        metadata={"before": before, "after": status},
+    )
     await session.commit()
     return tp
 
@@ -38,8 +44,13 @@ async def set_user_active(
     if profile is None:
         raise NotFound("user not found")
     profile.is_active = active
-    audit(session, actor=admin.id, action="user.reactivated" if active else "user.suspended",
-          entity_type="profile", entity_id=user_id)
+    audit(
+        session,
+        actor=admin.id,
+        action="user.reactivated" if active else "user.suspended",
+        entity_type="profile",
+        entity_id=user_id,
+    )
     await session.commit()
     return profile
 
@@ -70,8 +81,14 @@ async def resolve_dispute(
     dispute.resolution_note = note
     dispute.resolved_by = admin.id
     dispute.resolved_at = datetime.now(UTC)
-    audit(session, actor=admin.id, action=f"dispute.{dispute.status}", entity_type="dispute",
-          entity_id=dispute.id, metadata={"task_id": str(task.id)})
+    audit(
+        session,
+        actor=admin.id,
+        action=f"dispute.{dispute.status}",
+        entity_type="dispute",
+        entity_id=dispute.id,
+        metadata={"task_id": str(task.id)},
+    )
     await session.commit()
     return dispute
 
@@ -91,7 +108,7 @@ class RevenueSummary:
 
 async def revenue_summary(session: AsyncSession, fee_bps: int) -> RevenueSummary:
     def total(col: object, status: str):  # type: ignore[no-untyped-def]
-        return func.coalesce(func.sum(col).filter(Payment.status == status), 0)  # type: ignore[arg-type]
+        return func.coalesce(func.sum(col).filter(Payment.status == status), 0)
 
     row = (
         await session.execute(

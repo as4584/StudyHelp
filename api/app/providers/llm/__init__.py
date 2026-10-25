@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Literal, Protocol
+from typing import Any, Literal, Protocol, cast
 
 from app.core.config import Settings, get_settings
 
@@ -28,7 +28,9 @@ class LLMError(Exception):
 class LLMProvider(Protocol):
     name: str
 
-    async def generate(self, *, system: str, turns: list[ChatTurn], max_tokens: int) -> LLMResult: ...
+    async def generate(
+        self, *, system: str, turns: list[ChatTurn], max_tokens: int
+    ) -> LLMResult: ...
 
 
 class ClaudeProvider:
@@ -47,7 +49,7 @@ class ClaudeProvider:
                 model=self._model,
                 max_tokens=max_tokens,
                 system=system,
-                messages=[{"role": t.role, "content": t.content} for t in turns],
+                messages=cast(Any, [{"role": t.role, "content": t.content} for t in turns]),
             )
         except self._errors as exc:
             raise LLMError(f"anthropic: {type(exc).__name__}") from exc
@@ -75,10 +77,13 @@ class OpenAIProvider:
             resp = await self._client.chat.completions.create(
                 model=self._model,
                 max_completion_tokens=max_tokens,
-                messages=[
-                    {"role": "system", "content": system},
-                    *({"role": t.role, "content": t.content} for t in turns),
-                ],
+                messages=cast(
+                    Any,
+                    [
+                        {"role": "system", "content": system},
+                        *({"role": t.role, "content": t.content} for t in turns),
+                    ],
+                ),
             )
         except self._errors as exc:
             raise LLMError(f"openai: {type(exc).__name__}") from exc
