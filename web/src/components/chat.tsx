@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, LANGUAGES, type Message } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 
-import { Button, ErrorText, Sheet, inputCls, useAction } from "./ui";
+import { Button, DemoTagged, ErrorText, Sheet, inputCls, useAction } from "./ui";
 
 /**
  * Translated session conversation. Messages are always read from FastAPI; Supabase Realtime
@@ -58,7 +58,7 @@ export function Chat({ conversationId, meId, myLang }: { conversationId: string;
   }, [messages.length]);
 
   return (
-    <Sheet className="flex h-[min(38rem,75dvh)] flex-col">
+    <Sheet className="flex max-h-[min(40rem,80dvh)] min-h-[22rem] flex-col">
       <div className="flex items-center justify-between gap-3 border-b border-rule px-5 py-3.5">
         <h2 className="font-serif text-[17px] font-medium text-ink">Conversation</h2>
         <span className="flex items-center gap-1.5 text-[13px] text-muted">
@@ -90,7 +90,9 @@ export function Chat({ conversationId, meId, myLang }: { conversationId: string;
           }
           return (
             <div key={m.id} className="enter max-w-[94%]" data-testid="chat-message">
-              <p className="font-serif text-[16.5px] leading-[1.6] whitespace-pre-wrap text-ink">{text}</p>
+              <p className="font-serif text-[16.5px] leading-[1.6] whitespace-pre-wrap text-ink">
+                <DemoTagged text={text} />
+              </p>
               <div className="mt-1 flex flex-wrap items-center gap-x-2 text-[12px] text-muted">
                 <span>{time}</span>
                 {translated && (

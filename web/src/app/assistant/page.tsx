@@ -5,7 +5,17 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 import { useRequireRole } from "@/components/auth";
-import { Button, ErrorText, LinkButton, PageHeader, Sheet, Skeleton, inputCls, useAction } from "@/components/ui";
+import {
+  Button,
+  DemoTagged,
+  ErrorText,
+  LinkButton,
+  PageHeader,
+  Sheet,
+  Skeleton,
+  inputCls,
+  useAction,
+} from "@/components/ui";
 import { api } from "@/lib/api";
 
 type Msg = { id: string; role: string; content: string };
@@ -117,7 +127,7 @@ function Workspace() {
                 <span className="font-semibold text-tutor">AI tutor</span>
               </div>
               <p className="max-w-[64ch] font-serif text-[17px] leading-[1.65] whitespace-pre-wrap text-ink">
-                {m.content}
+                <DemoTagged text={m.content} />
               </p>
             </article>
           ),

@@ -405,3 +405,21 @@ export function Timeline({ status, compact = false }: { status: string; compact?
     </ol>
   );
 }
+
+/**
+ * Demo adapters prefix their output with a bracketed label ("[ES→EN] ", "[Demo AI — …] ").
+ * Keep it visible (honesty) but set it as a quiet tag instead of inside the reading text.
+ * The tag keeps its trailing space so the text content is unchanged.
+ */
+export function DemoTagged({ text }: { text: string }) {
+  const m = /^(\[[^\]]{1,80}\])\s/.exec(text);
+  if (!m) return <>{text}</>;
+  return (
+    <>
+      <span className="mr-1 inline-block translate-y-[-1px] rounded-[4px] bg-sunken px-1.5 py-px align-middle font-sans text-[11px] font-semibold tracking-[0.01em] text-muted">
+        {m[1]}
+      </span>{" "}
+      {text.slice(m[0].length)}
+    </>
+  );
+}

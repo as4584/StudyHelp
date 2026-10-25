@@ -93,7 +93,7 @@ function Account() {
     <div className="flex items-center gap-2.5">
       <Avatar name={me.profile.display_name} tone={me.profile.role === "tutor" ? "tutor" : "muted"} />
       <div className="min-w-0 flex-1 leading-tight">
-        <div data-testid="whoami" className="truncate text-[14px] font-semibold text-ink">
+        <div data-testid="whoami" className="text-[14px] leading-snug font-semibold break-words text-ink">
           {me.profile.display_name}
         </div>
         <div className="text-[12px] text-muted capitalize">
