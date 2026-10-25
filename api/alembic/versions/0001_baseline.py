@@ -5,9 +5,8 @@ Revises:
 Create Date: 2026-10-25
 """
 
-from sqlalchemy.util import await_
-
 from alembic import op
+from sqlalchemy.util import await_
 
 revision = "0001_baseline"
 down_revision = None

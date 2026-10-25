@@ -110,9 +110,8 @@ async def database() -> AsyncIterator[None]:
     await conn.execute((Path(__file__).parent / "supabase_stub.sql").read_text())
     await conn.close()
 
-    from alembic.config import Config
-
     from alembic import command
+    from alembic.config import Config
 
     cfg = Config(str(Path(__file__).parents[1] / "alembic.ini"))
     cfg.set_main_option("script_location", str(Path(__file__).parents[1] / "alembic"))
