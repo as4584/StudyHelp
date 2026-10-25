@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    name: scripts/check (full gate)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # secret scan covers full history
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.23"
+          enable-cache: true
+          cache-dependency-glob: api/uv.lock
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install API dependencies
+        working-directory: api
+        run: uv sync --frozen
+
+      - name: Install web dependencies and Chromium
+        working-directory: web
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Start local Supabase (Postgres/Auth/Realtime/Storage) with an ES256 signing key
+        run: |
+          uv run --project api --with cryptography python scripts/gen_signing_key.py
+          cd infra && npx --yes supabase@2.122.0 start
+
+      - name: Write local env files from the running stack
+        run: scripts/local-env
+
+      - name: Canonical quality gate
+        run: scripts/check
+
+      - name: Keep diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostics-${{ github.run_id }}
+          path: |
+            artifacts/
+          retention-days: 14
+
+  api-image:
+    name: API image (build once + smoke)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build release image
+        run: docker build --build-arg GIT_SHA=${{ github.sha }} -t gsht-api:${{ github.sha }} api
+      - name: Smoke-test the built image (identity + no fakes in production config)
+        run: |
+          docker run -d --name api -p 8000:8000 -e ENVIRONMENT=demo gsht-api:${{ github.sha }}
+          for i in $(seq 1 30); do curl -sf localhost:8000/health && break; sleep 1; done
+          curl -sf localhost:8000/health | tee health.json
+          grep -q '"git_sha":"${{ github.sha }}"' health.json
+          docker run --rm -e ENVIRONMENT=production gsht-api:${{ github.sha }} python -c "from app.core.config import Settings; Settings()" \
+            && { echo "production config accepted fake adapters"; exit 1; } || echo "production refuses fake adapters: ok"
+          docker exec api id -u | grep -qv '^0$'
