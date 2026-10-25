@@ -18,12 +18,34 @@ mkdirSync(OUT, { recursive: true });
 
 const browser = await chromium.launch();
 
+// QA probe: per screen and width, record overflow, clipped text and page errors.
+const qa = [];
+async function probe(page, name, w) {
+  const r = await page.evaluate(() => {
+    const W = document.documentElement.clientWidth;
+    const overflow = document.documentElement.scrollWidth - W;
+    const clipped = [...document.querySelectorAll("h1,h2,h3,p,button,a,dd,span")]
+      .filter((el) => el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflow !== "visible")
+      .slice(0, 5)
+      .map((el) => el.textContent.trim().slice(0, 40));
+    return { overflow, clipped };
+  });
+  qa.push({ screen: name, width: w, ...r, errors: page.__errors ?? [] });
+}
+
 async function shoot(page, name) {
+  if (!page.__hooked) {
+    page.__hooked = true;
+    page.__errors = [];
+    page.on("pageerror", (e) => page.__errors.push(e.message));
+    page.on("console", (m) => m.type() === "error" && page.__errors.push(m.text().slice(0, 120)));
+  }
   for (const [w, h] of WIDTHS) {
     await page.setViewportSize({ width: w, height: h });
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.waitForTimeout(w === 1440 ? 1600 : 400); // let entry motion finish (capture only)
     await page.screenshot({ path: `${OUT}/${name}-${w}.png`, fullPage: true });
+    await probe(page, name, w);
   }
   await page.setViewportSize({ width: 1440, height: 900 });
 }
@@ -152,4 +174,5 @@ const admin = await login("admin@demo.gsht");
 await shoot(admin, "13-admin");
 
 await browser.close();
+await import("node:fs").then((fs) => fs.writeFileSync(`${OUT}/qa.json`, JSON.stringify(qa, null, 2)));
 console.log(`shots written to ${OUT}`);
