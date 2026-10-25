@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Health sweep + environment diagnostics. Read-only; prints no secret values.
+#   scripts/diagnostics [api_url=http://127.0.0.1:8000] [web_url=http://localhost:3000]
+set -uo pipefail
+cd "$(dirname "$0")/.."
+API="${1:-http://127.0.0.1:8000}"; WEB="${2:-http://localhost:3000}"
+
+section() { printf '\n== %s\n' "$*"; }
+section "git";        git rev-parse --short HEAD; git status --short | head -20
+section "toolchain";  uv --version; node --version; docker --version 2>/dev/null || echo "docker: missing"
+section "supabase"   # URLs only; keys are never printed
+(cd infra && npx --yes supabase@2.122.0 status -o env 2>/dev/null | grep -E '^(API_URL|DB_URL)=' | sed 's#//[^:]*:[^@]*@#//***:***@#')   || echo "local supabase not running"
+section "env";        (cd api && uv run --frozen python scripts/env_check.py) || true
+section "api";        curl -s -m 5 "$API/health" || echo "unreachable"; echo; curl -s -m 5 "$API/ready" || echo "not ready"; echo
+section "web";        curl -s -m 5 -o /dev/null -w "HTTP %{http_code}\n" "$WEB" || echo "unreachable"
+section "migrations"; (cd api && uv run --frozen alembic current 2>/dev/null) || echo "unable to read alembic revision"

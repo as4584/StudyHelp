@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Verify a deployed API is the expected release and is safely configured.
+#   scripts/verify-release <api_base_url> <expected_git_sha>
+set -euo pipefail
+API="${1:?api base url}"; SHA="${2:?expected git sha}"
+fail() { echo "verify-release: FAIL - $*"; exit 1; }
+
+health="$(curl -sf "$API/health")" || fail "/health unreachable"
+echo "health: $health"
+echo "$health" | grep -q "\"git_sha\":\"$SHA" || fail "running sha does not match $SHA"
+
+ready="$(curl -sf "$API/ready")" || fail "/ready not ready"
+echo "ready:  $ready"
+
+code="$(curl -s -o /dev/null -w '%{http_code}' "$API/me")"
+[[ "$code" == "401" ]] || fail "unauthenticated /me returned $code (expected 401)"
+
+code="$(curl -s -o /dev/null -w '%{http_code}' -X POST "$API/webhooks/stripe" -d '{}')"
+[[ "$code" == "400" ]] || fail "unsigned webhook returned $code (expected 400)"
+
+echo "verify-release: OK ($SHA)"

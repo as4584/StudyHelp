@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0 # secret scan covers full history
 
@@ -29,7 +29,7 @@ jobs:
           enable-cache: true
           cache-dependency-glob: api/uv.lock
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -58,7 +58,7 @@ jobs:
 
       - name: Keep diagnostics on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: diagnostics-${{ github.run_id }}
           path: |
@@ -70,7 +70,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Build release image
         run: docker build --build-arg GIT_SHA=${{ github.sha }} -t gsht-api:${{ github.sha }} api
       - name: Smoke-test the built image (identity + no fakes in production config)
