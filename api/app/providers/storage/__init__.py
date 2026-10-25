@@ -55,7 +55,7 @@ class FakeStorage:
     async def signed_upload(self, bucket: str, path: str) -> SignedUpload:
         return SignedUpload(
             url=f"https://storage.invalid/{bucket}/{path}?token=fake",
-            token="fake",
+            token="fake",  # noqa: S106 - placeholder for the fake adapter
             path=path,
         )
 
