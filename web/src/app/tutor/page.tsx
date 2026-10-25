@@ -69,7 +69,7 @@ export default function TutorDesk() {
 
       {tutor?.status === "pending" && (
         <p className="mb-10 max-w-[60ch] font-serif text-[18px] leading-relaxed text-ink-2">
-          Your application is under review. You&apos;ll be able to send offers as soon as an admin approves it.
+          You&apos;ll be able to send offers as soon as an admin approves your application.
         </p>
       )}
 
