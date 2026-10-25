@@ -59,8 +59,15 @@ class KeyPair:
 
     def jwk(self) -> dict[str, str]:
         nums = self.private.public_key().public_numbers()
-        return {"kty": "EC", "crv": "P-256", "alg": "ES256", "use": "sig", "kid": self.kid,
-                "x": _b64(nums.x), "y": _b64(nums.y)}
+        return {
+            "kty": "EC",
+            "crv": "P-256",
+            "alg": "ES256",
+            "use": "sig",
+            "kid": self.kid,
+            "x": _b64(nums.x),
+            "y": _b64(nums.y),
+        }
 
 
 TRUSTED = KeyPair("trusted-key", ec.generate_private_key(ec.SECP256R1()))
@@ -69,9 +76,15 @@ UNTRUSTED = KeyPair("trusted-key", ec.generate_private_key(ec.SECP256R1()))  # s
 
 def make_token(sub: str, *, key: KeyPair = TRUSTED, **overrides: Any) -> str:
     now = int(time.time())
-    claims: dict[str, Any] = {"sub": sub, "aud": "authenticated", "iss": ISSUER,
-                              "role": "authenticated", "iat": now, "exp": now + 600,
-                              "email": f"{sub[:8]}@test.local"}
+    claims: dict[str, Any] = {
+        "sub": sub,
+        "aud": "authenticated",
+        "iss": ISSUER,
+        "role": "authenticated",
+        "iat": now,
+        "exp": now + 600,
+        "email": f"{sub[:8]}@test.local",
+    }
     claims.update(overrides)
     for k in [k for k, v in claims.items() if v is None]:
         del claims[k]
@@ -79,8 +92,9 @@ def make_token(sub: str, *, key: KeyPair = TRUSTED, **overrides: Any) -> str:
 
 
 def test_verifier() -> TokenVerifier:
-    return TokenVerifier(StaticKeySource({"keys": [TRUSTED.jwk()]}), ISSUER, "authenticated",
-                         ["ES256"])
+    return TokenVerifier(
+        StaticKeySource({"keys": [TRUSTED.jwk()]}), ISSUER, "authenticated", ["ES256"]
+    )
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -96,8 +110,9 @@ async def database() -> AsyncIterator[None]:
     await conn.execute((Path(__file__).parent / "supabase_stub.sql").read_text())
     await conn.close()
 
-    from alembic import command
     from alembic.config import Config
+
+    from alembic import command
 
     cfg = Config(str(Path(__file__).parents[1] / "alembic.ini"))
     cfg.set_main_option("script_location", str(Path(__file__).parents[1] / "alembic"))
@@ -169,18 +184,26 @@ def make_user(db: asyncpg.Connection) -> UserFactory:
         await db.execute("insert into auth.users(id, email) values ($1, $2)", uid, f"{uid}@t")
         await db.execute(
             "insert into profiles(id, role, display_name, preferred_language) values ($1,$2,$3,$4)",
-            uid, role, name or f"{role}-{str(uid)[:4]}", lang,
+            uid,
+            role,
+            name or f"{role}-{str(uid)[:4]}",
+            lang,
         )
         if role == "tutor":
             await db.execute(
                 "insert into tutor_profiles(user_id, bio, subjects, hourly_rate_cents, status,"
                 " stripe_account_id, payouts_enabled) values ($1,'bio','{Math}',2000,$2,$3,$4)",
-                uid, tutor_status, f"acct_fake_{uid.hex[:12]}" if payouts else None, payouts,
+                uid,
+                tutor_status,
+                f"acct_fake_{uid.hex[:12]}" if payouts else None,
+                payouts,
             )
         if premium:
             await db.execute(
                 "insert into subscriptions(user_id, provider_subscription_id, status)"
-                " values ($1, $2, 'active')", uid, f"sub_{uid.hex[:10]}",
+                " values ($1, $2, 'active')",
+                uid,
+                f"sub_{uid.hex[:10]}",
             )
         return User(uid, role, make_token(str(uid)))
 
@@ -199,24 +222,35 @@ class Flow:
     conversation_id: str = ""
 
     async def post_task(self, budget: int = 4000) -> str:
-        r = await self.client.post("/tasks", headers=self.student.h, json={
-            "subject": "Math", "title": "Help me understand derivatives",
-            "description": "Chain rule practice", "budget_cents": budget,
-            "honor_code_ack": True})
+        r = await self.client.post(
+            "/tasks",
+            headers=self.student.h,
+            json={
+                "subject": "Math",
+                "title": "Help me understand derivatives",
+                "description": "Chain rule practice",
+                "budget_cents": budget,
+                "honor_code_ack": True,
+            },
+        )
         assert r.status_code == 201, r.text
         self.task_id = r.json()["id"]
         return self.task_id
 
     async def bid(self, amount: int = 4000) -> str:
-        r = await self.client.post(f"/tasks/{self.task_id}/bids", headers=self.tutor.h,
-                                   json={"amount_cents": amount, "message": "Happy to help"})
+        r = await self.client.post(
+            f"/tasks/{self.task_id}/bids",
+            headers=self.tutor.h,
+            json={"amount_cents": amount, "message": "Happy to help"},
+        )
         assert r.status_code == 201, r.text
         self.bid_id = r.json()["id"]
         return self.bid_id
 
     async def hire(self) -> None:
-        r = await self.client.post(f"/tasks/{self.task_id}/hire", headers=self.student.h,
-                                   json={"bid_id": self.bid_id})
+        r = await self.client.post(
+            f"/tasks/{self.task_id}/hire", headers=self.student.h, json={"bid_id": self.bid_id}
+        )
         assert r.status_code == 200, r.text
         r = await self.client.get(f"/tasks/{self.task_id}/conversation", headers=self.student.h)
         self.conversation_id = r.json()["id"]
@@ -225,14 +259,18 @@ class Flow:
         r = await self.client.post(f"/tasks/{self.task_id}/checkout", headers=self.student.h)
         assert r.status_code == 200, r.text
         session_id = r.json()["url"].rsplit("/", 1)[1]
-        r = await self.client.post(f"/simulated/checkout/{session_id}/complete",
-                                   headers=self.student.h)
+        r = await self.client.post(
+            f"/simulated/checkout/{session_id}/complete", headers=self.student.h
+        )
         assert r.status_code == 200, r.text
         return session_id
 
     async def deliver(self) -> None:
-        r = await self.client.post(f"/tasks/{self.task_id}/deliver", headers=self.tutor.h,
-                                   json={"note": "Walkthrough video and practice set"})
+        r = await self.client.post(
+            f"/tasks/{self.task_id}/deliver",
+            headers=self.tutor.h,
+            json={"note": "Walkthrough video and practice set"},
+        )
         assert r.status_code == 200, r.text
 
     async def to(self, stage: str, amount: int = 4000) -> "Flow":
