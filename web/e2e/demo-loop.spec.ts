@@ -93,6 +93,7 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
   // --- Student hires and pays ----------------------------------------------------------
   await student.reload();
   await student.getByRole("button", { name: /Hire Prof\. Diego/ }).click();
+  await expect(student.getByRole("status").filter({ hasText: "You hired" })).toBeVisible();
   await expect(student.getByTestId("status").first()).toHaveText("hired");
   await student.getByRole("button", { name: /Pay \$40\.00 securely/ }).click();
   await student.waitForURL(/\/pay$/);
@@ -121,6 +122,7 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
 
   await student.reload();
   await student.getByRole("button", { name: "Release payment to tutor" }).click();
+  await expect(student.getByRole("status").filter({ hasText: "Payment released" })).toBeVisible();
   await expect(student.getByTestId("status").first()).toHaveText("completed");
   await expect(student.getByTestId("payment-card")).toContainText("released");
 
@@ -131,6 +133,7 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
   await expect(student.getByTestId("payment-card")).toContainText("Tips (100% to tutor)");
   await student.getByLabel("Rate your tutor").selectOption("5");
   await student.getByRole("button", { name: "Submit review" }).click();
+  await expect(student.getByText("You rated this session")).toBeVisible(); // no silent submit
 
   // --- Premium AI assistant + escalation to a live expert ------------------------------
   await student.goto("/student");
