@@ -55,7 +55,7 @@ function NewTaskForm() {
           router.push(`/tasks/${task.id}`);
         });
       }}
-      className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_19rem] lg:gap-14"
+      className="grid gap-12 xl:grid-cols-[minmax(0,1fr)_19rem] xl:gap-14"
     >
       <div className="min-w-0">
         <header className="mb-10">
@@ -222,7 +222,7 @@ function NewTaskForm() {
       </div>
 
       {/* Live preview: what tutors will see, on the study path. */}
-      <aside className="hidden lg:block">
+      <aside className="hidden xl:block">
         <div className="sticky top-12">
           <div className="micro text-muted">Your request</div>
           <div className="mt-4 rounded-[14px] border border-rule bg-sheet p-5 shadow-[0_1px_2px_rgb(20_22_27/0.04),0_24px_48px_-30px_rgb(30_27_75/0.3)]">

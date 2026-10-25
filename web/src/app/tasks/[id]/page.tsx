@@ -123,7 +123,7 @@ export default function TaskPage() {
             </p>
             {task.delivery_note && (
               <div className="mt-5 border-t border-rule pt-4">
-                <div className="mb-1 text-[13px] font-semibold text-mastery">Tutor&apos;s delivery</div>
+                <div className="micro mb-1.5 text-mastery">Tutor&apos;s delivery</div>
                 <p className="font-serif text-[16px] leading-relaxed text-ink">{task.delivery_note}</p>
               </div>
             )}

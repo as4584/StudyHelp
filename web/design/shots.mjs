@@ -21,6 +21,7 @@ const browser = await chromium.launch();
 async function shoot(page, name) {
   for (const [w, h] of WIDTHS) {
     await page.setViewportSize({ width: w, height: h });
+    await page.evaluate(() => window.scrollTo(0, 0));
     await page.waitForTimeout(w === 1440 ? 1600 : 400); // let entry motion finish (capture only)
     await page.screenshot({ path: `${OUT}/${name}-${w}.png`, fullPage: true });
   }

@@ -6,7 +6,13 @@ import { resolve } from "node:path";
 
 const label = process.argv[2] ?? "current";
 const dir = resolve(`../artifacts/design/${label}`);
-const screens = [...new Set(readdirSync(dir).filter((f) => /-1440\.png$/.test(f)).map((f) => f.replace(/-1440\.png$/, "")))].sort();
+const screens = [
+  ...new Set(
+    readdirSync(dir)
+      .filter((f) => /-1440\.png$/.test(f))
+      .map((f) => f.replace(/-1440\.png$/, "")),
+  ),
+].sort();
 
 const html = `<!doctype html><meta charset="utf-8"><style>
   body{margin:0;padding:40px;background:#efede7;font:14px system-ui;color:#14161b}
