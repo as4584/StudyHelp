@@ -199,7 +199,7 @@ function Progress({ view }: { view: View }) {
     done: t.status === "completed",
   }));
   return (
-    <section aria-labelledby="path-h">
+    <section aria-labelledby="path-h" className="min-w-0">
       <h2 id="path-h" className="font-serif text-[1.75rem] leading-tight font-medium tracking-[-0.02em]">
         Your study path
       </h2>
@@ -207,25 +207,27 @@ function Progress({ view }: { view: View }) {
         <EmptyState>Each session you take becomes a stop on your path.</EmptyState>
       ) : (
         <>
-          <dl className="mt-6 grid grid-cols-3 gap-6">
+          <dl className="mt-6 grid grid-cols-3 gap-4 sm:gap-6">
             <div>
-              <dd className="tnum font-serif text-[3.25rem] leading-none font-medium tracking-[-0.03em] text-mastery">
+              <dd className="tnum font-serif text-[2.5rem] leading-none sm:text-[3.25rem] font-medium tracking-[-0.03em] text-mastery">
                 {view.stepsDone}
                 <span className="text-[1.5rem] text-muted">/{view.stepsTotal}</span>
               </dd>
-              <dt className="micro mt-2 text-muted">Steps complete</dt>
+              <dt className="micro mt-2 leading-snug text-muted">Steps complete</dt>
             </div>
             <div>
-              <dd className="tnum font-serif text-[3.25rem] leading-none font-medium tracking-[-0.03em] text-ink">
+              <dd className="tnum font-serif text-[2.5rem] leading-none sm:text-[3.25rem] font-medium tracking-[-0.03em] text-ink">
                 {view.done.length}
               </dd>
-              <dt className="micro mt-2 text-muted">Sessions finished</dt>
+              <dt className="micro mt-2 leading-snug text-muted">Sessions finished</dt>
             </div>
             <div>
-              <dd className="tnum font-serif text-[3.25rem] leading-none font-medium tracking-[-0.03em] text-ink">
+              <dd className="tnum font-serif text-[2.5rem] leading-none sm:text-[3.25rem] font-medium tracking-[-0.03em] text-ink">
                 {view.subjects.length}
               </dd>
-              <dt className="micro mt-2 text-muted">{view.subjects.length === 1 ? "Subject" : "Subjects"}</dt>
+              <dt className="micro mt-2 leading-snug text-muted">
+                {view.subjects.length === 1 ? "Subject" : "Subjects"}
+              </dt>
             </div>
           </dl>
 
@@ -277,7 +279,7 @@ function AskTutor({ premium }: { premium: boolean }) {
   return (
     <section
       aria-labelledby="ai-h"
-      className="relative isolate self-start overflow-hidden rounded-[16px] bg-tutor-deep px-6 py-7 text-white shadow-[0_30px_60px_-30px_rgb(30_27_75/0.6)] sm:px-8"
+      className="relative isolate min-w-0 self-start overflow-hidden rounded-[16px] bg-tutor-deep px-6 py-7 text-white shadow-[0_30px_60px_-30px_rgb(30_27_75/0.6)] sm:px-8"
     >
       <div
         aria-hidden

@@ -20,7 +20,7 @@ const browser = await chromium.launch();
 async function shoot(page, name) {
   for (const [w, h] of WIDTHS) {
     await page.setViewportSize({ width: w, height: h });
-    await page.waitForTimeout(250); // layout settle for capture only (not a test)
+    await page.waitForTimeout(w === 1440 ? 1600 : 400); // let entry motion finish (capture only)
     await page.screenshot({ path: `${OUT}/${name}-${w}.png`, fullPage: true });
   }
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -102,6 +102,24 @@ await student.reload();
 await student.waitForLoadState("networkidle");
 await shoot(student, "09-student-task-chat");
 await shoot(tutor, "10-tutor-task-chat");
+
+// Complete the first session for real, then open a second request in another subject so the
+// study path shows genuine history (finished stop + open stop + subject accents).
+await tutor.getByLabel("Delivery note").fill("Recorded walkthrough of five chain-rule examples + a practice set.");
+await tutor.getByRole("button", { name: "Mark as delivered" }).click();
+await tutor.getByText(/student will release/).waitFor();
+await student.reload();
+await student.getByRole("button", { name: "Release payment to tutor" }).click();
+await student.getByText("Session complete").waitFor();
+await shoot(student, "10b-student-task-complete");
+await student.goto(`${BASE}/student/tasks/new`);
+await student.getByLabel("Subject").fill("Writing");
+await student.getByLabel(/What do you need help/).fill("Structure a persuasive essay introduction");
+await student.getByLabel("Details").fill("My thesis keeps getting lost in the first paragraph.");
+await student.getByLabel(/Budget/).fill("30");
+await student.getByRole("checkbox").check();
+await student.getByRole("button", { name: "Post request" }).click();
+await student.waitForURL(/\/tasks\/[0-9a-f-]{36}$/);
 
 // premium + assistant
 await student.goto(`${BASE}/student`);

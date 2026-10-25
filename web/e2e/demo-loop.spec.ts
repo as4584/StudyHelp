@@ -131,6 +131,11 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
 
   // --- Premium AI assistant + escalation to a live expert ------------------------------
   await student.goto("/student");
+  await expect(student.getByRole("heading", { name: "Your study path" })).toBeVisible();
+  // Layout guard: the study desk must never scroll sideways (caught a mobile overflow once).
+  expect(
+    await student.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth),
+  ).toBeLessThanOrEqual(0);
   const upgrade = student.getByRole("button", { name: "Upgrade to Premium" });
   await expect(upgrade.or(student.getByText("AI tutor · Premium"))).toBeVisible();
   if (await upgrade.isVisible()) {
