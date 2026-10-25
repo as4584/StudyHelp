@@ -2,7 +2,7 @@
 
 import { ArrowLeft, CircleAlert, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { useRequireRole } from "@/components/auth";
@@ -213,6 +213,7 @@ function StudentActions({
   reload: () => Promise<void>;
 }) {
   const a = useAction();
+  const router = useRouter();
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [reason, setReason] = useState("");
@@ -294,11 +295,7 @@ function StudentActions({
           Your payment is held by the platform and released to {accepted?.tutor_name ?? "your tutor"} only when you
           confirm the session was delivered.
         </p>
-        <Button
-          className="w-full"
-          disabled={a.pending}
-          onClick={() => a.run(() => redirect(`/tasks/${task.id}/checkout`))}
-        >
+        <Button className="w-full" disabled={a.pending} onClick={() => router.push(`/tasks/${task.id}/pay`)}>
           Pay {money(accepted?.amount_cents ?? task.budget_cents)} securely
         </Button>
         {pay?.payment?.status === "pending" && (

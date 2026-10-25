@@ -10,6 +10,7 @@ const OUT = `../artifacts/design/${label}`;
 const WIDTHS = [
   [1440, 900],
   [1024, 768],
+  [768, 1024],
   [390, 844],
 ];
 const PASSWORD = "demo-password-123";
@@ -86,10 +87,16 @@ await student.waitForLoadState("networkidle");
 await shoot(student, "07-student-task-bids");
 await student.getByRole("button", { name: /Hire/ }).first().click();
 await student.getByRole("button", { name: /Pay .* securely/ }).click();
+await student.waitForURL(/\/pay$/);
+await student.waitForLoadState("networkidle");
+await shoot(student, "07b-review-payment");
+await student.getByRole("button", { name: "Continue to secure payment" }).click();
 await student.waitForURL(/checkout\/simulated/);
 await shoot(student, "08-checkout");
 await student.getByRole("button", { name: "Pay now" }).click();
 await student.waitForURL(/payments\/return/);
+await student.waitForLoadState("networkidle");
+await shoot(student, "08b-payment-held");
 await student.goto(taskUrl);
 await student.getByLabel("Message").fill("Can you explain why we multiply by the derivative of the inside?");
 await student.getByRole("button", { name: "Send" }).click();

@@ -183,7 +183,7 @@ function Workspace() {
           <div ref={bottom} />
         </div>
 
-        <div className="sticky bottom-4 mt-12">
+        <div className="mt-12 lg:sticky lg:bottom-4">
           <form
             className="rounded-[14px] border border-rule bg-sheet/95 p-2.5 shadow-[0_1px_2px_rgb(20_22_27/0.05),0_24px_48px_-24px_rgb(30_27_75/0.35)] backdrop-blur"
             onSubmit={(e) => {

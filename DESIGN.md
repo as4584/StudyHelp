@@ -135,3 +135,27 @@ Gradient heroes or gradient text · uppercase eyebrows above headings · numbere
 cards in cards · same-size card grids as page structure · KPI tiles for every number · pastel pills
 for every state · coloured left borders · glows/halos · glassmorphism · unicode/emoji icons ·
 greeting titles ("Hi Maya") as the h1 · decorative WebGPU/3D/particles · fake metrics.
+
+## 12. The StudyHelp path (signature motif)
+
+A thin diagrammatic line with stops. It represents **real progression only**; never decoration.
+
+| Use | Stages | Component |
+| --- | --- | --- |
+| A session's lifecycle (hero, session header) | Bids → Hired → Paid → Delivered → Released | `SessionPath` (curved, drawn in) |
+| Session lists, request preview | Request → Offers → Hired → Learning → Complete | `PathLine` + `sessionStages()` |
+| A payment's journey (checkout review, return) | Pay → Held → Delivered → Released | `PathLine` |
+| A tutor conversation (AI tutor header) | Question → Understand → Practice | `PathLine` (dark) — stages advance only on observed events |
+| Auth asides (illustrative, clearly conceptual) | Question → Understand → Practice → Master | `PathLine` |
+| History (study desk) | one stop per session + dashed "next stop" | `PathHistory` |
+
+States: **done** = teal fill + check · **current** = indigo halo · **attention/waiting** = amber
+halo · **upcoming** = neutral outline on a dashed pencil line. The travelled segment is a solid
+teal stroke. Labels are 11px tracked uppercase micro-labels. Do not invent stages the product
+cannot observe.
+
+## 13. Subject accents
+
+`web/src/lib/subjects.ts`: maths/STEM indigo, science teal, writing & humanities amber/clay,
+computing violet, otherwise slate. Accents tint dots, micro-labels, the current path stop and the
+hero light — never whole surfaces.

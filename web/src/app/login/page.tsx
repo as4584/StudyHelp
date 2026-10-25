@@ -18,6 +18,16 @@ export default function LoginPage() {
     <AuthFrame
       title="Welcome back"
       lede="Pick up where you left off."
+      path={{
+        heading: "Every hard idea is a path, not a wall.",
+        body: "Ask, understand, practise — and bring in a live expert whenever a step won't click.",
+        stages: [
+          { label: "Question", state: "done" },
+          { label: "Understand", state: "current" },
+          { label: "Practice", state: "upcoming" },
+          { label: "Master", state: "upcoming" },
+        ],
+      }}
       footer={
         <>
           New here?{" "}

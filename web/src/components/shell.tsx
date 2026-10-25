@@ -150,7 +150,7 @@ function Sidebar() {
 function MobileBar() {
   const { items, isActive } = useNav();
   return (
-    <div className="sticky top-0 z-20 border-b border-rule bg-paper/95 backdrop-blur-sm lg:hidden">
+    <div className="relative z-20 border-b border-rule bg-paper lg:hidden">
       <div className="flex h-14 items-center justify-between px-5 sm:px-8">
         <Mark />
         <MobileAccount />

@@ -18,6 +18,17 @@ export default function SignupPage() {
     <AuthFrame
       title="Open your study desk"
       lede="One account for learning — or for teaching."
+      path={{
+        heading: "From stuck to sure, one step at a time.",
+        body: "Post what you're stuck on, choose a vetted tutor, and pay only when the session is delivered.",
+        stages: [
+          { label: "Request", state: "current" },
+          { label: "Offers", state: "upcoming" },
+          { label: "Hired", state: "upcoming" },
+          { label: "Learning", state: "upcoming" },
+          { label: "Complete", state: "upcoming" },
+        ],
+      }}
       footer={
         <>
           Already have an account?{" "}

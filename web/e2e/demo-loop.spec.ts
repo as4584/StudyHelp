@@ -95,6 +95,9 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
   await student.getByRole("button", { name: /Hire Prof\. Diego/ }).click();
   await expect(student.getByTestId("status").first()).toHaveText("hired");
   await student.getByRole("button", { name: /Pay \$40\.00 securely/ }).click();
+  await student.waitForURL(/\/pay$/);
+  await expect(student.getByText("Your money is protected while you learn.")).toBeVisible();
+  await student.getByRole("button", { name: "Continue to secure payment" }).click();
   await student.waitForURL(/\/checkout\/simulated\//);
   await student.getByRole("button", { name: "Pay now" }).click();
   await student.waitForURL(/\/payments\/return/);
