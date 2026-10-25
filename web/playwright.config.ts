@@ -13,6 +13,8 @@ export default defineConfig({
   reporter: [["list"], ["html", { outputFolder: "../artifacts/playwright-report", open: "never" }]],
   use: {
     baseURL,
+    actionTimeout: 20_000,
+    navigationTimeout: 30_000,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",

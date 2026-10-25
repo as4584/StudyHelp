@@ -75,6 +75,8 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
   // --- Tutor connects payouts (simulated Express onboarding) and bids -----------------
   const tutor = await open("tutor@demo.gsht");
   const setup = tutor.getByRole("button", { name: "Set up payouts" });
+  const connected = tutor.getByText("Your payout account is connected");
+  await expect(setup.or(connected)).toBeVisible(); // wait for the hub to load before branching
   if (await setup.isVisible()) {
     await setup.click();
     await tutor.getByRole("button", { name: "Complete onboarding" }).click();
@@ -130,6 +132,7 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
   // --- Premium AI assistant + escalation to a live expert ------------------------------
   await student.goto("/student");
   const upgrade = student.getByRole("button", { name: "Upgrade to Premium" });
+  await expect(upgrade.or(student.getByText("Premium is active ✓"))).toBeVisible();
   if (await upgrade.isVisible()) {
     await upgrade.click();
     await student.getByRole("button", { name: "Pay now" }).click();
