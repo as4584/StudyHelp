@@ -2,9 +2,10 @@
 
 import { ArrowRight, Wallet } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useRequireRole } from "@/components/auth";
+import { PathLine, sessionStages } from "@/components/path-line";
 import {
   Badge,
   Button,
@@ -12,60 +13,94 @@ import {
   ErrorText,
   Field,
   FileButton,
-  PageHeader,
   Section,
   Sheet,
   Skeleton,
   Stars,
-  Timeline,
   inputCls,
   useAction,
 } from "@/components/ui";
-import { api, money, type Task } from "@/lib/api";
+import { api, money, type PaymentState, type Task } from "@/lib/api";
+import { accentFor } from "@/lib/subjects";
 import { uploadToSignedUrl } from "@/lib/upload";
 
+/*
+ * Tutor desk — the professional counterpart of the student Study desk. One headline sentence about
+ * what needs the tutor, editorial earnings computed from real payment records, then the two working
+ * lists: requests to answer and sessions in progress (on the study path).
+ */
 export default function TutorDesk() {
   const { me, refresh } = useRequireRole("tutor");
   const [open, setOpen] = useState<Task[] | null>(null);
   const [mine, setMine] = useState<Task[] | null>(null);
+  const [payState, setPayState] = useState<Record<string, PaymentState>>({});
   const tutor = me?.tutor ?? null;
 
   const load = useCallback(async () => {
-    setOpen(await api<Task[]>("/tasks?scope=open"));
-    setMine(await api<Task[]>("/tasks?scope=mine"));
+    const [o, m] = await Promise.all([api<Task[]>("/tasks?scope=open"), api<Task[]>("/tasks?scope=mine")]);
+    setOpen(o);
+    setMine(m);
+    const states = await Promise.all(
+      m
+        .filter((t) => t.status !== "hired")
+        .map((t) => api<PaymentState>(`/tasks/${t.id}/payment`).then((p) => [t.id, p] as const)),
+    );
+    setPayState(Object.fromEntries(states));
   }, []);
   useEffect(() => {
     if (me) void load();
   }, [me, load]);
 
+  const earnings = useMemo(() => {
+    const ps = Object.values(payState);
+    const earned = ps.reduce(
+      (n, p) => n + (p.transfer?.status === "created" ? p.transfer.amount_cents : 0) + p.tips_cents,
+      0,
+    );
+    const held = ps.reduce((n, p) => n + (p.payment?.status === "held" ? p.payment.tutor_net_cents : 0), 0);
+    return { earned, held, completed: (mine ?? []).filter((t) => t.status === "completed").length };
+  }, [payState, mine]);
+
   if (!me) return <Skeleton lines={4} />;
   const approved = tutor?.status === "approved";
+  const active = (mine ?? []).filter((t) => !["completed", "refunded", "cancelled"].includes(t.status));
+  const today = new Date().toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" });
+  const waiting = open?.length ?? 0;
+  let headline = "You're all caught up.";
+  if (!tutor) headline = "Teach students around the world.";
+  else if (!approved) headline = "Your application is in.";
+  else if (waiting > 0) headline = `${waiting} ${waiting === 1 ? "student is" : "students are"} waiting for an offer.`;
+  else if (active.length > 0)
+    headline = `${active.length} ${active.length === 1 ? "session" : "sessions"} in progress.`;
+
+  let statusLabel = "Application not approved";
+  if (tutor?.status === "pending") statusLabel = "Application under review";
+  if (tutor?.status === "approved")
+    statusLabel = tutor.payouts_enabled ? "Accepting sessions" : "Approved · payouts not set up";
 
   return (
     <div>
-      <PageHeader
-        title="Tutor desk"
-        lede={
-          tutor ? (
-            <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <Badge
-                status={tutor.status}
-                label={
-                  tutor.status === "approved"
-                    ? "Approved tutor"
-                    : tutor.status === "pending"
-                      ? "Application under review"
-                      : "Application not approved"
-                }
-              />
-              <Stars value={Number(tutor.rating_avg)} count={tutor.rating_count} />
-              <span className="tnum text-muted">{money(tutor.hourly_rate_cents)}/hr</span>
+      <header className="mb-12">
+        <div className="micro text-muted">Tutor desk · {today}</div>
+        <h1 className="mt-3 max-w-[20ch] font-serif text-[2.4rem] leading-[1.04] font-medium tracking-[-0.03em] sm:text-[3.25rem]">
+          {headline}
+        </h1>
+        {tutor && (
+          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[14px]">
+            <Badge status={tutor.status} label={statusLabel} />
+            <Stars value={Number(tutor.rating_avg)} count={tutor.rating_count} />
+            <span className="tnum text-ink-2">{money(tutor.hourly_rate_cents)}/hr</span>
+            <span className="flex flex-wrap gap-x-3">
+              {tutor.subjects.map((s) => (
+                <span key={s} className="flex items-center gap-1.5 font-semibold" style={{ color: accentFor(s).ink }}>
+                  <span className="size-1.5 rounded-full" style={{ background: accentFor(s).mark }} />
+                  {s}
+                </span>
+              ))}
             </span>
-          ) : (
-            "Apply once, then pick up requests from students around the world."
-          )
-        }
-      />
+          </div>
+        )}
+      </header>
 
       {tutor?.status === "pending" && (
         <p className="mb-10 max-w-[60ch] font-serif text-[18px] leading-relaxed text-ink-2">
@@ -73,17 +108,20 @@ export default function TutorDesk() {
         </p>
       )}
 
-      <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr] lg:gap-12">
-        <div className="min-w-0 space-y-10">
+      {approved && (
+        <dl className="mb-14 grid grid-cols-3 gap-6 border-y border-rule py-7 sm:gap-10">
+          <Metric label="Earned · released + tips" value={money(earnings.earned)} strong={earnings.earned > 0} />
+          <Metric label="Held for you · in sessions" value={money(earnings.held)} />
+          <Metric label="Sessions completed" value={String(earnings.completed)} />
+        </dl>
+      )}
+
+      <div className="grid gap-12 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:gap-14">
+        <div className="min-w-0 space-y-12">
           {approved && (
             <>
-              <TaskList
-                title="Your sessions"
-                tasks={mine}
-                empty="When a student hires you, the session lands here."
-                showTimeline
-              />
-              <TaskList title="Open requests" tasks={open} empty="No open requests in your subjects right now." />
+              <Requests tasks={open} />
+              <Sessions tasks={mine} />
             </>
           )}
           {!approved && <Application existing={tutor} onSaved={refresh} startOpen={!tutor} />}
@@ -97,56 +135,105 @@ export default function TutorDesk() {
   );
 }
 
-function TaskList({
-  title,
-  tasks,
-  empty,
-  showTimeline,
-}: {
-  title: string;
-  tasks: Task[] | null;
-  empty: string;
-  showTimeline?: boolean;
-}) {
+function Metric({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
-    <Section title={title}>
+    <div className="min-w-0">
+      <dd
+        className={`tnum font-serif text-[2rem] leading-none font-medium tracking-[-0.03em] sm:text-[3.25rem] ${
+          strong ? "text-mastery" : "text-ink"
+        }`}
+      >
+        {value}
+      </dd>
+      <dt className="micro mt-2 leading-snug text-muted">{label}</dt>
+    </div>
+  );
+}
+
+function Requests({ tasks }: { tasks: Task[] | null }) {
+  return (
+    <section aria-labelledby="req-h">
+      <h2 id="req-h" className="font-serif text-[1.75rem] leading-tight font-medium tracking-[-0.02em]">
+        Open requests
+      </h2>
       {tasks === null ? (
-        <Skeleton />
+        <div className="mt-4">
+          <Skeleton />
+        </div>
       ) : tasks.length === 0 ? (
-        <EmptyState>{empty}</EmptyState>
+        <EmptyState>No open requests in your subjects right now.</EmptyState>
       ) : (
-        <ul className="divide-y divide-rule">
+        <ul className="mt-4 divide-y divide-rule border-y border-rule">
+          {tasks.map((t) => {
+            const a = accentFor(t.subject);
+            return (
+              <li key={t.id}>
+                <Link href={`/tasks/${t.id}`} className="group grid grid-cols-[1fr_auto] items-center gap-x-6 py-5">
+                  <span className="min-w-0">
+                    <span className="micro flex items-center gap-1.5" style={{ color: a.ink }}>
+                      <span className="size-1.5 rounded-full" style={{ background: a.mark }} />
+                      {t.subject}
+                    </span>
+                    <span className="mt-1.5 block font-serif text-[1.25rem] leading-snug text-ink transition-colors group-hover:text-tutor">
+                      {t.title}
+                    </span>
+                  </span>
+                  <span className="text-right">
+                    <span className="tnum block font-serif text-[1.5rem] leading-none font-medium text-ink">
+                      {money(t.budget_cents)}
+                    </span>
+                    <span className="mt-1.5 inline-flex items-center gap-1 text-[13px] font-semibold text-tutor">
+                      Make an offer
+                      <ArrowRight
+                        size={14}
+                        strokeWidth={2}
+                        className="transition-transform group-hover:translate-x-0.5"
+                        aria-hidden
+                      />
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function Sessions({ tasks }: { tasks: Task[] | null }) {
+  return (
+    <section aria-labelledby="ses-h">
+      <h2 id="ses-h" className="font-serif text-[1.75rem] leading-tight font-medium tracking-[-0.02em]">
+        Your sessions
+      </h2>
+      {tasks === null ? (
+        <div className="mt-4">
+          <Skeleton />
+        </div>
+      ) : tasks.length === 0 ? (
+        <EmptyState>When a student hires you, the session lands here.</EmptyState>
+      ) : (
+        <ul className="mt-4 divide-y divide-rule border-y border-rule">
           {tasks.map((t) => (
             <li key={t.id}>
-              <Link
-                href={`/tasks/${t.id}`}
-                className="group grid gap-3 py-4 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-6"
-              >
-                <span className="min-w-0">
-                  <span className="block truncate font-serif text-[17px] font-medium text-ink group-hover:text-tutor">
+              <Link href={`/tasks/${t.id}`} className="group block py-5">
+                <span className="flex items-baseline justify-between gap-4">
+                  <span className="min-w-0 truncate font-serif text-[1.125rem] text-ink group-hover:text-tutor">
                     {t.title}
                   </span>
-                  <span className="mt-0.5 flex items-center gap-3 text-[13px] text-muted">
-                    <span>{t.subject}</span>
-                    <span className="tnum">Budget {money(t.budget_cents)}</span>
-                    {showTimeline && <Badge status={t.status} />}
-                  </span>
+                  <Badge status={t.status} />
                 </span>
-                {showTimeline ? (
-                  <span className="w-44">
-                    <Timeline status={t.status} compact />
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-[14px] font-semibold text-tutor">
-                    View &amp; bid <ArrowRight size={15} strokeWidth={2} aria-hidden />
-                  </span>
-                )}
+                <span className="mt-4 block max-w-[28rem]">
+                  <PathLine stages={sessionStages(t.status, t.status === "hired" || t.status === "delivered")} dense />
+                </span>
               </Link>
             </li>
           ))}
         </ul>
       )}
-    </Section>
+    </section>
   );
 }
 
