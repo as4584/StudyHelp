@@ -50,7 +50,9 @@ export function Chat({ conversationId, meId, myLang }: { conversationId: string;
     };
   }, [conversationId, load]);
 
-  useEffect(() => bottom.current?.scrollIntoView({ block: "nearest" }), [messages.length]);
+  useEffect(() => {
+    bottom.current?.scrollIntoView({ block: "nearest" });
+  }, [messages.length]);
 
   return (
     <Card title="Chat · auto-translated" className="flex h-[32rem] flex-col">

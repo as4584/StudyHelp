@@ -21,7 +21,9 @@ export function TaskFiles({
   const [files, setFiles] = useState<FileOut[]>([]);
   const a = useAction();
   const load = useCallback(async () => setFiles(await api<FileOut[]>(`/tasks/${taskId}/files`)), [taskId]);
-  useEffect(() => void load().catch(() => setFiles([])), [load]);
+  useEffect(() => {
+    load().catch(() => setFiles([]));
+  }, [load]);
 
   const kind = canUploadDeliverable ? "deliverable" : canUploadRubric ? "rubric" : null;
   if (!files.length && !kind) return null;
