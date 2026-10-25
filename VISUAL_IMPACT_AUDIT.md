@@ -53,3 +53,40 @@ Evidence: `artifacts/design/round3/*` at 1440 / 1024 / 390. Judged as static ima
    in sequence; a context rail (subject, questions asked, escalation with the conversation attached).
 3. **Study path progress.** Every session as a stop on one path, coloured by subject, with large
    numerals for steps completed and sessions finished — an honest, readable "oh, that's nice".
+
+---
+
+## Result (branch `visual-impact`; previous version tagged `ui-refinement-v1`)
+
+Evidence: `artifacts/design/vi1` (first pass), `vi2`, `vi3` (after critique fixes).
+
+- **Signature motif — the study path.** One drawn line with stops, used in three places: the
+  session's own lifecycle (hero + session page), and the student's whole history (one stop per
+  session, ring filled by real progress, ending in a dashed "next stop"). Travelled ink is teal,
+  the current stop is lit in the subject's accent, the road ahead is a dashed pencil line; it draws
+  itself in on load.
+- **Moment 1 — Today's focus.** 56px display headline of the real next step, subject micro-label,
+  a large typographic subject glyph (∫ ¶ Δ { } §) as graphic, localized subject-coloured light.
+- **Moment 2 — AI tutor.** The question becomes the page's display headline; answers render as
+  annotated sections (Explanation / Worked example / Hint / Check yourself / Common mistake) with
+  margin labels, concept highlights and mono formulas; context rail with legend and escalation.
+  The system prompt requests these labels; the keyless demo adapter emits them (still tagged demo).
+- **Moment 3 — Study path progress.** Large numerals (steps complete / sessions finished /
+  subjects) — all computed from real task states — above the history path.
+- **Depth & colour:** deep-indigo AI panel with lavender/teal light; lifted hero and next-step
+  sheets; tactile primary buttons (inner highlight, lift, press, arrow nudge). Subject accents:
+  maths indigo, science teal, writing clay, computing violet.
+- **Motion (5 moments):** path draw, hero stagger reveal (opacity + rise + blur), tutor sections
+  revealing in sequence, button press/lift, thinking skeleton. All honour reduced motion.
+
+Second critique — the five things keeping it from exceptional (ranked) and what happened:
+1. Travelled path stopped short of the current stop → **fixed** (separate path ending on the stop).
+2. Browser-yellow concept highlight → **fixed** (lavender underline highlight).
+3. Study-path history was a lone ring → **fixed** (labelled stops on one path + next stop).
+4. Hero glyph clipped / smudge-like → **fixed** (repositioned, fully visible).
+5. Next-step block weaker than the new header → **fixed** (display-scale title, lift).
+Plus a real bug found on review: study desk overflowed horizontally at 390px → fixed, and the E2E
+now asserts no sideways scroll.
+
+Still not exceptional: no dark theme; the landing page has not yet received the path motif; tutor
+desk and operations screens are clean but not "moments"; fake-adapter tags remain (by design).

@@ -338,7 +338,7 @@ function StudentActions({
       <ActionSheet title="Session complete" tone="mastery">
         <div>
           <p className="mb-2 text-[14px] font-semibold text-ink">Say thanks with a tip — 100% goes to your tutor</p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2 [&>button]:px-2 [&>button]:text-[14px]">
             {[200, 500, 1000].map((c) => (
               <Button
                 key={c}
