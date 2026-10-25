@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Generate api/.env and web/.env.local from the running local Supabase stack (gitignored).
+set -euo pipefail
+cd "$(dirname "$0")/.."
+eval "$(cd infra && npx --yes supabase@2.122.0 status -o env 2>/dev/null | grep -E '^(API_URL|DB_URL|PUBLISHABLE_KEY|SECRET_KEY)=')"
+cat > api/.env <<ENV
+ENVIRONMENT=development
+GIT_SHA=$(git rev-parse --short HEAD)
+DATABASE_URL=${DB_URL/postgresql:/postgresql+asyncpg:}
+SUPABASE_URL=$API_URL
+SUPABASE_SECRET_KEY=$SECRET_KEY
+CORS_ORIGINS=["http://localhost:3000","http://127.0.0.1:3000","http://localhost:3001"]
+WEB_BASE_URL=http://localhost:3000
+PAYMENTS_PROVIDER=fake
+LLM_PROVIDER=fake
+TRANSLATION_PROVIDER=fake
+STORAGE_PROVIDER=supabase
+ENV
+cat > web/.env.local <<ENV
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+NEXT_PUBLIC_SUPABASE_URL=$API_URL
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY
+ENV
+echo "local-env: wrote api/.env and web/.env.local"
