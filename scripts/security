@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Secret scan of the working tree and git history. Nonzero exit on any finding.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks git . --no-banner --redact
+  gitleaks dir . --no-banner --redact
+else
+  root="$(pwd -W 2>/dev/null || pwd)"
+  MSYS_NO_PATHCONV=1 docker run --rm -v "$root:/repo" zricethezav/gitleaks:v8.21.2 \
+    dir /repo --no-banner --redact
+fi
+echo "security: secret scan clean"
