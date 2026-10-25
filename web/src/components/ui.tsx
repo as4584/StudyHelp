@@ -51,7 +51,7 @@ export function Section({
     <section className={cx("min-w-0", className)}>
       {(title || action) && (
         <div className="mb-3 flex items-baseline justify-between gap-3 border-b border-rule pb-2">
-          {title && <h2 className="text-[13px] font-semibold tracking-[0.01em] text-muted">{title}</h2>}
+          {title && <h2 className="micro text-muted">{title}</h2>}
           {action}
         </div>
       )}

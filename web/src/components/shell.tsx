@@ -120,7 +120,7 @@ function Account() {
 function Sidebar() {
   const { items, isActive } = useNav();
   return (
-    <aside className="sticky top-0 hidden h-dvh flex-col border-r border-rule bg-paper px-4 py-6 lg:flex">
+    <aside className="sticky top-0 hidden h-dvh flex-col self-start border-r border-rule bg-paper px-4 py-6 lg:flex">
       <Mark className="px-2" />
       <nav className="mt-10 space-y-0.5" aria-label="Main">
         {items.map((i) => {

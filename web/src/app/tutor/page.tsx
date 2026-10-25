@@ -110,9 +110,14 @@ export default function TutorDesk() {
 
       {approved && (
         <dl className="mb-14 grid grid-cols-3 gap-6 border-y border-rule py-7 sm:gap-10">
-          <Metric label="Earned · released + tips" value={money(earnings.earned)} strong={earnings.earned > 0} />
-          <Metric label="Held for you · in sessions" value={money(earnings.held)} />
-          <Metric label="Sessions completed" value={String(earnings.completed)} />
+          <Metric
+            label="Earned · released + tips"
+            value={money(earnings.earned)}
+            strong={earnings.earned > 0}
+            muted={!earnings.earned}
+          />
+          <Metric label="Held for you · in sessions" value={money(earnings.held)} muted={!earnings.held} />
+          <Metric label="Sessions completed" value={String(earnings.completed)} muted={!earnings.completed} />
         </dl>
       )}
 
@@ -135,12 +140,12 @@ export default function TutorDesk() {
   );
 }
 
-function Metric({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+function Metric({ label, value, strong, muted }: { label: string; value: string; strong?: boolean; muted?: boolean }) {
   return (
     <div className="min-w-0">
       <dd
         className={`tnum font-serif text-[2rem] leading-none font-medium tracking-[-0.03em] sm:text-[3.25rem] ${
-          strong ? "text-mastery" : "text-ink"
+          strong ? "text-mastery" : muted ? "text-rule-strong" : "text-ink"
         }`}
       >
         {value}

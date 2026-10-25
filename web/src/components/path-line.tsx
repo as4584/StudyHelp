@@ -79,7 +79,7 @@ export function PathLine({
                 {s.state === "attention" && <span className="size-2 rounded-full bg-attention-mark" />}
               </span>
               <span
-                className={`micro mt-2.5 whitespace-nowrap ${dense && s.state === "upcoming" ? "max-sm:sr-only" : ""} ${
+                className={`micro mt-2.5 whitespace-nowrap ${dense && s.state !== "current" && s.state !== "attention" ? "sr-only" : ""} ${
                   s.state === "done"
                     ? "text-mastery"
                     : s.state === "current"
