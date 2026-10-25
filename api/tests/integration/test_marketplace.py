@@ -130,3 +130,24 @@ async def test_unknown_task_and_bad_ids(client: httpx.AsyncClient, make_user: Us
     u = await make_user()
     assert (await client.get(f"/tasks/{uuid.uuid4()}", headers=u.h)).status_code == 404
     assert (await client.get("/tasks/not-a-uuid", headers=u.h)).status_code == 422
+
+
+async def test_hired_task_cannot_be_cancelled(flow: Flow) -> None:
+    await flow.to("hired")
+    r = await flow.client.post(f"/tasks/{flow.task_id}/cancel", headers=flow.student.h)
+    assert r.status_code == 409
+
+
+async def test_open_task_can_be_cancelled(flow: Flow) -> None:
+    await flow.to("posted")
+    r = await flow.client.post(f"/tasks/{flow.task_id}/cancel", headers=flow.student.h)
+    assert r.status_code == 200 and r.json()["status"] == "cancelled"
+
+
+async def test_suspended_tutor_cannot_be_hired(flow: Flow, db) -> None:  # type: ignore[no-untyped-def]
+    await flow.to("bid")
+    await db.execute("update profiles set is_active = false where id = $1", flow.tutor.id)
+    r = await flow.client.post(
+        f"/tasks/{flow.task_id}/hire", headers=flow.student.h, json={"bid_id": flow.bid_id}
+    )
+    assert r.status_code == 409

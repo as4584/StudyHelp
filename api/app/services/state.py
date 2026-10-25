@@ -4,7 +4,8 @@ from app.core.errors import InvalidState
 
 TRANSITIONS: dict[str, set[str]] = {
     "open": {"hired", "cancelled"},
-    "hired": {"paid", "cancelled"},
+    # No hired -> cancelled: a checkout may be in flight and its webhook must always land.
+    "hired": {"paid"},
     "paid": {"delivered", "disputed", "refunded"},
     "delivered": {"completed", "disputed", "refunded"},
     "disputed": {"completed", "refunded", "paid", "delivered"},

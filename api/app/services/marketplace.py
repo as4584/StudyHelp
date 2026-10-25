@@ -12,14 +12,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import CurrentUser
 from app.core.errors import Conflict, Forbidden, InvalidState, NotFound
-from app.models.entities import Bid, Conversation, Dispute, Review, Task, TutorProfile
+from app.models.entities import Bid, Conversation, Dispute, Profile, Review, Task, TutorProfile
 from app.services.audit import audit
 from app.services.state import ensure_transition
 
 
 async def tutor_is_approved(session: AsyncSession, user_id: uuid.UUID) -> bool:
+    """Approved AND not suspended, read from current DB state."""
     tp = await session.get(TutorProfile, user_id)
-    return tp is not None and tp.status == "approved"
+    if tp is None or tp.status != "approved":
+        return False
+    profile = await session.get(Profile, user_id)
+    return profile is not None and profile.is_active
 
 
 def _is_party(user: CurrentUser, task: Task) -> bool:
