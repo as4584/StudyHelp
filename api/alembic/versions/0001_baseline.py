@@ -291,7 +291,7 @@ create table audit_logs (
 );
 
 -- Append-only ledgers: block UPDATE/DELETE at the database level.
-create function forbid_mutation() returns trigger language plpgsql as $$
+create function forbid_mutation() returns trigger language plpgsql set search_path = '' as $$
 begin
   raise exception '% is append-only', tg_table_name;
 end $$;
