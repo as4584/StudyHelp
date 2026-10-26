@@ -2,6 +2,8 @@
 
 import { AlertCircle, Check, Paperclip } from "lucide-react";
 import Link from "next/link";
+
+import { useCapabilities } from "@/lib/capabilities";
 import { useId, useState } from "react";
 
 /* Primitives for the study-desk design system. Tokens and rules: /DESIGN.md. */
@@ -209,6 +211,20 @@ export function FileButton({
 }) {
   const id = useId();
   const [name, setName] = useState<string | null>(null);
+  const caps = useCapabilities();
+  if (caps && !caps.uploads) {
+    // Storage isn't configured on this deployment: say so instead of offering a dead control.
+    return (
+      <div className="space-y-1.5">
+        <span className="block text-[14px] font-semibold text-ink">{label}</span>
+        <div className="flex min-h-11 items-center gap-3 rounded-[6px] border border-dashed border-rule px-3 text-[14px] text-muted">
+          <Paperclip size={16} strokeWidth={1.75} className="shrink-0" aria-hidden />
+          File uploads are off in this demo.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-1.5">
       <span className="block text-[14px] font-semibold text-ink">{label}</span>
