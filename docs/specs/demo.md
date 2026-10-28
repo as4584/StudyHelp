@@ -1,5 +1,12 @@
 # Client demo script (~8 minutes, phone-friendly)
 
+## Hosted demo
+
+- Web: https://studyhelp-web.vercel.app
+- API: https://studyhelp-api.vercel.app (`/health`, `/ready`)
+- Hosting: Vercel team `studyhelp` (projects `studyhelp-web`, `studyhelp-api`); database: Supabase project `studyhelp-demo` via the pooler as role `studyhelp_api`.
+- Payments, AI, translation and storage run on labelled demo adapters; file uploads are off.
+
 Accounts (password `demo-password-123`, demo environment only):
 
 | Role | Email | Language |
