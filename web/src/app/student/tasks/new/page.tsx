@@ -11,7 +11,19 @@ import { api, LANGUAGES, LEVELS, money, type Task } from "@/lib/api";
 import { accentFor } from "@/lib/subjects";
 import { uploadToSignedUrl } from "@/lib/upload";
 
-const QUICK_SUBJECTS = ["Calculus", "Physics", "Chemistry", "Writing", "Computer science"];
+// Everyday classes first; "More subjects" reveals the harder, more specialised ones.
+const QUICK_SUBJECTS = ["English", "Mathematics", "Algebra", "Biology", "Chemistry", "Physics", "History", "Calculus"];
+const MORE_SUBJECTS = [
+  "Geometry",
+  "Statistics",
+  "Organic chemistry",
+  "Linear algebra",
+  "Anatomy & physiology",
+  "Economics",
+  "Psychology",
+  "Computer science",
+  "Essay writing",
+];
 const QUICK_BUDGETS = [10, 15, 25, 40];
 
 function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
@@ -51,6 +63,7 @@ function NewTaskForm() {
   const [subject, setSubject] = useState(q.get("subject") ?? "");
   const [title, setTitle] = useState(q.get("title") ?? "");
   const [description, setDescription] = useState(q.get("description") ?? "");
+  const [moreSubjects, setMoreSubjects] = useState(false);
   const [level, setLevel] = useState("");
   const [language, setLanguage] = useState("en");
   const [budget, setBudget] = useState("15");
@@ -112,7 +125,7 @@ function NewTaskForm() {
               onChange={(e) => setSubject(e.target.value)}
             />
             <div className="mt-3 flex flex-wrap gap-2" aria-label="Quick picks">
-              {QUICK_SUBJECTS.map((s) => {
+              {[...QUICK_SUBJECTS, ...(moreSubjects ? MORE_SUBJECTS : [])].map((s) => {
                 const on = subject.toLowerCase() === s.toLowerCase();
                 const a = accentFor(s);
                 return (
@@ -131,6 +144,15 @@ function NewTaskForm() {
                   </button>
                 );
               })}
+              {!moreSubjects && (
+                <button
+                  type="button"
+                  onClick={() => setMoreSubjects(true)}
+                  className="inline-flex h-8 items-center rounded-full px-3 text-[13px] font-semibold text-tutor hover:bg-tutor-soft"
+                >
+                  More subjects…
+                </button>
+              )}
             </div>
           </Step>
 
