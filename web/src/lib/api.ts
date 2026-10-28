@@ -51,6 +51,8 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
 
 export const money = (cents: number) => (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
 
+export const LEVELS: Record<string, string> = { high_school: "High school", college: "College" };
+
 export const LANGUAGES: Record<string, string> = {
   en: "English",
   es: "Español",

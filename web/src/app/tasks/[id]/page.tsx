@@ -25,7 +25,7 @@ import {
   useAction,
 } from "@/components/ui";
 import { accentFor } from "@/lib/subjects";
-import { api, ApiError, money, type Bid, type PaymentState, type Task } from "@/lib/api";
+import { api, ApiError, LANGUAGES, LEVELS, money, type Bid, type PaymentState, type Task } from "@/lib/api";
 
 export default function TaskPage() {
   const { id } = useParams<{ id: string }>();
@@ -84,6 +84,8 @@ export default function TaskPage() {
             <span className="size-1.5 rounded-full" style={{ background: accentFor(task.subject).mark }} />
             {task.subject}
           </span>
+          <span>{LEVELS[task.level] ?? task.level}</span>
+          <span>{LANGUAGES[task.language] ?? task.language}</span>
           <span className="tnum">Budget {money(task.budget_cents)}</span>
           <Badge status={task.status} />
         </div>
@@ -92,7 +94,7 @@ export default function TaskPage() {
         </h1>
         {hiredBid && !isTutor && (
           <div className="mt-3 flex items-center gap-2 text-[14px] text-ink-2">
-            <Avatar name={hiredBid.tutor_name} tone="tutor" />
+            <Avatar name={hiredBid.tutor_name} tone="tutor" src={hiredBid.tutor_avatar_url} />
             <span>
               with <span className="font-semibold text-ink">{hiredBid.tutor_name}</span>
             </span>
@@ -280,7 +282,7 @@ function StudentActions({
               <li key={b.id} className="py-4 first:pt-0 last:pb-0">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-2.5">
-                    <Avatar name={b.tutor_name} tone="tutor" />
+                    <Avatar name={b.tutor_name} tone="tutor" src={b.tutor_avatar_url} />
                     <div className="min-w-0">
                       <div className="truncate font-semibold text-ink">{b.tutor_name}</div>
                       <Stars value={b.tutor_rating_avg} count={b.tutor_rating_count} />
@@ -348,28 +350,31 @@ function StudentActions({
   } else if (task.status === "completed") {
     body = (
       <ActionSheet title="Session complete" tone="mastery">
-        <div>
-          <p className="mb-2 text-[14px] font-semibold text-ink">Say thanks with a tip — 100% goes to your tutor</p>
-          <div className="grid grid-cols-3 gap-2 [&>button]:px-2 [&>button]:text-[14px]">
-            {[200, 500, 1000].map((c) => (
-              <Button
-                key={c}
-                variant="secondary"
-                disabled={a.pending}
-                onClick={() => a.run(() => redirect(`/tasks/${task.id}/tips`, { amount_cents: c }))}
-              >
-                Tip {money(c)}
-              </Button>
-            ))}
-          </div>
-        </div>
         {reviewed ? (
-          <p className="enter flex items-center gap-2 border-t border-rule pt-4 text-[15px] text-ink-2">
-            <Stars value={reviewed} /> You rated this session — thank you.
-          </p>
+          <>
+            <p className="enter flex items-center gap-2 text-[15px] text-ink-2">
+              <Stars value={reviewed} /> You rated this session — thank you.
+            </p>
+            {/* Tipping comes right after the review, while the session is fresh. */}
+            <div className="enter border-t border-rule pt-4">
+              <p className="mb-2 text-[14px] font-semibold text-ink">Say thanks with a tip — 100% goes to your tutor</p>
+              <div className="grid grid-cols-3 gap-2 [&>button]:px-2 [&>button]:text-[14px]">
+                {[200, 500, 1000].map((c) => (
+                  <Button
+                    key={c}
+                    variant="secondary"
+                    disabled={a.pending}
+                    onClick={() => a.run(() => redirect(`/tasks/${task.id}/tips`, { amount_cents: c }))}
+                  >
+                    Tip {money(c)}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </>
         ) : (
           <form
-            className="space-y-3 border-t border-rule pt-4"
+            className="space-y-3"
             onSubmit={(e) => {
               e.preventDefault();
               void a.run(async () => {

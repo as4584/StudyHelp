@@ -65,6 +65,9 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
   await student.getByLabel("Subject").fill("Calculus");
   await student.getByLabel("What do you need help understanding?").fill(title);
   await student.getByLabel("Details").fill("I keep mixing up the inner and outer functions.");
+  await expect(student.getByRole("button", { name: "Post request" })).toBeDisabled(); // level is required
+  await student.getByRole("group", { name: "Level" }).getByRole("button", { name: "College" }).click();
+  await student.getByRole("group", { name: "Language" }).getByRole("button", { name: "Español" }).click();
   await student.getByLabel("Budget (USD)").fill("40");
   await student.getByRole("checkbox").check();
   await student.getByRole("button", { name: "Post request" }).click();
@@ -126,14 +129,16 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
   await expect(student.getByTestId("status").first()).toHaveText("completed");
   await expect(student.getByTestId("payment-card")).toContainText("released");
 
+  // Review first; the tip is offered right after it.
+  await expect(student.getByRole("button", { name: "Tip $5.00" })).toHaveCount(0);
+  await student.getByLabel("Rate your tutor").selectOption("5");
+  await student.getByRole("button", { name: "Submit review" }).click();
+  await expect(student.getByText("You rated this session")).toBeVisible(); // no silent submit
   await student.getByRole("button", { name: "Tip $5.00" }).click();
   await student.getByRole("button", { name: "Pay now" }).click();
   await student.waitForURL(/\/payments\/return/);
   await student.goto(taskUrl);
   await expect(student.getByTestId("payment-card")).toContainText("Tips (100% to tutor)");
-  await student.getByLabel("Rate your tutor").selectOption("5");
-  await student.getByRole("button", { name: "Submit review" }).click();
-  await expect(student.getByText("You rated this session")).toBeVisible(); // no silent submit
 
   // --- Premium AI assistant + escalation to a live expert ------------------------------
   await student.goto("/student");

@@ -7,12 +7,27 @@ import { Suspense, useState } from "react";
 import { useRequireRole } from "@/components/auth";
 import { PathLine, sessionStages } from "@/components/path-line";
 import { Button, ErrorText, FileButton, inputCls, useAction } from "@/components/ui";
-import { api, money, type Task } from "@/lib/api";
+import { api, LANGUAGES, LEVELS, money, type Task } from "@/lib/api";
 import { accentFor } from "@/lib/subjects";
 import { uploadToSignedUrl } from "@/lib/upload";
 
 const QUICK_SUBJECTS = ["Calculus", "Physics", "Chemistry", "Writing", "Computer science"];
-const QUICK_BUDGETS = [25, 40, 60];
+const QUICK_BUDGETS = [10, 15, 25, 40];
+
+function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={onClick}
+      className={`h-9 rounded-full border px-3.5 text-[14px] font-semibold transition-colors ${
+        on ? "border-tutor bg-tutor-soft text-tutor" : "border-rule-strong text-ink-2 hover:border-ink-2/40"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
 
 /** One numbered step of the guided request: number + question, then the control. No container. */
 function Step({ n, title, hint, children }: { n: string; title: string; hint?: string; children: React.ReactNode }) {
@@ -36,7 +51,9 @@ function NewTaskForm() {
   const [subject, setSubject] = useState(q.get("subject") ?? "");
   const [title, setTitle] = useState(q.get("title") ?? "");
   const [description, setDescription] = useState(q.get("description") ?? "");
-  const [budget, setBudget] = useState("25");
+  const [level, setLevel] = useState("");
+  const [language, setLanguage] = useState("en");
+  const [budget, setBudget] = useState("15");
   const [ack, setAck] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const { pending, error, run } = useAction();
@@ -49,7 +66,15 @@ function NewTaskForm() {
         e.preventDefault();
         void run(async () => {
           const task = await api<Task>("/tasks", {
-            body: { subject, title, description, budget_cents: budgetCents, honor_code_ack: ack },
+            body: {
+              subject,
+              title,
+              description,
+              level: level as "high_school" | "college",
+              language,
+              budget_cents: budgetCents,
+              honor_code_ack: ack,
+            },
           });
           if (file) await uploadToSignedUrl(`/tasks/${task.id}/files`, file, "rubric");
           router.push(`/tasks/${task.id}`);
@@ -70,7 +95,7 @@ function NewTaskForm() {
             </p>
           ) : (
             <p className="mt-4 max-w-[52ch] text-[16px] text-ink-2">
-              Five short steps. Vetted tutors read it and send you offers — you choose who to work with.
+              A few short steps. Vetted tutors read it and send you offers — you choose who to work with.
             </p>
           )}
         </header>
@@ -109,7 +134,17 @@ function NewTaskForm() {
             </div>
           </Step>
 
-          <Step n="02" title="What are you trying to understand?" hint="One line — this becomes the title tutors see.">
+          <Step n="02" title="Level" hint="So we match you with a tutor who teaches at your level.">
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Level">
+              {Object.entries(LEVELS).map(([k, v]) => (
+                <Chip key={k} on={level === k} onClick={() => setLevel(k)}>
+                  {v}
+                </Chip>
+              ))}
+            </div>
+          </Step>
+
+          <Step n="03" title="What are you trying to understand?" hint="One line — this becomes the title tutors see.">
             <input
               aria-label="What do you need help understanding?"
               className={`${inputCls} font-serif text-[18px]`}
@@ -123,7 +158,7 @@ function NewTaskForm() {
           </Step>
 
           <Step
-            n="03"
+            n="04"
             title="Tell the tutor where you're stuck"
             hint="What you've tried, where it stops making sense, and when you'd like to meet."
           >
@@ -137,7 +172,21 @@ function NewTaskForm() {
             />
           </Step>
 
-          <Step n="04" title="Add context" hint="Optional. A screenshot of the rubric or the problem helps the most.">
+          <Step
+            n="05"
+            title="Language"
+            hint="The language you'd like your session in. Chat messages are translated automatically."
+          >
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Language">
+              {Object.entries(LANGUAGES).map(([k, v]) => (
+                <Chip key={k} on={language === k} onClick={() => setLanguage(k)}>
+                  {v}
+                </Chip>
+              ))}
+            </div>
+          </Step>
+
+          <Step n="06" title="Add context" hint="Optional. A screenshot of the rubric or the problem helps the most.">
             <FileButton
               label="Rubric or screenshot (optional)"
               accept="image/*,.pdf"
@@ -146,7 +195,7 @@ function NewTaskForm() {
             />
           </Step>
 
-          <Step n="05" title="Budget" hint="You'll see tutors' offers before paying anything.">
+          <Step n="07" title="Budget" hint="You'll see tutors' offers before paying anything.">
             <div className="flex flex-wrap items-center gap-3">
               <div className="relative w-36">
                 <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[16px] text-muted">
@@ -214,9 +263,10 @@ function NewTaskForm() {
 
           <div className="space-y-3 sm:pl-[5rem]">
             <ErrorText error={error} />
+            {!level && <p className="text-[14px] text-muted">Choose a level (step 02) to post your request.</p>}
             <Button
               type="submit"
-              disabled={pending || !ack}
+              disabled={pending || !ack || !level}
               loading={pending}
               className="h-12 w-full px-6 text-[16px] sm:w-auto"
             >
@@ -242,7 +292,11 @@ function NewTaskForm() {
             >
               {title || "What you're trying to understand"}
             </p>
-            <p className="tnum mt-3 text-[14px] text-muted">Budget {money(budgetCents)}</p>
+            <p className="tnum mt-3 text-[14px] text-muted">
+              {[level && LEVELS[level], LANGUAGES[language], `Budget ${money(budgetCents)}`]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
             <div className="mt-6">
               <PathLine stages={sessionStages("draft")} dense />
             </div>

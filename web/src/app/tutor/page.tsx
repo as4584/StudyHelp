@@ -20,7 +20,7 @@ import {
   inputCls,
   useAction,
 } from "@/components/ui";
-import { api, money, type PaymentState, type Task } from "@/lib/api";
+import { api, LANGUAGES, LEVELS, money, type PaymentState, type Task } from "@/lib/api";
 import { accentFor } from "@/lib/subjects";
 import { uploadToSignedUrl } from "@/lib/upload";
 import { useToast } from "@/components/toast";
@@ -183,6 +183,9 @@ function Requests({ tasks }: { tasks: Task[] | null }) {
                     <span className="mt-1.5 block font-serif text-[1.25rem] leading-snug text-ink transition-colors group-hover:text-tutor">
                       {t.title}
                     </span>
+                    <span className="mt-1 block text-[13px] text-muted">
+                      {LEVELS[t.level] ?? t.level} · {LANGUAGES[t.language] ?? t.language}
+                    </span>
                   </span>
                   <span className="text-right">
                     <span className="tnum block font-serif text-[1.5rem] leading-none font-medium text-ink">
@@ -248,12 +251,13 @@ function Application({
   onSaved,
   startOpen,
 }: {
-  existing: { bio: string; subjects: string[]; hourly_rate_cents: number; status: string } | null;
+  existing: { bio: string; subjects: string[]; levels: string[]; hourly_rate_cents: number; status: string } | null;
   onSaved: () => Promise<void>;
   startOpen: boolean;
 }) {
   const [bio, setBio] = useState(existing?.bio ?? "");
   const [subjects, setSubjects] = useState(existing?.subjects.join(", ") ?? "");
+  const [levels, setLevels] = useState<string[]>(existing?.levels ?? ["high_school", "college"]);
   const [rate, setRate] = useState(String((existing?.hourly_rate_cents ?? 2000) / 100));
   const [doc, setDoc] = useState<File | null>(null);
   const a = useAction();
@@ -264,6 +268,9 @@ function Application({
     return (
       <Section title="Your profile">
         <p className="text-[15px] text-ink-2">{existing?.subjects.join(" · ")}</p>
+        <p className="mt-1 text-[14px] text-muted">
+          Teaches {(existing?.levels ?? []).map((l) => LEVELS[l] ?? l).join(" and ")}
+        </p>
         {existing?.bio && <p className="mt-2 font-serif text-[16px] leading-relaxed text-ink-2">{existing.bio}</p>}
         <Button variant="secondary" className="mt-4" onClick={() => setOpen(true)}>
           Edit application
@@ -290,6 +297,7 @@ function Application({
                   .split(",")
                   .map((s) => s.trim())
                   .filter(Boolean),
+                levels: levels as ("high_school" | "college")[],
                 hourly_rate_cents: Math.round(Number(rate) * 100),
               },
             });
@@ -302,6 +310,27 @@ function Application({
       >
         <Field label="Subjects" hint="Comma separated, e.g. Calculus, Physics">
           <input className={inputCls} required value={subjects} onChange={(e) => setSubjects(e.target.value)} />
+        </Field>
+        <Field label="Levels you teach" hint="You'll only see requests at these levels.">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Levels you teach">
+            {Object.entries(LEVELS).map(([k, v]) => {
+              const on = levels.includes(k);
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  aria-pressed={on}
+                  disabled={on && levels.length === 1}
+                  onClick={() => setLevels(on ? levels.filter((l) => l !== k) : [...levels, k])}
+                  className={`h-9 rounded-full border px-3.5 text-[14px] font-semibold transition-colors ${
+                    on ? "border-tutor bg-tutor-soft text-tutor" : "border-rule-strong text-ink-2 hover:border-ink-2/40"
+                  }`}
+                >
+                  {v}
+                </button>
+              );
+            })}
+          </div>
         </Field>
         <Field label="Hourly rate (USD)">
           <input

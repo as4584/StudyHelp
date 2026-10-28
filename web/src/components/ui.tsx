@@ -347,7 +347,19 @@ export function Stars({ value, count }: { value: number; count?: number }) {
   );
 }
 
-export function Avatar({ name, tone = "muted" }: { name: string; tone?: "tutor" | "muted" | "mastery" }) {
+export function Avatar({
+  name,
+  tone = "muted",
+  src,
+}: {
+  name: string;
+  tone?: "tutor" | "muted" | "mastery";
+  src?: string | null;
+}) {
+  if (src) {
+    // eslint-disable-next-line @next/next/no-img-element -- inline data URL, nothing to optimize
+    return <img src={src} alt="" aria-hidden className="size-7 shrink-0 rounded-full object-cover" />;
+  }
   // Initial of the given name, skipping honorifics ("Prof. Diego" -> "D").
   const word = name.replace(/^(prof|dr|mr|mrs|ms)\.?\s+/i, "").trim();
   const initial = (word[0] ?? "?").toUpperCase();
