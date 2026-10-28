@@ -750,6 +750,8 @@ export interface components {
     schemas: {
         /** AdminUserOut */
         AdminUserOut: {
+            /** Avatar Url */
+            avatar_url?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -889,6 +891,8 @@ export interface components {
              * Format: uuid
              */
             task_id: string;
+            /** Tutor Avatar Url */
+            tutor_avatar_url: string | null;
             /**
              * Tutor Id
              * Format: uuid
@@ -1086,6 +1090,8 @@ export interface components {
         };
         /** ProfileOut */
         ProfileOut: {
+            /** Avatar Url */
+            avatar_url?: string | null;
             /** Display Name */
             display_name: string;
             /**
@@ -1102,6 +1108,8 @@ export interface components {
         };
         /** ProfilePatch */
         ProfilePatch: {
+            /** Avatar Url */
+            avatar_url?: string | null;
             /** Display Name */
             display_name?: string | null;
             /** Preferred Language */
@@ -1109,12 +1117,16 @@ export interface components {
         };
         /** PublicTutorOut */
         PublicTutorOut: {
+            /** Avatar Url */
+            avatar_url?: string | null;
             /** Bio */
             bio: string;
             /** Display Name */
             display_name: string;
             /** Hourly Rate Cents */
             hourly_rate_cents: number;
+            /** Levels */
+            levels: string[];
             /** Payouts Enabled */
             payouts_enabled: boolean;
             /** Rating Avg */
@@ -1232,6 +1244,17 @@ export interface components {
             description: string;
             /** Honor Code Ack */
             honor_code_ack: boolean;
+            /**
+             * Language
+             * @default en
+             */
+            language: string;
+            /**
+             * Level
+             * @default college
+             * @enum {string}
+             */
+            level: "high_school" | "college";
             /** Subject */
             subject: string;
             /** Title */
@@ -1259,6 +1282,10 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Language */
+            language: string;
+            /** Level */
+            level: string;
             /** Status */
             status: string;
             /**
@@ -1317,6 +1344,14 @@ export interface components {
             bio: string;
             /** Hourly Rate Cents */
             hourly_rate_cents: number;
+            /**
+             * Levels
+             * @default [
+             *       "high_school",
+             *       "college"
+             *     ]
+             */
+            levels: ("high_school" | "college")[];
             /** Subjects */
             subjects: string[];
         };
@@ -1326,6 +1361,8 @@ export interface components {
             bio: string;
             /** Hourly Rate Cents */
             hourly_rate_cents: number;
+            /** Levels */
+            levels: string[];
             /** Payouts Enabled */
             payouts_enabled: boolean;
             /** Rating Avg */

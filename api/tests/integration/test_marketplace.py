@@ -151,3 +151,63 @@ async def test_suspended_tutor_cannot_be_hired(flow: Flow, db) -> None:  # type:
         f"/tasks/{flow.task_id}/hire", headers=flow.student.h, json={"bid_id": flow.bid_id}
     )
     assert r.status_code == 409
+
+
+async def test_task_language_defaults_to_english_and_is_validated(flow: Flow) -> None:
+    base = {
+        "subject": "Math",
+        "title": "Limits",
+        "description": "x",
+        "budget_cents": 1000,
+        "honor_code_ack": True,
+    }
+    c, h = flow.client, flow.student.h
+    r = await c.post("/tasks", headers=h, json=base)
+    assert r.status_code == 201 and r.json()["language"] == "en"
+    r = await c.post("/tasks", headers=h, json={**base, "language": "es"})
+    assert r.status_code == 201 and r.json()["language"] == "es"
+    r = await c.post("/tasks", headers=h, json={**base, "language": "spanish"})
+    assert r.status_code == 422
+
+
+async def test_tutors_only_see_requests_at_levels_they_teach(flow: Flow) -> None:
+    c = flow.client
+    base = {"subject": "Math", "description": "x", "budget_cents": 1000, "honor_code_ack": True}
+    hs = await c.post(
+        "/tasks",
+        headers=flow.student.h,
+        json={**base, "title": "HS algebra", "level": "high_school"},
+    )
+    assert hs.status_code == 201 and hs.json()["level"] == "high_school"
+    r = await c.post(
+        "/tasks", headers=flow.student.h, json={**base, "title": "Bad", "level": "phd"}
+    )
+    assert r.status_code == 422
+
+    def open_ids(resp: httpx.Response) -> set[str]:
+        return {t["id"] for t in resp.json()}
+
+    assert hs.json()["id"] in open_ids(await c.get("/tasks?scope=open", headers=flow.tutor.h))
+    r = await c.put(
+        "/tutors/me/application",
+        headers=flow.tutor.h,
+        json={"bio": "", "subjects": ["Math"], "levels": ["college"], "hourly_rate_cents": 3000},
+    )
+    assert r.status_code == 200 and r.json()["levels"] == ["college"]
+    assert hs.json()["id"] not in open_ids(await c.get("/tasks?scope=open", headers=flow.tutor.h))
+
+
+async def test_profile_photo_set_validated_and_cleared(flow: Flow) -> None:
+    c, h = flow.client, flow.student.h
+    pic = "data:image/jpeg;base64,/9j/4AAQSkZJRg=="
+    r = await c.patch("/me", headers=h, json={"avatar_url": pic})
+    assert r.status_code == 200 and r.json()["profile"]["avatar_url"] == pic
+    for bad in ["javascript:alert(1)", "data:text/html;base64,PGgxPg==", "https://x.test/a.png"]:
+        r = await c.patch("/me", headers=h, json={"avatar_url": bad})
+        assert r.status_code == 422, bad
+    r = await c.patch(
+        "/me", headers=h, json={"avatar_url": "data:image/png;base64," + "A" * 200_000}
+    )
+    assert r.status_code == 422
+    r = await c.patch("/me", headers=h, json={"avatar_url": ""})
+    assert r.status_code == 200 and r.json()["profile"]["avatar_url"] is None

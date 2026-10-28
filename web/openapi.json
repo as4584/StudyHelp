@@ -3,6 +3,17 @@
     "schemas": {
       "AdminUserOut": {
         "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -261,6 +272,17 @@
             "title": "Task Id",
             "type": "string"
           },
+          "tutor_avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tutor Avatar Url"
+          },
           "tutor_id": {
             "format": "uuid",
             "title": "Tutor Id",
@@ -288,6 +310,7 @@
           "status",
           "created_at",
           "tutor_name",
+          "tutor_avatar_url",
           "tutor_rating_avg",
           "tutor_rating_count"
         ],
@@ -673,6 +696,17 @@
       },
       "ProfileOut": {
         "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
           "display_name": {
             "title": "Display Name",
             "type": "string"
@@ -707,6 +741,19 @@
       },
       "ProfilePatch": {
         "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "maxLength": 200000,
+                "pattern": "^(|data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
           "display_name": {
             "anyOf": [
               {
@@ -738,6 +785,17 @@
       },
       "PublicTutorOut": {
         "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
           "bio": {
             "title": "Bio",
             "type": "string"
@@ -749,6 +807,13 @@
           "hourly_rate_cents": {
             "title": "Hourly Rate Cents",
             "type": "integer"
+          },
+          "levels": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Levels",
+            "type": "array"
           },
           "payouts_enabled": {
             "title": "Payouts Enabled",
@@ -783,6 +848,7 @@
           "user_id",
           "bio",
           "subjects",
+          "levels",
           "hourly_rate_cents",
           "status",
           "payouts_enabled",
@@ -1015,6 +1081,21 @@
             "title": "Honor Code Ack",
             "type": "boolean"
           },
+          "language": {
+            "default": "en",
+            "pattern": "^[a-z]{2}$",
+            "title": "Language",
+            "type": "string"
+          },
+          "level": {
+            "default": "college",
+            "enum": [
+              "high_school",
+              "college"
+            ],
+            "title": "Level",
+            "type": "string"
+          },
           "subject": {
             "maxLength": 60,
             "minLength": 1,
@@ -1093,6 +1174,14 @@
             "title": "Id",
             "type": "string"
           },
+          "language": {
+            "title": "Language",
+            "type": "string"
+          },
+          "level": {
+            "title": "Level",
+            "type": "string"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -1118,6 +1207,8 @@
           "title",
           "description",
           "budget_cents",
+          "language",
+          "level",
           "status",
           "hired_tutor_id",
           "accepted_bid_id",
@@ -1264,6 +1355,23 @@
             "title": "Hourly Rate Cents",
             "type": "integer"
           },
+          "levels": {
+            "default": [
+              "high_school",
+              "college"
+            ],
+            "items": {
+              "enum": [
+                "high_school",
+                "college"
+              ],
+              "type": "string"
+            },
+            "maxItems": 2,
+            "minItems": 1,
+            "title": "Levels",
+            "type": "array"
+          },
           "subjects": {
             "items": {
               "type": "string"
@@ -1291,6 +1399,13 @@
           "hourly_rate_cents": {
             "title": "Hourly Rate Cents",
             "type": "integer"
+          },
+          "levels": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Levels",
+            "type": "array"
           },
           "payouts_enabled": {
             "title": "Payouts Enabled",
@@ -1325,6 +1440,7 @@
           "user_id",
           "bio",
           "subjects",
+          "levels",
           "hourly_rate_cents",
           "status",
           "payouts_enabled",

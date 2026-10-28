@@ -57,7 +57,12 @@ async def list_bids(
     for b in bids:
         row = (
             await session.execute(
-                select(Profile.display_name, TutorProfile.rating_avg, TutorProfile.rating_count)
+                select(
+                    Profile.display_name,
+                    TutorProfile.rating_avg,
+                    TutorProfile.rating_count,
+                    Profile.avatar_url,
+                )
                 .join(TutorProfile, TutorProfile.user_id == Profile.id)
                 .where(Profile.id == b.tutor_id)
             )
@@ -66,6 +71,7 @@ async def list_bids(
             BidWithTutorOut(
                 **BidOut.model_validate(b).model_dump(),
                 tutor_name=row[0],
+                tutor_avatar_url=row[3],
                 tutor_rating_avg=float(row[1]),
                 tutor_rating_count=row[2],
             )

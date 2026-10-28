@@ -56,6 +56,8 @@ async def create_task(
     description: str,
     budget_cents: int,
     honor_code_ack: bool,
+    language: str = "en",
+    level: str = "college",
 ) -> Task:
     if not honor_code_ack:
         raise InvalidState("the honor-code acknowledgement is required")
@@ -65,6 +67,8 @@ async def create_task(
         title=title,
         description=description,
         budget_cents=budget_cents,
+        language=language,
+        level=level,
         honor_code_ack=True,
         status="open",
     )
@@ -79,9 +83,13 @@ async def list_tasks(session: AsyncSession, user: CurrentUser, scope: str) -> li
         stmt = stmt.where(Task.student_id == user.id)
     elif user.role == "tutor":
         if scope == "open":
-            if not await tutor_is_approved(session, user.id):
+            tp = await session.get(TutorProfile, user.id)
+            if tp is None or tp.status != "approved":
                 return []
-            stmt = stmt.where(Task.status == "open", Task.student_id != user.id)
+            # Tutors only see requests at the levels they teach.
+            stmt = stmt.where(
+                Task.status == "open", Task.student_id != user.id, Task.level.in_(tp.levels)
+            )
         else:
             stmt = stmt.where(Task.hired_tutor_id == user.id)
     elif scope == "open":
