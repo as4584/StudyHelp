@@ -34,7 +34,9 @@ def create_app() -> FastAPI:
     async def domain_error(_: Request, exc: DomainError) -> JSONResponse:
         if exc.status_code >= 500:
             event(log, "domain.provider_error", logging.ERROR, code=exc.code, detail=exc.message)
-        return JSONResponse({"detail": exc.message, "code": exc.code}, status_code=exc.status_code)
+        return JSONResponse(
+            {"detail": exc.message, "code": exc.code, **exc.extra}, status_code=exc.status_code
+        )
 
     def _identity(status: str) -> HealthOut:
         return HealthOut(

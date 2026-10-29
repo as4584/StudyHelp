@@ -5,9 +5,10 @@ class DomainError(Exception):
     status_code = 400
     code = "bad_request"
 
-    def __init__(self, message: str) -> None:
+    def __init__(self, message: str, **extra: object) -> None:
         super().__init__(message)
         self.message = message
+        self.extra = extra
 
 
 class NotFound(DomainError):
@@ -28,6 +29,15 @@ class Conflict(DomainError):
 class InvalidState(DomainError):
     status_code = 409
     code = "invalid_state"
+
+
+class QuotaExceeded(DomainError):
+    """An AI usage limit was reached; ``code`` says which, ``extra['resets_at']`` says when."""
+
+    def __init__(self, message: str, *, code: str, status_code: int, resets_at: str) -> None:
+        super().__init__(message, resets_at=resets_at)
+        self.code = code
+        self.status_code = status_code
 
 
 class ProviderError(DomainError):

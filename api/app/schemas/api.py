@@ -269,6 +269,15 @@ class AiChatOut(ORM):
     subject: str
 
 
+class AiQuotaOut(BaseModel):
+    premium: bool
+    period: Literal["day", "month"]
+    used: int
+    limit: int
+    remaining: int
+    resets_at: datetime
+
+
 class AiAskIn(BaseModel):
     question: str = Field(min_length=1, max_length=4000)
 
