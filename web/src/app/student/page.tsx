@@ -1,5 +1,6 @@
 "use client";
 
+import { QuotaNote, startPremiumCheckout, useAiQuota } from "@/components/ai-quota";
 import { ArrowRight, ArrowUp, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -7,7 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useRequireRole } from "@/components/auth";
 import { PathHistory, SessionPath } from "@/components/study-path";
-import { Badge, Button, EmptyState, ErrorText, LinkButton, Skeleton, TIMELINE, useAction } from "@/components/ui";
+import { Badge, EmptyState, ErrorText, LinkButton, Skeleton, TIMELINE, useAction } from "@/components/ui";
 import { api, money, type Bid, type Task } from "@/lib/api";
 import { isActive, studentNextStep } from "@/lib/next-step";
 import { accentFor, subjectFamily } from "@/lib/subjects";
@@ -277,6 +278,7 @@ function AskTutor({ premium }: { premium: boolean }) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const upgrade = useAction();
+  const { quota } = useAiQuota();
   return (
     <section
       aria-labelledby="ai-h"
@@ -295,62 +297,49 @@ function AskTutor({ premium }: { premium: boolean }) {
         <span className="micro">AI tutor{premium ? " · Premium" : ""}</span>
       </div>
       <h2 id="ai-h" className="mt-3 font-serif text-[1.75rem] leading-[1.15] font-medium tracking-[-0.02em]">
-        {premium ? "What are you trying to understand right now?" : "A patient study coach, any hour."}
+        What are you trying to understand right now?
       </h2>
-      {premium ? (
-        <form
-          className="mt-5"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (q.trim()) router.push(`/assistant?${new URLSearchParams({ q }).toString()}`);
-          }}
-        >
-          <div className="flex items-end gap-2 rounded-[10px] bg-white/10 p-2 ring-1 ring-white/15 transition focus-within:bg-white/[0.14] focus-within:ring-lavender">
-            <textarea
-              aria-label="Ask the AI tutor"
-              className="min-h-20 w-full resize-none bg-transparent px-2 py-1.5 text-[16px] text-white outline-none placeholder:text-lavender/70"
-              placeholder="e.g. Why does the chain rule multiply by the inner derivative?"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
-            <button
-              type="submit"
-              aria-label="Ask"
-              className="flex size-10 shrink-0 items-center justify-center rounded-[8px] bg-white text-tutor-deep transition-transform hover:-translate-y-px active:scale-95"
-            >
-              <ArrowUp size={18} strokeWidth={2.25} aria-hidden />
-            </button>
-          </div>
-          <p className="mt-3 text-[13px] text-lavender/90">
-            It guides you to the answer — and hands you to a live expert, conversation attached, when you&apos;re stuck.
-          </p>
-        </form>
-      ) : (
-        <div className="mt-4">
-          <ul className="space-y-1.5 text-[15px] text-lavender">
-            <li>Explanations, worked examples and hints, 24/7</li>
-            <li>One tap to a live expert with the conversation attached</li>
-            <li>Priority matching and session discounts</li>
-          </ul>
-          <ErrorText error={upgrade.error} />
-          <div className="mt-6 flex items-center gap-4">
-            <Button
-              className="border-0 bg-white text-tutor-deep hover:bg-lavender"
-              variant="secondary"
-              disabled={upgrade.pending}
-              onClick={() =>
-                upgrade.run(async () => {
-                  const { url } = await api<{ url: string }>("/premium/checkout", { body: {} });
-                  window.location.href = url;
-                })
-              }
-            >
-              Upgrade to Premium
-            </Button>
-            <span className="tnum text-[14px] text-lavender">$9.99 / month</span>
-          </div>
+      <form
+        className="mt-5"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (q.trim()) router.push(`/assistant?${new URLSearchParams({ q }).toString()}`);
+        }}
+      >
+        <div className="flex items-end gap-2 rounded-[10px] bg-white/10 p-2 ring-1 ring-white/15 transition focus-within:bg-white/[0.14] focus-within:ring-lavender">
+          <textarea
+            aria-label="Ask the AI tutor"
+            className="min-h-20 w-full resize-none bg-transparent px-2 py-1.5 text-[16px] text-white outline-none placeholder:text-lavender/70"
+            placeholder="e.g. Why does the chain rule multiply by the inner derivative?"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          <button
+            type="submit"
+            aria-label="Ask"
+            className="flex size-10 shrink-0 items-center justify-center rounded-[8px] bg-white text-tutor-deep transition-transform hover:-translate-y-px active:scale-95"
+          >
+            <ArrowUp size={18} strokeWidth={2.25} aria-hidden />
+          </button>
         </div>
-      )}
+        <p className="mt-3 text-[13px] text-lavender/90">
+          It guides you to the answer — and hands you to a live expert, conversation attached, when you&apos;re stuck.
+        </p>
+        {!premium && (
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-white/15 pt-4">
+            <QuotaNote quota={quota} tone="dark" />
+            <button
+              type="button"
+              disabled={upgrade.pending}
+              onClick={() => upgrade.run(startPremiumCheckout)}
+              className="text-[13px] font-semibold text-white underline-offset-4 hover:underline"
+            >
+              Upgrade to Premium · $9.99/mo for unlimited
+            </button>
+            <ErrorText error={upgrade.error} />
+          </div>
+        )}
+      </form>
     </section>
   );
 }
