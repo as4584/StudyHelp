@@ -48,7 +48,20 @@ jobs:
       - name: Start local Supabase (Postgres/Auth/Realtime/Storage) with an ES256 signing key
         run: |
           uv run --project api --with cryptography python scripts/gen_signing_key.py
-          cd infra && npx --yes supabase@2.122.0 start
+          cd infra
+          # Pull only what the gate uses (db, auth, rest, realtime, storage, kong): fewer, smaller
+          # images. Shared runners can hit the default registry's anonymous data cap
+          # ("toomanyrequests"), so retry and fall back to Docker Hub.
+          SKIP=studio,imgproxy,edge-runtime,logflare,vector,mailpit,postgres-meta,supavisor
+          for registry in public.ecr.aws docker.io public.ecr.aws; do
+            if SUPABASE_INTERNAL_IMAGE_REGISTRY=$registry npx --yes supabase@2.122.0 start -x "$SKIP"; then
+              exit 0
+            fi
+            echo "supabase start failed via $registry; retrying"
+            npx --yes supabase@2.122.0 stop --no-backup || true
+            sleep 20
+          done
+          exit 1
 
       - name: Write local env files from the running stack
         run: scripts/local-env
