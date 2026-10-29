@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC, datetime, timedelta
 
 import httpx
 
@@ -209,3 +210,40 @@ async def test_admin_tutor_approval_flow_is_audited(
     r = await client.post(f"/admin/users/{t.id}/suspend", headers=admin.h)
     assert r.json()["is_active"] is False
     assert (await client.get("/me", headers=t.h)).status_code == 403
+
+
+async def test_free_allowance_resets_at_next_utc_midnight(
+    client: httpx.AsyncClient, make_user: UserFactory
+) -> None:
+    s = await make_user("student")
+    q = (await client.get("/ai/quota", headers=s.h)).json()
+    resets = datetime.fromisoformat(q["resets_at"])
+    now = datetime.now(UTC)
+    assert resets == (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+async def test_failed_ai_answer_does_not_use_up_a_question(
+    client: httpx.AsyncClient, make_user: UserFactory, db
+) -> None:  # type: ignore[no-untyped-def]
+    from app.providers.llm import LLMError, get_llm_provider
+
+    app = client._transport.app  # type: ignore[attr-defined]  # the fixture's ASGI app
+
+    class Down:
+        name = "down"
+
+        async def generate(self, **_: object) -> object:
+            raise LLMError("provider outage")
+
+    s = await make_user("student")
+    chat = (await client.post("/ai/chats", headers=s.h, json={"subject": "Math"})).json()
+    app.dependency_overrides[get_llm_provider] = lambda: Down()
+    try:
+        r = await client.post(
+            f"/ai/chats/{chat['id']}/messages", headers=s.h, json={"question": "hi"}
+        )
+    finally:
+        app.dependency_overrides.pop(get_llm_provider)
+    assert r.status_code == 502
+    assert (await client.get("/ai/quota", headers=s.h)).json()["used"] == 0
+    assert await db.fetchval("select status from ai_usage") == "error"
