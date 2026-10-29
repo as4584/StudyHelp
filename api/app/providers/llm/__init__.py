@@ -96,6 +96,53 @@ class OpenAIProvider:
         )
 
 
+class OllamaProvider:
+    """Open-weight model served by Ollama (``POST /api/chat``, non-streaming)."""
+
+    name = "ollama"
+
+    def __init__(self, settings: Settings) -> None:
+        import httpx
+
+        headers = (
+            {"Authorization": f"Bearer {settings.ollama_api_key}"}
+            if settings.ollama_api_key
+            else {}
+        )
+        self._client = httpx.AsyncClient(
+            base_url=settings.ollama_base_url.rstrip("/"),
+            headers=headers,
+            timeout=settings.ollama_timeout_s,
+        )
+        self._model = settings.ollama_model
+        self._errors: tuple[type[Exception], ...] = (httpx.HTTPError, ValueError, KeyError)
+
+    async def generate(self, *, system: str, turns: list[ChatTurn], max_tokens: int) -> LLMResult:
+        body = {
+            "model": self._model,
+            "stream": False,
+            "think": False,  # reasoning models: answer directly, no hidden chain of thought
+            "options": {"num_predict": max_tokens},
+            "messages": [
+                {"role": "system", "content": system},
+                *({"role": t.role, "content": t.content} for t in turns),
+            ],
+        }
+        try:
+            resp = await self._client.post("/api/chat", json=body)
+            resp.raise_for_status()
+            data = resp.json()
+            text = data["message"]["content"]
+        except self._errors as exc:
+            raise LLMError(f"ollama: {type(exc).__name__}") from exc
+        return LLMResult(
+            text=text,
+            model=data.get("model", self._model),
+            input_tokens=data.get("prompt_eval_count"),
+            output_tokens=data.get("eval_count"),
+        )
+
+
 class FakeLLMProvider:
     """Deterministic, visibly-labelled adapter for tests and keyless demos."""
 
@@ -130,4 +177,6 @@ def get_llm_provider() -> LLMProvider:
         return ClaudeProvider(s)
     if s.llm_provider == "openai":
         return OpenAIProvider(s)
+    if s.llm_provider == "ollama":
+        return OllamaProvider(s)
     return FakeLLMProvider()

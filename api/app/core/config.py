@@ -39,11 +39,16 @@ class Settings(BaseSettings):
 
     storage_provider: Literal["supabase", "fake"] = "supabase"
 
-    llm_provider: Literal["anthropic", "openai", "fake"] = "fake"
+    llm_provider: Literal["anthropic", "openai", "ollama", "fake"] = "fake"
     anthropic_api_key: str = ""
     anthropic_model: str = ""
     openai_api_key: str = ""
     openai_model: str = ""
+    # Self-hosted open model via Ollama's chat API (no per-token cost; good for demos).
+    ollama_base_url: str = "http://127.0.0.1:11434"
+    ollama_model: str = ""
+    ollama_api_key: str = ""  # optional bearer token when Ollama sits behind an auth proxy
+    ollama_timeout_s: float = 120.0
     llm_max_tokens: int = 800
 
     translation_provider: Literal["deepl", "google", "fake"] = "fake"
@@ -83,6 +88,8 @@ class Settings(BaseSettings):
             raise ValueError("ANTHROPIC_API_KEY and ANTHROPIC_MODEL are required")
         if self.llm_provider == "openai" and not (self.openai_api_key and self.openai_model):
             raise ValueError("OPENAI_API_KEY and OPENAI_MODEL are required")
+        if self.llm_provider == "ollama" and not self.ollama_model:
+            raise ValueError("OLLAMA_MODEL is required")
         if self.translation_provider == "deepl" and not self.deepl_api_key:
             raise ValueError("DEEPL_API_KEY is required")
         if self.translation_provider == "google" and not self.google_translate_api_key:
