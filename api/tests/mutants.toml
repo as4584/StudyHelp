@@ -197,6 +197,12 @@ why = "weak LiveKit secrets are refused"
 
 [[mutant]]
 file = "app/core/config.py"
+old = '            dev = self.environment in ("development", "test")'
+new = '            dev = self.environment != "production"'
+why = "plain ws:// is for local development only"
+
+[[mutant]]
+file = "app/core/config.py"
 old = "            self.video_provider if self.video_enabled else None,"
 new = "            None,"
 why = "production refuses fake video"
