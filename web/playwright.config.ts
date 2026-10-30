@@ -18,6 +18,8 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
+    // Synthetic camera/mic so the video pages run headless in CI without real devices.
+    launchOptions: { args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"] },
   },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
