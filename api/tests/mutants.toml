@@ -1,0 +1,202 @@
+# Mutation specs for scripts/mutate.py. Each mutant breaks one rule; the suite must fail.
+# Add mutants for every new rule in the same PR that adds the rule.
+
+# ---------------------------------------------------------------- AI freemium (sprint 09)
+[[mutant]]
+file = "app/services/ai.py"
+old = "if q.remaining == 0:"
+new = "if q.remaining < 0:"
+why = "quota exhausted must refuse"
+
+[[mutant]]
+file = "app/services/ai.py"
+old = "return max(self.limit - self.used, 0)"
+new = "return max(self.limit - self.used + 1, 0)"
+why = "remaining count is exact"
+
+[[mutant]]
+file = "app/services/ai.py"
+old = "AiMessage.created_at >= start"
+new = "AiMessage.created_at <= start"
+why = "only this window's questions count"
+
+[[mutant]]
+file = "app/services/ai.py"
+old = 'AiMessage.role == "user"'
+new = 'AiMessage.role != "user"'
+why = "only the user's own questions count"
+
+[[mutant]]
+file = "app/services/ai.py"
+old = "limit = s.ai_premium_monthly if premium else s.ai_free_daily"
+new = "limit = s.ai_free_daily if premium else s.ai_premium_monthly"
+why = "free vs premium limits"
+
+[[mutant]]
+file = "app/services/ai.py"
+old = "start + timedelta(days=1)"
+new = "start + timedelta(days=2)"
+why = "free allowance resets at next UTC midnight"
+
+[[mutant]]
+file = "app/services/ai.py"
+old = "        await session.execute(delete(AiMessage).where(AiMessage.id == asked.id))\n"
+new = ""
+why = "a failed answer refunds the question"
+
+[[mutant]]
+file = "app/services/marketplace.py"
+old = "Task.level.in_(tp.levels)"
+new = "Task.level.notin_(tp.levels)"
+why = "tutors only see levels they teach"
+
+[[mutant]]
+file = "app/services/marketplace.py"
+old = '            if tp is None or tp.status != "approved":'
+new = "            if tp is None:"
+why = "unapproved tutors see no open requests"
+
+[[mutant]]
+file = "app/routers/me.py"
+old = "profile.avatar_url = body.avatar_url or None"
+new = "profile.avatar_url = body.avatar_url"
+why = "empty string clears the photo"
+
+[[mutant]]
+file = "app/schemas/api.py"
+old = 'AVATAR_PATTERN = r"^(|data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+)$"'
+new = 'AVATAR_PATTERN = r"^(|data:.*)$"'
+why = "only image data URLs are accepted"
+
+# ---------------------------------------------------------------- video (sprint 10)
+[[mutant]]
+file = "app/services/video.py"
+old = 'JOINABLE = {"paid", "delivered"}'
+new = 'JOINABLE = {"hired", "paid", "delivered"}'
+why = "no video before payment"
+
+[[mutant]]
+file = "app/services/video.py"
+old = 'JOINABLE = {"paid", "delivered"}'
+new = 'JOINABLE = {"paid", "delivered", "completed"}'
+why = "no video after completion"
+
+[[mutant]]
+file = "app/services/video.py"
+old = "    if user.id not in (task.student_id, task.hired_tutor_id):\n        raise Forbidden"
+new = "    if user.role != \"admin\" and user.id not in (task.student_id, task.hired_tutor_id):\n        raise Forbidden"
+why = "admins can see a task but never join its call"
+
+[[mutant]]
+file = "app/services/video.py"
+old = "    if user.id not in (task.student_id, task.hired_tutor_id):\n        raise Forbidden"
+new = "    if user.id == uuid.UUID(int=0):\n        raise Forbidden"
+why = "only the two parties may join"
+
+[[mutant]]
+file = "app/services/video.py"
+old = "    if vs is not None and vs.status == \"ended\":\n        raise InvalidState"
+new = "    if vs is not None and vs.status == \"never\":\n        raise InvalidState"
+why = "an ended session issues no new credentials"
+
+[[mutant]]
+file = "app/services/video.py"
+old = "        vs.status, vs.started_at = \"active\", now"
+new = "        vs.started_at = now"
+why = "first join marks the session active"
+
+[[mutant]]
+file = "app/services/video.py"
+old = 'role = "student" if user.id == task.student_id else "tutor"'
+new = 'role = "tutor" if user.id == task.student_id else "student"'
+why = "participant role metadata"
+
+[[mutant]]
+file = "app/services/video.py"
+old = 'return "p_" + hashlib.sha256(f"{room}:{user_id}".encode()).hexdigest()[:24]'
+new = 'return f"p_{user_id}"'
+why = "identity must not reveal the user id"
+
+[[mutant]]
+file = "app/services/video.py"
+old = 'return "p_" + hashlib.sha256(f"{room}:{user_id}".encode()).hexdigest()[:24]'
+new = 'return "p_" + secrets.token_hex(12)'
+why = "identity is stable so a rejoin replaces, not adds, a participant"
+
+[[mutant]]
+file = "app/services/video.py"
+old = '    return f"room_{secrets.token_hex(16)}"'
+new = '    return f"room_{secrets.token_hex(15)}"'
+why = "room names carry 128 random bits"
+
+[[mutant]]
+file = "app/services/video.py"
+old = "    if user.role != \"admin\" and user.id not in (task.student_id, task.hired_tutor_id):\n        raise NotFound"
+new = "    if user.role == \"nobody\":\n        raise NotFound"
+why = "browsing tutors cannot read a session's video status"
+
+[[mutant]]
+file = "app/services/video.py"
+old = '    return state, task.status in JOINABLE and state != "ended"'
+new = "    return state, task.status in JOINABLE"
+why = "an ended session is not joinable"
+
+[[mutant]]
+file = "app/services/video.py"
+old = "    if vs.status == \"ended\":\n        return \"ended\""
+new = "    if vs.status == \"never\":\n        return \"ended\""
+why = "ending twice closes the room once"
+
+[[mutant]]
+file = "app/services/video.py"
+old = "        await provider.close_room(room)\n"
+new = "        pass\n"
+why = "ending a session closes the room"
+
+[[mutant]]
+file = "app/services/video.py"
+old = "    if vs is None:\n        raise NotFound"
+new = "    if vs is None and False:\n        raise NotFound"
+why = "ending with no session is 404"
+
+[[mutant]]
+file = "app/providers/video/__init__.py"
+old = '        "canPublishData": False,'
+new = '        "canPublishData": True,'
+why = "no data channel"
+
+[[mutant]]
+file = "app/providers/video/__init__.py"
+old = 'PUBLISH_SOURCES = ["camera", "microphone", "screen_share", "screen_share_audio"]'
+new = 'PUBLISH_SOURCES = ["camera", "microphone"]'
+why = "screen share is allowed"
+
+[[mutant]]
+file = "app/providers/video/__init__.py"
+old = '{"iss": api_key, "nbf": now, "exp": now + ttl_s, **claims}'
+new = '{"iss": api_key, "nbf": now, "exp": now + 10 * ttl_s, **claims}'
+why = "credentials are short-lived"
+
+[[mutant]]
+file = "app/providers/video/__init__.py"
+old = '{"video": {"room": room, "roomCreate": True}}'
+new = '{"video": {"room": room, "roomAdmin": True, "roomCreate": True}}'
+why = "the close-room token is least-privilege"
+
+[[mutant]]
+file = "app/routers/video.py"
+old = "    if not get_settings().video_enabled:"
+new = "    if False:"
+why = "the feature flag turns video off"
+
+[[mutant]]
+file = "app/core/config.py"
+old = "            if len(self.livekit_api_secret) < 32:"
+new = "            if len(self.livekit_api_secret) < 3:"
+why = "weak LiveKit secrets are refused"
+
+[[mutant]]
+file = "app/core/config.py"
+old = "            self.video_provider if self.video_enabled else None,"
+new = "            None,"
+why = "production refuses fake video"
