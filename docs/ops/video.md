@@ -27,7 +27,48 @@ Recorded result, 2026-10-30, LiveKit 1.13.11 on the dev workstation:
   participant-minute. A 1:1 hour is about 2.25 GB of server egress. This is a planning
   assumption, so measure it on the real node.
 
-## Production edge (Sprint 13, needs a human decision before anything is changed)
+## Production edge: DECIDED, option A (2026-10-30)
+
+Alex chose to self-host with **no outside services**:
+- The home server is on a wired connection to the router, and Alex has router access.
+- Public IPv4 is `24.146.145.204`. It is not CGNAT, but it still has to be confirmed against
+  the WAN IP the router shows.
+- PC LAN address: `192.168.0.137`.
+
+`infra/edge/` (Docker Desktop):
+- **HAProxy 3.2.26** does an SNI split on 443: `turn.*` goes to LiveKit TURN/TLS, everything
+  else to Caddy.
+- **Caddy 2.11.7** serves the Let's Encrypt certificates and `rtc.*` WSS.
+- **LiveKit 1.13.11** sends all UDP media over a **single port (mux, 7882)**, with embedded
+  TURN.
+
+Router port forwards, all to `192.168.0.137`, and nothing else:
+
+| Protocol | Port | Purpose |
+|---|---|---|
+| TCP | 80 | certificate issuance and renewal (HTTP-01) |
+| TCP | 443 | HTTPS/WSS signaling plus TURN/TLS |
+| TCP | 7881 | ICE/TCP fallback |
+| UDP | 7882 | media |
+| UDP | 3478 | TURN/UDP |
+
+### Bring-up order
+1. Router: give the PC a **DHCP reservation** for `192.168.0.137` and add the 5 forwards above.
+   Check the router's WAN IP: it must equal the public IP (otherwise there's a second NAT in
+   front of us).
+2. `infra/edge/firewall.ps1`, run as Administrator.
+3. DNS: `A rtc` and `A turn` → public IP, **DNS-only** (not proxied).
+4. `python infra/edge/render.py --domain <domain> --email <email>`, then
+   `docker compose -f infra/edge/docker-compose.yml up -d`.
+5. From a phone **on cellular** (not home Wi-Fi), run the network tests below.
+
+### Keeping the IP stable
+Residential IPs are dynamic but usually last for months.
+- `render.py` re-detects the IP and refuses private or CGNAT addresses.
+- If the IP changes: re-run it, then restart livekit and update the two A records.
+- A static IP from the ISP removes that step entirely.
+
+## Production edge: background on the options
 
 The current home server publishes through a **Cloudflare Tunnel**. A tunnel carries HTTP and
 WebSocket only. **It cannot carry WebRTC media (UDP) or TURN.** Signaling could go through the

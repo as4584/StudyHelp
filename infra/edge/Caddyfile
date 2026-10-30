@@ -1,0 +1,14 @@
+# Certificates come from Let's Encrypt over HTTP-01 (port 80) and are renewed automatically.
+{
+	email {$ACME_EMAIL}
+}
+
+# Browser signaling (WSS) and the API's RoomService calls.
+rtc.{$DOMAIN} {
+	reverse_proxy livekit:7880
+}
+
+# Only here so Caddy obtains and renews the TURN certificate (TLS itself is served by LiveKit).
+turn.{$DOMAIN} {
+	respond 404
+}
