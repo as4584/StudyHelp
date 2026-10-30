@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Real-call proof against the self-hosted LiveKit SFU (local, single node).
+#
+#   scripts/video-proof      needs the local Supabase stack + Docker
+#
+# Starts infra/video (LiveKit), boots the API with VIDEO_PROVIDER=livekit and the built web
+# app, then runs e2e/video-live.spec.ts: two browsers exchange camera + screen-share tracks.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+ROOT="$(pwd)"
+API_PORT="${PROOF_API_PORT:-8100}"
+WEB_PORT="${PROOF_WEB_PORT:-3100}"
+
+[[ -f infra/video/.env ]] || (cd infra/video && uv run --no-project python gen-keys.py)
+docker compose -f infra/video/docker-compose.yml up -d
+# LIVEKIT_KEYS="<key>: <secret>"
+KEYS="$(sed -n 's/^LIVEKIT_KEYS=//p' infra/video/.env)"
+LK_KEY="${KEYS%%:*}"
+LK_SECRET="${KEYS#*: }"
+for _ in $(seq 1 30); do curl -sf -o /dev/null http://127.0.0.1:7880/ && break; sleep 1; done
+
+(cd web && NEXT_PUBLIC_API_URL="http://127.0.0.1:$API_PORT" npx --no-install next build >/dev/null)
+(cd api && uv run --frozen python -m alembic upgrade head >/dev/null 2>&1 && uv run --frozen python scripts/seed.py --reset >/dev/null)
+LOGS="$ROOT/artifacts/video-proof"; mkdir -p "$LOGS"
+(cd api && VIDEO_ENABLED=true VIDEO_PROVIDER=livekit LIVEKIT_API_KEY="$LK_KEY" LIVEKIT_API_SECRET="$LK_SECRET" \
+  LIVEKIT_URL=http://127.0.0.1:7880 LIVEKIT_PUBLIC_URL=ws://127.0.0.1:7880 \
+  CORS_ORIGINS="[\"http://localhost:$WEB_PORT\"]" WEB_BASE_URL="http://localhost:$WEB_PORT" \
+  exec uv run --frozen python -m uvicorn app.main:app --host 127.0.0.1 --port "$API_PORT" >"$LOGS/api.log" 2>&1) &
+API_PID=$!
+(cd web && exec npx --no-install next start -p "$WEB_PORT" >"$LOGS/web.log" 2>&1) &
+WEB_PID=$!
+cleanup() {
+  kill "$API_PID" "$WEB_PID" 2>/dev/null || true
+  if command -v powershell >/dev/null 2>&1; then
+    powershell -NoProfile -Command "foreach(\$p in $API_PORT,$WEB_PORT){Get-NetTCPConnection -LocalPort \$p -State Listen -ErrorAction SilentlyContinue | % { Stop-Process -Id \$_.OwningProcess -Force }}" || true
+  fi
+}
+trap cleanup EXIT
+for _ in $(seq 1 120); do
+  curl -sf "http://127.0.0.1:$API_PORT/ready" >/dev/null && curl -sf -o /dev/null "http://localhost:$WEB_PORT" && break
+  sleep 1
+done
+curl -sf "http://127.0.0.1:$API_PORT/health" | grep -q '"video":"livekit"' || { echo "API is not on the livekit provider"; exit 1; }
+
+(cd web && E2E_LIVE_VIDEO=1 E2E_BASE_URL="http://localhost:$WEB_PORT" E2E_API_URL="http://127.0.0.1:$API_PORT" \
+  npx --no-install playwright test e2e/video-live.spec.ts --project=desktop)
+docker logs video-livekit-1 2>&1 | grep -E "participant (active|closing)|room closing" | tail -8 | tee "$LOGS/livekit.log" || true
+echo "VIDEO PROOF PASSED"

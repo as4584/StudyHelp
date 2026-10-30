@@ -281,14 +281,14 @@ export default function CallPage() {
       <div className="grid gap-3">
         {share && (
           <div className="overflow-hidden rounded-[10px] bg-ink">
-            <TrackView track={share.track} className="aspect-video w-full object-contain" />
+            <TrackView track={share.track} className="aspect-video w-full object-contain" testId="remote-screen" />
             <div className="px-3 py-1.5 text-[13px] text-white/80">{share.name} is sharing their screen</div>
           </div>
         )}
         <div className={share ? "grid grid-cols-2 gap-3 sm:grid-cols-4" : "grid gap-3 sm:grid-cols-2"}>
           {remoteCams.map((t) => (
             <div key={t.key} className="overflow-hidden rounded-[10px] bg-ink">
-              <TrackView track={t.track} className="aspect-video w-full object-cover" />
+              <TrackView track={t.track} className="aspect-video w-full object-cover" testId="remote-camera" />
               <div className="px-3 py-1.5 text-[13px] text-white/80">{t.name}</div>
             </div>
           ))}

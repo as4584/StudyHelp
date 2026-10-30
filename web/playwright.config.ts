@@ -19,7 +19,13 @@ export default defineConfig({
     screenshot: "only-on-failure",
     video: "retain-on-failure",
     // Synthetic camera/mic so the video pages run headless in CI without real devices.
-    launchOptions: { args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"] },
+    launchOptions: {
+      args: [
+        "--use-fake-ui-for-media-stream",
+        "--use-fake-device-for-media-stream",
+        "--auto-accept-this-tab-capture", // screen share picker -> this tab, no prompt
+      ],
+    },
   },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
