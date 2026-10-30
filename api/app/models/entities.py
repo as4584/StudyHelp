@@ -106,6 +106,19 @@ class TaskFile(Base):
     created_at: Mapped[datetime] = _created()
 
 
+class VideoSession(Base):
+    __tablename__ = "video_sessions"
+    id: Mapped[uuid.UUID] = _pk()
+    task_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tasks.id"), unique=True
+    )
+    room_name: Mapped[str] = mapped_column(String, unique=True)
+    status: Mapped[str] = mapped_column(String, default="created")
+    created_at: Mapped[datetime] = _created()
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class Bid(Base):
     __tablename__ = "bids"
     id: Mapped[uuid.UUID] = _pk()

@@ -31,6 +31,11 @@ class InvalidState(DomainError):
     code = "invalid_state"
 
 
+class VideoDisabled(DomainError):
+    status_code = 404
+    code = "video_disabled"
+
+
 class QuotaExceeded(DomainError):
     """An AI usage limit was reached; ``code`` says which, ``extra['resets_at']`` says when."""
 

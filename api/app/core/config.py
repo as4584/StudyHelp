@@ -57,6 +57,16 @@ class Settings(BaseSettings):
     google_translate_api_key: str = ""
     translation_timeout_s: float = 5.0
 
+    # Live video + screen share (self-hosted LiveKit SFU). Media never passes through this API;
+    # it only authorizes a party and signs a short-lived, single-room credential.
+    video_enabled: bool = False
+    video_provider: Literal["livekit", "fake"] = "fake"
+    livekit_api_key: str = ""
+    livekit_api_secret: str = ""
+    livekit_url: str = "http://127.0.0.1:7880"  # server-to-server (RoomService) address
+    livekit_public_url: str = ""  # wss:// address browsers connect to
+    video_token_ttl_s: int = Field(default=600, ge=60, le=3600)
+
     @property
     def jwt_issuer(self) -> str:
         return f"{self.supabase_url.rstrip('/')}/auth/v1"
@@ -80,6 +90,7 @@ class Settings(BaseSettings):
             self.llm_provider,
             self.translation_provider,
             self.storage_provider,
+            self.video_provider if self.video_enabled else None,
         ):
             raise ValueError("Fake adapters are not allowed in production")
         if self.llm_provider == "anthropic" and not (
@@ -94,6 +105,13 @@ class Settings(BaseSettings):
             raise ValueError("DEEPL_API_KEY is required")
         if self.translation_provider == "google" and not self.google_translate_api_key:
             raise ValueError("GOOGLE_TRANSLATE_API_KEY is required")
+        if self.video_provider == "livekit":
+            if not self.livekit_api_key:
+                raise ValueError("LIVEKIT_API_KEY is required")
+            if len(self.livekit_api_secret) < 32:
+                raise ValueError("LIVEKIT_API_SECRET must be at least 32 characters")
+            if not self.livekit_public_url.startswith("wss://"):
+                raise ValueError("LIVEKIT_PUBLIC_URL must be a wss:// URL")
         return self
 
 
