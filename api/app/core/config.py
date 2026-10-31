@@ -110,8 +110,14 @@ class Settings(BaseSettings):
                 raise ValueError("LIVEKIT_API_KEY is required")
             if len(self.livekit_api_secret) < 32:
                 raise ValueError("LIVEKIT_API_SECRET must be at least 32 characters")
-            if not self.livekit_public_url.startswith("wss://"):
-                raise ValueError("LIVEKIT_PUBLIC_URL must be a wss:// URL")
+            dev = self.environment in ("development", "test")
+            local = dev and self.livekit_public_url.startswith(
+                ("ws://127.0.0.1:", "ws://localhost:")
+            )
+            if not (self.livekit_public_url.startswith("wss://") or local):
+                raise ValueError(
+                    "LIVEKIT_PUBLIC_URL must be a wss:// URL (ws:// only for localhost)"
+                )
         return self
 
 

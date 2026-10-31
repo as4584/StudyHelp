@@ -1,6 +1,16 @@
 # Sprint plan 10–15: live video + screen share, then the self-hosting exit
 
-Status: PLANNED (10 ACTIVE)
+Status:
+- **10** DONE (PR #4)
+- **11** DONE (PR #5)
+- **12** DONE (PR #6); the load test is deferred to the real media node
+- **13** BLOCKED on the network decision
+- **14–15** PLANNED
+
+Evidence:
+- `scripts/check` full gate green on each branch
+- mutation testing 36/36 killed
+- `scripts/video-proof` passed: a real UDP call, cameras both ways, screen share, end closes the room
 Governing spec: `docs/specs/video.md`. The architecture input is the client-side brief
 "Fully Self-Hosted Video Calling and Screen-Sharing Architecture" (2026-10-30), which
 recommends LiveKit OSS with no per-minute SaaS.

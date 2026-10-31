@@ -75,6 +75,9 @@ def test_livekit_config_is_validated() -> None:
         lk_settings(livekit_api_key="")
     with pytest.raises(ValueError, match="wss://"):
         lk_settings(livekit_public_url="ws://rtc.example.com")
+    lk_settings(livekit_public_url="ws://127.0.0.1:7880")  # the local SFU, dev/test only
+    with pytest.raises(ValueError, match="wss://"):
+        lk_settings(environment="demo", livekit_public_url="ws://127.0.0.1:7880")
 
 
 def test_production_refuses_fake_video_only_when_video_is_on() -> None:

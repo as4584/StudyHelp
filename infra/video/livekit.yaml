@@ -1,0 +1,20 @@
+# Self-hosted LiveKit SFU (OSS, Apache-2.0). Single node: no Redis needed until a second
+# media node is added. API keys come from LIVEKIT_KEYS in .env (see gen-keys.py), never here.
+port: 7880
+rtc:
+  tcp_port: 7881 # ICE/TCP fallback when UDP is blocked
+  port_range_start: 50000
+  port_range_end: 50100 # local proof. Production: 50000-60000 (see docs/ops/video.md)
+  use_external_ip: false # production: true (or node_ip: <public IP>)
+  node_ip: 127.0.0.1
+room:
+  # Tutoring is 1:1. The SFU itself refuses a third participant, in addition to the API rules.
+  max_participants: 2
+  empty_timeout: 300
+  departure_timeout: 20
+turn:
+  enabled: false # production: embedded TURN with TLS on 443 behind the SNI router
+prometheus:
+  port: 6789 # internal only; never published
+logging:
+  level: info
