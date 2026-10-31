@@ -29,3 +29,13 @@ of similar problems, no submission-ready graded answers, suggest a live expert w
 and `FakeTranslationProvider` (labelled `[EN→ES] …`, supports a forced-failure marker for
 tests). Any provider error raises `TranslationError`; chat stores `status=failed` and keeps the
 original. Timeout: `TRANSLATION_TIMEOUT_S` (5 s). One configured provider is sufficient.
+
+## Ollama (self-hosted open model)
+
+`LLM_PROVIDER=ollama`, `OLLAMA_MODEL=qwen3:8b`, `OLLAMA_BASE_URL` (default `http://127.0.0.1:11434`),
+optional `OLLAMA_API_KEY` (bearer, for an auth proxy). Uses `/api/chat` non-streaming with
+`think=false`. Measured on the dev workstation (RTX 5070 Ti, 16 GB): `qwen3:8b` answers a full
+structured tutor reply in ~2–4 s; `qwen3.6:27b` (17.7 GB) spills to CPU at ~1 tok/s — too slow
+for interactive use. Models decorate section labels (`**Key idea:**`, `### Hint:`); the web
+answer parser normalizes those. Reaching a workstation Ollama from the hosted demo requires a
+public authenticated endpoint — an infrastructure change that needs human approval.

@@ -44,7 +44,13 @@ export function parseAnswer(raw: string): { tag: string | null; parts: Part[] } 
   }
   const parts: Part[] = [];
   for (const line of text.split(/\n+/)) {
-    const l = line.trim();
+    // Real models often decorate labels: "**Key idea:**", "**Hint**:", "### Example:", "- Hint:".
+    const l = line
+      .trim()
+      .replace(/^(?:#{1,6}\s*|[-*]\s+)/, "")
+      .replace(/^\*\*([^*]{2,30}?)(:?)\*\*\s*(:?)\s*/, (all, label: string, c1: string, c2: string) =>
+        c1 || c2 ? `${label}: ` : all,
+      );
     if (!l) continue;
     const hit = LABELS.find(([re]) => re.test(l));
     if (hit) parts.push({ kind: hit[1], text: l.replace(hit[0], "") });
