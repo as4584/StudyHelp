@@ -57,7 +57,7 @@ pass "next build"
 step "e2e: seed demo data, boot API + built web, run Playwright"
 (cd api && uv run --frozen python -m alembic upgrade head >/dev/null 2>&1 && uv run --frozen python scripts/seed.py --reset >/dev/null)
 LOGS="$ROOT/artifacts/check"; mkdir -p "$LOGS"
-(cd api && CORS_ORIGINS="[\"http://localhost:$WEB_PORT\"]" WEB_BASE_URL="http://localhost:$WEB_PORT" \
+(cd api && VIDEO_ENABLED=true VIDEO_PROVIDER=fake CORS_ORIGINS="[\"http://localhost:$WEB_PORT\"]" WEB_BASE_URL="http://localhost:$WEB_PORT" \
   GIT_SHA="$(git rev-parse --short HEAD)" \
   exec uv run --frozen python -m uvicorn app.main:app --host 127.0.0.1 --port "$API_PORT" >"$LOGS/api.log" 2>&1) &
 API_PID=$!

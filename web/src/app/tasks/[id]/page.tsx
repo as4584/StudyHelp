@@ -11,6 +11,7 @@ import { useRequireRole } from "@/components/auth";
 import { Chat } from "@/components/chat";
 import { SessionPath } from "@/components/study-path";
 import { TaskFiles } from "@/components/task-files";
+import { VideoSessionCard } from "@/components/video-session";
 import {
   Avatar,
   Badge,
@@ -112,7 +113,8 @@ export default function TaskPage() {
           hasChat ? "grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-x-10" : "grid max-w-[44rem] gap-10"
         }
       >
-        <div className="min-w-0 lg:col-start-1 lg:row-start-1">
+        <div className="min-w-0 space-y-6 lg:col-start-1 lg:row-start-1">
+          {(isStudent || isTutor) && <VideoSessionCard taskId={task.id} />}
           {isStudent && <StudentActions task={task} bids={bids} pay={pay} reload={reload} />}
           {role === "tutor" && <TutorActions task={task} bids={bids} isHired={isTutor} reload={reload} />}
         </div>
