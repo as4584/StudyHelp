@@ -55,7 +55,7 @@ step "web: next build (artifact under test, API=:$API_PORT)"
 pass "next build"
 
 step "e2e: seed demo data, boot API + built web, run Playwright"
-(cd api && uv run --frozen alembic upgrade head >/dev/null 2>&1 && uv run --frozen python scripts/seed.py --reset >/dev/null)
+(cd api && uv run --frozen python -m alembic upgrade head >/dev/null 2>&1 && uv run --frozen python scripts/seed.py --reset >/dev/null)
 LOGS="$ROOT/artifacts/check"; mkdir -p "$LOGS"
 (cd api && CORS_ORIGINS="[\"http://localhost:$WEB_PORT\"]" WEB_BASE_URL="http://localhost:$WEB_PORT" \
   GIT_SHA="$(git rev-parse --short HEAD)" \

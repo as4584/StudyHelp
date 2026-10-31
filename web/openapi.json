@@ -1587,6 +1587,64 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "VideoJoinOut": {
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "identity": {
+            "title": "Identity",
+            "type": "string"
+          },
+          "room": {
+            "title": "Room",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "token",
+          "expires_at",
+          "room",
+          "identity"
+        ],
+        "title": "VideoJoinOut",
+        "type": "object"
+      },
+      "VideoStatusOut": {
+        "properties": {
+          "joinable": {
+            "title": "Joinable",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "none",
+              "created",
+              "active",
+              "ended"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "joinable"
+        ],
+        "title": "VideoStatusOut",
+        "type": "object"
+      },
       "WebhookAck": {
         "properties": {
           "result": {
@@ -3588,6 +3646,150 @@
         "summary": "Tip",
         "tags": [
           "payments"
+        ]
+      }
+    },
+    "/tasks/{task_id}/video": {
+      "get": {
+        "operationId": "video_status_tasks__task_id__video_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Video Status",
+        "tags": [
+          "video"
+        ]
+      }
+    },
+    "/tasks/{task_id}/video/end": {
+      "post": {
+        "operationId": "end_video_tasks__task_id__video_end_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "End Video",
+        "tags": [
+          "video"
+        ]
+      }
+    },
+    "/tasks/{task_id}/video/join": {
+      "post": {
+        "operationId": "join_video_tasks__task_id__video_join_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoJoinOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Join Video",
+        "tags": [
+          "video"
         ]
       }
     },

@@ -278,6 +278,19 @@ class AiQuotaOut(BaseModel):
     resets_at: datetime
 
 
+class VideoJoinOut(BaseModel):
+    url: str
+    token: str
+    expires_at: datetime
+    room: str
+    identity: str
+
+
+class VideoStatusOut(BaseModel):
+    status: Literal["none", "created", "active", "ended"]
+    joinable: bool
+
+
 class AiAskIn(BaseModel):
     question: str = Field(min_length=1, max_length=4000)
 

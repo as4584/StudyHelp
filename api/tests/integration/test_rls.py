@@ -85,6 +85,7 @@ async def test_payments_party_only(flow: Flow, make_user: UserFactory, db) -> No
         "tips",
         "task_files",
         "tutor_documents",
+        "video_sessions",
     ],
 )
 async def test_internal_tables_unreadable_by_clients(

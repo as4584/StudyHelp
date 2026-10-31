@@ -11,7 +11,7 @@ from app.core.config import get_settings
 from app.core.db import get_sessionmaker
 from app.core.errors import DomainError
 from app.observability.logging import RequestContextMiddleware, configure_logging, event
-from app.routers import admin, ai, chat, me, payments, tasks
+from app.routers import admin, ai, chat, me, payments, tasks, video
 from app.schemas.api import HealthOut
 
 log = logging.getLogger("app")
@@ -49,6 +49,7 @@ def create_app() -> FastAPI:
                 "llm": settings.llm_provider,
                 "translation": settings.translation_provider,
                 "storage": settings.storage_provider,
+                "video": settings.video_provider if settings.video_enabled else "off",
             },
         )
 
@@ -70,7 +71,15 @@ def create_app() -> FastAPI:
         out.providers["schema"] = str(rev)
         return out
 
-    for r in (me.router, tasks.router, payments.router, chat.router, ai.router, admin.router):
+    for r in (
+        me.router,
+        tasks.router,
+        payments.router,
+        chat.router,
+        ai.router,
+        admin.router,
+        video.router,
+    ):
         app.include_router(r)
     if payments.simulated_enabled():
         app.include_router(payments.simulated)

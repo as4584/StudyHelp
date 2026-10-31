@@ -17,7 +17,7 @@ jobs:
   check:
     name: scripts/check (full gate)
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
         with:
@@ -68,6 +68,10 @@ jobs:
 
       - name: Canonical quality gate
         run: scripts/check
+
+      - name: Mutation testing (every critical rule must have a test that fails)
+        working-directory: api
+        run: uv run --frozen python scripts/mutate.py
 
       - name: Keep diagnostics on failure
         if: failure()
