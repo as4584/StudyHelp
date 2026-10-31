@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     # Marketplace commission in basis points; product policy is 20-30%.
     platform_fee_bps: int = 2500
     premium_price_cents: int = 999
+    # AI study assistant: free questions per UTC day, and the Premium fair-use cap per month.
+    ai_free_daily: int = Field(default=5, ge=0)
+    ai_premium_monthly: int = Field(default=150, ge=1)
 
     payments_provider: Literal["stripe", "fake"] = "fake"
     stripe_secret_key: str = ""

@@ -7,8 +7,9 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRequireRole } from "@/components/auth";
 import { PathLine } from "@/components/path-line";
 import { TutorAnswer } from "@/components/tutor-answer";
-import { Button, ErrorText, LinkButton, Skeleton, inputCls, useAction } from "@/components/ui";
-import { api } from "@/lib/api";
+import { LimitDialog, QuotaNote, useAiQuota } from "@/components/ai-quota";
+import { Button, ErrorText, Skeleton, inputCls, useAction } from "@/components/ui";
+import { api, ApiError } from "@/lib/api";
 import { accentFor } from "@/lib/subjects";
 
 type Msg = { id: string; role: string; content: string };
@@ -25,6 +26,9 @@ function Workspace() {
   const [subject, setSubject] = useState("");
   const [question, setQuestion] = useState("");
   const [msgs, setMsgs] = useState<Msg[]>([]);
+  const [limit, setLimit] = useState<"daily" | "fair_use" | null>(null);
+  const { quota, reload: reloadQuota } = useAiQuota();
+  const locked = !!quota && quota.remaining === 0;
   const a = useAction();
   const started = useRef(false);
   const bottom = useRef<HTMLDivElement>(null);
@@ -38,9 +42,23 @@ function Workspace() {
           id = (await api<{ id: string }>("/ai/chats", { body: { subject } })).id;
           setChatId(id);
         }
-        setMsgs((m) => [...m, { id: `local-${m.length}`, role: "user", content: q }]);
-        const reply = await api<Msg>(`/ai/chats/${id}/messages`, { body: { question: q } });
-        setMsgs((m) => [...m, reply]);
+        const local = `local-${Date.now()}`;
+        setMsgs((m) => [...m, { id: local, role: "user", content: q }]);
+        try {
+          const reply = await api<Msg>(`/ai/chats/${id}/messages`, { body: { question: q } });
+          setMsgs((m) => [...m, reply]);
+        } catch (e) {
+          setMsgs((m) => m.filter((x) => x.id !== local));
+          // Limits are a product moment, not an error: show the upgrade / fair-use dialog.
+          if (e instanceof ApiError && (e.code === "ai_daily_limit" || e.code === "ai_fair_use")) {
+            setQuestion(q);
+            setLimit(e.code === "ai_daily_limit" ? "daily" : "fair_use");
+            return;
+          }
+          throw e;
+        } finally {
+          void reloadQuota();
+        }
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [chatId, subject],
@@ -48,7 +66,7 @@ function Workspace() {
 
   useEffect(() => {
     const q = params.get("q");
-    if (me?.premium && q && !started.current) {
+    if (me && q && !started.current) {
       started.current = true;
       void ask(q);
     }
@@ -67,24 +85,6 @@ function Workspace() {
     });
 
   if (!me) return <Skeleton lines={4} />;
-  if (!me.premium) {
-    return (
-      <div className="max-w-[40rem] pt-4">
-        <div className="micro text-tutor">AI tutor · Premium</div>
-        <h1 className="mt-3 font-serif text-[2.75rem] leading-[1.04] font-medium tracking-[-0.03em]">
-          A patient study coach, any hour.
-        </h1>
-        <p className="mt-4 font-serif text-[19px] leading-relaxed text-ink-2">
-          It explains, gives worked examples and hints, checks your understanding — and hands you to a live expert when
-          you need one.
-        </p>
-        <div className="mt-8">
-          <LinkButton href="/student">Upgrade from your study desk</LinkButton>
-        </div>
-      </div>
-    );
-  }
-
   const asked = msgs.filter((m) => m.role === "user").length;
   // Practice is real: the student sent their own attempt (via "Write my attempt").
   const attempted = msgs.some((m) => m.role === "user" && /^my attempt/i.test(m.content));
@@ -222,7 +222,7 @@ function Workspace() {
               />
               <Button
                 type="submit"
-                disabled={a.pending}
+                disabled={a.pending || locked}
                 loading={a.pending}
                 aria-label="Ask"
                 className="size-11 shrink-0 px-0"
@@ -231,7 +231,20 @@ function Workspace() {
               </Button>
             </div>
             <ErrorText error={a.error} />
+            <div className="flex items-center justify-between gap-3 px-2.5 pt-1">
+              <QuotaNote quota={quota} />
+              {locked && !quota.premium && (
+                <button
+                  type="button"
+                  onClick={() => setLimit("daily")}
+                  className="text-[13px] font-semibold text-tutor hover:underline"
+                >
+                  Get unlimited questions
+                </button>
+              )}
+            </div>
           </form>
+          <LimitDialog open={limit !== null} kind={limit ?? "daily"} quota={quota} onClose={() => setLimit(null)} />
         </div>
       </div>
 

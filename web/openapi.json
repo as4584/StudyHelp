@@ -128,6 +128,49 @@
         "title": "AiMessageOut",
         "type": "object"
       },
+      "AiQuotaOut": {
+        "properties": {
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "period": {
+            "enum": [
+              "day",
+              "month"
+            ],
+            "title": "Period",
+            "type": "string"
+          },
+          "premium": {
+            "title": "Premium",
+            "type": "boolean"
+          },
+          "remaining": {
+            "title": "Remaining",
+            "type": "integer"
+          },
+          "resets_at": {
+            "format": "date-time",
+            "title": "Resets At",
+            "type": "string"
+          },
+          "used": {
+            "title": "Used",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "premium",
+          "period",
+          "used",
+          "limit",
+          "remaining",
+          "resets_at"
+        ],
+        "title": "AiQuotaOut",
+        "type": "object"
+      },
       "AuditOut": {
         "properties": {
           "action": {
@@ -2155,6 +2198,32 @@
           }
         ],
         "summary": "Ask",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/ai/quota": {
+      "get": {
+        "operationId": "quota_ai_quota_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiQuotaOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Quota",
         "tags": [
           "ai"
         ]

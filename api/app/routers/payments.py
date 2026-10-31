@@ -151,7 +151,7 @@ async def simulated_checkout_complete(
     payment = (
         await session.execute(select(Payment).where(Payment.checkout_session_id == session_id))
     ).scalar_one_or_none()
-    tip = (
+    tip_row = (
         await session.execute(select(Tip).where(Tip.checkout_session_id == session_id))
     ).scalar_one_or_none()
     obj: dict[str, object] = {"id": session_id, "payment_status": "paid"}
@@ -162,12 +162,12 @@ async def simulated_checkout_complete(
             "payment_intent": f"pi_fake_{payment.id.hex[:16]}",
             "metadata": {"kind": "task_payment", "payment_id": str(payment.id)},
         }
-    elif tip is not None:
-        if tip.student_id != user.id:
+    elif tip_row is not None:
+        if tip_row.student_id != user.id:
             raise NotFound("checkout not found")
         obj |= {
-            "payment_intent": f"pi_fake_{tip.id.hex[:16]}",
-            "metadata": {"kind": "tip", "tip_id": str(tip.id)},
+            "payment_intent": f"pi_fake_{tip_row.id.hex[:16]}",
+            "metadata": {"kind": "tip", "tip_id": str(tip_row.id)},
         }
     elif user.role == "student" and session_id.startswith("cs_fake_"):
         obj |= {

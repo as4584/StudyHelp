@@ -209,6 +209,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/quota": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Quota */
+        get: operations["quota_ai_quota_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/conversations/{conversation_id}/messages": {
         parameters: {
             query?: never;
@@ -810,6 +827,27 @@ export interface components {
             id: string;
             /** Role */
             role: string;
+        };
+        /** AiQuotaOut */
+        AiQuotaOut: {
+            /** Limit */
+            limit: number;
+            /**
+             * Period
+             * @enum {string}
+             */
+            period: "day" | "month";
+            /** Premium */
+            premium: boolean;
+            /** Remaining */
+            remaining: number;
+            /**
+             * Resets At
+             * Format: date-time
+             */
+            resets_at: string;
+            /** Used */
+            used: number;
         };
         /** AuditOut */
         AuditOut: {
@@ -1790,6 +1828,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    quota_ai_quota_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiQuotaOut"];
                 };
             };
         };

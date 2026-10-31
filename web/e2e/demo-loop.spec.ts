@@ -150,13 +150,15 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
   const upgrade = student.getByRole("button", { name: "Upgrade to Premium" });
   await expect(upgrade.or(student.getByText("AI tutor · Premium"))).toBeVisible();
   if (await upgrade.isVisible()) {
+    // Free students can ask a few questions a day before upgrading; the counter tells them.
+    await expect(student.getByTestId("ai-quota")).toContainText(/of 5 free questions left today/);
     await upgrade.click();
     await student.getByRole("button", { name: "Pay now" }).click();
     await student.waitForURL(/\/payments\/return/);
   }
   await student.goto("/assistant");
   await student.getByPlaceholder("Subject (e.g. Calculus)").fill("Physics");
-  await student.getByLabel("Question").fill("Why does a heavier object not fall faster?");
+  await student.getByLabel("Question", { exact: true }).fill("Why does a heavier object not fall faster?");
   await student.getByRole("button", { name: "Ask", exact: true }).click();
   await expect(student.getByTestId("ai-log")).toContainText("Let's work through this together");
   await student.getByRole("button", { name: /Ask a live expert/ }).click();

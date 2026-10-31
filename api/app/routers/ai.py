@@ -5,11 +5,24 @@ from fastapi import APIRouter, Depends
 
 from app.api.dependencies import SessionDep, StudentDep
 from app.providers.llm import LLMProvider, get_llm_provider
-from app.schemas.api import AiAskIn, AiChatIn, AiChatOut, AiMessageOut, TaskDraftOut
+from app.schemas.api import AiAskIn, AiChatIn, AiChatOut, AiMessageOut, AiQuotaOut, TaskDraftOut
 from app.services import ai
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 LLMDep = Annotated[LLMProvider, Depends(get_llm_provider)]
+
+
+@router.get("/quota", response_model=AiQuotaOut)
+async def quota(student: StudentDep, session: SessionDep) -> AiQuotaOut:
+    q = await ai.quota(session, student)
+    return AiQuotaOut(
+        premium=q.premium,
+        period=q.period,
+        used=q.used,
+        limit=q.limit,
+        remaining=q.remaining,
+        resets_at=q.resets_at,
+    )
 
 
 @router.post("/chats", response_model=AiChatOut, status_code=201)

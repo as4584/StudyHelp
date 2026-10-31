@@ -1,3 +1,6 @@
+import uuid
+from datetime import UTC, datetime, timedelta
+
 import httpx
 
 from tests.conftest import Flow, UserFactory
@@ -118,14 +121,46 @@ async def test_tutor_documents_private(client: httpx.AsyncClient, make_user: Use
     ).status_code == 200
 
 
-async def test_ai_requires_premium_server_side(
+async def test_free_students_get_five_ai_questions_per_day(
     client: httpx.AsyncClient, make_user: UserFactory, db
 ) -> None:  # type: ignore[no-untyped-def]
     s = await make_user("student")
     chat = (await client.post("/ai/chats", headers=s.h, json={"subject": "Math"})).json()
-    r = await client.post(f"/ai/chats/{chat['id']}/messages", headers=s.h, json={"question": "hi"})
-    assert r.status_code == 403
-    assert await db.fetchval("select status from ai_usage") == "denied"
+    url = f"/ai/chats/{chat['id']}/messages"
+    for i in range(5):
+        r = await client.post(url, headers=s.h, json={"question": f"q{i}"})
+        assert r.status_code == 201, r.text
+    q = (await client.get("/ai/quota", headers=s.h)).json()
+    assert q["period"] == "day" and q["used"] == 5 and q["remaining"] == 0
+    r = await client.post(url, headers=s.h, json={"question": "one more"})
+    assert r.status_code == 402 and r.json()["code"] == "ai_daily_limit" and r.json()["resets_at"]
+    assert await db.fetchval("select count(*) from ai_usage where status = 'denied'") == 1
+    # Yesterday's questions don't count: the allowance resets each UTC day.
+    await db.execute(
+        "update ai_messages set created_at = now() - interval '1 day' - interval '1 minute'"
+    )
+    r = await client.post(url, headers=s.h, json={"question": "new day"})
+    assert r.status_code == 201
+
+
+async def test_premium_is_unlimited_daily_with_monthly_fair_use_cap(
+    client: httpx.AsyncClient, make_user: UserFactory, db
+) -> None:  # type: ignore[no-untyped-def]
+    s = await make_user("student", premium=True)
+    chat = (await client.post("/ai/chats", headers=s.h, json={"subject": "Math"})).json()
+    url = f"/ai/chats/{chat['id']}/messages"
+    for i in range(6):  # past the free daily allowance
+        assert (await client.post(url, headers=s.h, json={"question": f"q{i}"})).status_code == 201
+    # Fill the rest of the month's 150 directly, then the 151st is refused.
+    await db.execute(
+        "insert into ai_messages (chat_id, role, content)"
+        " select $1, 'user', 'x' from generate_series(1, 144)",
+        uuid.UUID(chat["id"]),
+    )
+    q = (await client.get("/ai/quota", headers=s.h)).json()
+    assert q["period"] == "month" and q["used"] == 150 and q["limit"] == 150
+    r = await client.post(url, headers=s.h, json={"question": "151"})
+    assert r.status_code == 429 and r.json()["code"] == "ai_fair_use"
 
 
 async def test_ai_answers_logs_usage_and_escalates(
@@ -175,3 +210,40 @@ async def test_admin_tutor_approval_flow_is_audited(
     r = await client.post(f"/admin/users/{t.id}/suspend", headers=admin.h)
     assert r.json()["is_active"] is False
     assert (await client.get("/me", headers=t.h)).status_code == 403
+
+
+async def test_free_allowance_resets_at_next_utc_midnight(
+    client: httpx.AsyncClient, make_user: UserFactory
+) -> None:
+    s = await make_user("student")
+    q = (await client.get("/ai/quota", headers=s.h)).json()
+    resets = datetime.fromisoformat(q["resets_at"])
+    now = datetime.now(UTC)
+    assert resets == (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+async def test_failed_ai_answer_does_not_use_up_a_question(
+    client: httpx.AsyncClient, make_user: UserFactory, db
+) -> None:  # type: ignore[no-untyped-def]
+    from app.providers.llm import LLMError, get_llm_provider
+
+    app = client._transport.app  # type: ignore[attr-defined]  # the fixture's ASGI app
+
+    class Down:
+        name = "down"
+
+        async def generate(self, **_: object) -> object:
+            raise LLMError("provider outage")
+
+    s = await make_user("student")
+    chat = (await client.post("/ai/chats", headers=s.h, json={"subject": "Math"})).json()
+    app.dependency_overrides[get_llm_provider] = lambda: Down()
+    try:
+        r = await client.post(
+            f"/ai/chats/{chat['id']}/messages", headers=s.h, json={"question": "hi"}
+        )
+    finally:
+        app.dependency_overrides.pop(get_llm_provider)
+    assert r.status_code == 502
+    assert (await client.get("/ai/quota", headers=s.h)).json()["used"] == 0
+    assert await db.fetchval("select status from ai_usage") == "error"
