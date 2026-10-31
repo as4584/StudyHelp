@@ -100,7 +100,7 @@ export default function ReviewPayment() {
               <p className="mt-2 font-serif text-[1.375rem] leading-snug font-medium text-ink">{task.title}</p>
               {bid && (
                 <div className="mt-4 flex items-center gap-2.5 text-[14px]">
-                  <Avatar name={bid.tutor_name} tone="tutor" />
+                  <Avatar name={bid.tutor_name} tone="tutor" src={bid.tutor_avatar_url} />
                   <span>
                     <span className="block font-semibold text-ink">{bid.tutor_name}</span>
                     <Stars value={bid.tutor_rating_avg} count={bid.tutor_rating_count} />

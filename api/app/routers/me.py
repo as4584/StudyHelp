@@ -60,6 +60,8 @@ async def patch_me(body: ProfilePatch, user: UserDep, session: SessionDep) -> Me
         profile.display_name = body.display_name
     if body.preferred_language is not None:
         profile.preferred_language = body.preferred_language
+    if body.avatar_url is not None:
+        profile.avatar_url = body.avatar_url or None
     await session.commit()
     return await _me(session, profile)
 
@@ -81,6 +83,7 @@ async def submit_application(
         session.add(tp)
     else:
         tp.bio, tp.subjects, tp.hourly_rate_cents = body.bio, body.subjects, body.hourly_rate_cents
+        tp.levels = list(body.levels)
         if tp.status == "rejected":
             tp.status = "pending"  # editing a rejected application resubmits it
     audit(
@@ -99,7 +102,7 @@ async def list_tutors(
     session: SessionDep, _: UserDep, subject: str | None = None
 ) -> list[PublicTutorOut]:
     stmt = (
-        select(TutorProfile, Profile.display_name)
+        select(TutorProfile, Profile.display_name, Profile.avatar_url)
         .join(Profile, Profile.id == TutorProfile.user_id)
         .where(TutorProfile.status == "approved", Profile.is_active)
         .order_by(TutorProfile.rating_avg.desc(), TutorProfile.rating_count.desc())
@@ -109,7 +112,7 @@ async def list_tutors(
     rows = (await session.execute(stmt)).all()
     return [
         PublicTutorOut.model_validate(
-            {**TutorOut.model_validate(tp).model_dump(), "display_name": n}
+            {**TutorOut.model_validate(tp).model_dump(), "display_name": n, "avatar_url": av}
         )
-        for tp, n in rows
+        for tp, n, av in rows
     ]

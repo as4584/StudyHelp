@@ -81,6 +81,7 @@ await student
   .getByLabel("Details")
   .fill("I keep mixing up the inner and outer functions when differentiating sin(x²).");
 await student.getByLabel(/Budget/).fill("40");
+await student.getByRole("group", { name: "Level" }).getByRole("button").last().click();
 await student.getByRole("checkbox").check();
 await student.getByRole("button", { name: "Post request" }).click();
 await student.waitForURL(/\/tasks\/[0-9a-f-]{36}$/);
@@ -150,6 +151,7 @@ await student.getByLabel("Subject").fill("Writing");
 await student.getByLabel(/What do you need help/).fill("Structure a persuasive essay introduction");
 await student.getByLabel("Details").fill("My thesis keeps getting lost in the first paragraph.");
 await student.getByLabel(/Budget/).fill("30");
+await student.getByRole("group", { name: "Level" }).getByRole("button").last().click();
 await student.getByRole("checkbox").check();
 await student.getByRole("button", { name: "Post request" }).click();
 await student.waitForURL(/\/tasks\/[0-9a-f-]{36}$/);

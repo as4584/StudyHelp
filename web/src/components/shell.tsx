@@ -1,12 +1,12 @@
 "use client";
 
+import { ProfilePhoto } from "@/components/profile-photo";
 import { BookOpen, Inbox, LayoutDashboard, LogOut, Scale, Sparkles } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import { useAuth } from "./auth";
-import { Avatar } from "./ui";
 
 type NavItem = { href: string; label: string; icon: LucideIcon; match?: RegExp };
 
@@ -91,7 +91,7 @@ function Account() {
   if (!me) return null;
   return (
     <div className="flex items-center gap-2.5">
-      <Avatar name={me.profile.display_name} tone={me.profile.role === "tutor" ? "tutor" : "muted"} />
+      <ProfilePhoto />
       <div className="min-w-0 flex-1 leading-tight">
         <div data-testid="whoami" className="text-[14px] leading-snug font-semibold break-words text-ink">
           {me.profile.display_name}
@@ -185,7 +185,7 @@ function MobileAccount() {
   if (!me) return null;
   return (
     <div className="flex items-center gap-1">
-      <Avatar name={me.profile.display_name} tone={me.profile.role === "tutor" ? "tutor" : "muted"} />
+      <ProfilePhoto />
       <button
         className="rounded-[6px] px-2 py-2 text-[14px] font-semibold text-muted hover:text-ink"
         onClick={async () => {

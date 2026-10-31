@@ -7,6 +7,9 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 Lang = Field(pattern=r"^[a-z]{2}$")
+Level = Literal["high_school", "college"]
+# A client-resized profile photo as a data URL; "" clears it.
+AVATAR_PATTERN = r"^(|data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+)$"
 
 
 class ORM(BaseModel):
@@ -25,11 +28,13 @@ class OnboardIn(BaseModel):
 class ProfilePatch(BaseModel):
     display_name: str | None = Field(default=None, min_length=1, max_length=80)
     preferred_language: str | None = Field(default=None, pattern=r"^[a-z]{2}$")
+    avatar_url: str | None = Field(default=None, max_length=200000, pattern=AVATAR_PATTERN)
 
 
 class TutorApplicationIn(BaseModel):
     bio: str = Field(max_length=2000)
     subjects: list[str] = Field(min_length=1, max_length=10)
+    levels: list[Level] = Field(default=["high_school", "college"], min_length=1, max_length=2)
     hourly_rate_cents: int = Field(ge=100, le=100000)
 
 
@@ -37,6 +42,7 @@ class TutorOut(ORM):
     user_id: uuid.UUID
     bio: str
     subjects: list[str]
+    levels: list[str]
     hourly_rate_cents: int
     status: str
     payouts_enabled: bool
@@ -46,6 +52,7 @@ class TutorOut(ORM):
 
 class PublicTutorOut(TutorOut):
     display_name: str
+    avatar_url: str | None = None
 
 
 class ProfileOut(ORM):
@@ -54,6 +61,7 @@ class ProfileOut(ORM):
     display_name: str
     preferred_language: str
     is_active: bool
+    avatar_url: str | None = None
 
 
 class MeOut(BaseModel):
@@ -70,6 +78,8 @@ class TaskIn(BaseModel):
     title: str = Field(min_length=3, max_length=140)
     description: str = Field(min_length=1, max_length=5000)
     budget_cents: int = Field(ge=500, le=500000)
+    language: str = Field(default="en", pattern=r"^[a-z]{2}$")
+    level: Level = "college"
     honor_code_ack: bool
 
 
@@ -80,6 +90,8 @@ class TaskOut(ORM):
     title: str
     description: str
     budget_cents: int
+    language: str
+    level: str
     status: str
     hired_tutor_id: uuid.UUID | None
     accepted_bid_id: uuid.UUID | None
@@ -104,6 +116,7 @@ class BidOut(ORM):
 
 class BidWithTutorOut(BidOut):
     tutor_name: str
+    tutor_avatar_url: str | None
     tutor_rating_avg: float
     tutor_rating_count: int
 

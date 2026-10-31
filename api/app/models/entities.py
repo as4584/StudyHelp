@@ -37,6 +37,7 @@ class Profile(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
     role: Mapped[str] = mapped_column(String)
     display_name: Mapped[str] = mapped_column(String)
+    avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     preferred_language: Mapped[str] = mapped_column(String, default="en")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     stripe_customer_id: Mapped[str | None] = mapped_column(String, nullable=True)
@@ -50,6 +51,9 @@ class TutorProfile(Base):
     )
     bio: Mapped[str] = mapped_column(Text, default="")
     subjects: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
+    levels: Mapped[list[str]] = mapped_column(
+        ARRAY(String), default=lambda: ["high_school", "college"]
+    )
     hourly_rate_cents: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String, default="pending")
     stripe_account_id: Mapped[str | None] = mapped_column(String, nullable=True)
@@ -76,6 +80,8 @@ class Task(Base):
     title: Mapped[str] = mapped_column(String)
     description: Mapped[str] = mapped_column(Text)
     budget_cents: Mapped[int] = mapped_column(Integer)
+    language: Mapped[str] = mapped_column(String, default="en")
+    level: Mapped[str] = mapped_column(String, default="college")
     status: Mapped[str] = mapped_column(String, default="open")
     hired_tutor_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("profiles.id"), nullable=True
