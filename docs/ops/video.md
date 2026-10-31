@@ -27,6 +27,29 @@ Recorded result, 2026-10-30, LiveKit 1.13.11 on the dev workstation:
   participant-minute. A 1:1 hour is about 2.25 GB of server egress. This is a planning
   assumption, so measure it on the real node.
 
+## Production edge: LIVE on the home server (2026-10-31)
+
+`PROOF_EDGE=1 scripts/video-proof` passed against `wss://rtc.lexmakesit.com`:
+- certificates valid on rtc and turn
+- media over UDP to `24.146.145.204:7882`, connecting in about 80 ms
+- cameras both ways, screen share, and DeleteRoom ending the call for both
+
+What was changed outside the repo, and how to undo it: `docs/ops/edge-changes.md`.
+
+Findings:
+- **The ISP blocks inbound TCP 80.** Certificates therefore come over TLS-ALPN-01 on 443:
+  - Caddy has `disable_http_challenge` set, with Let's Encrypt as the only issuer.
+  - HAProxy routes `acme-tls/1` to Caddy.
+- **If LiveKit ever starts with no network** (`docker inspect` shows `{}`), run
+  `docker compose up -d --force-recreate livekit`.
+
+Still to do:
+- Both test browsers ran on the LAN, so these tests must still run from outside:
+  - a phone on cellular (test 1)
+  - the UDP-blocked and 443-only cases (tests 2–3)
+  - a reconnect after a network flap (test 4)
+- `lk load-test`.
+
 ## Production edge: DECIDED, option A (2026-10-30)
 
 Alex chose to self-host with **no outside services**:

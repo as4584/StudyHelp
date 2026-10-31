@@ -1,6 +1,11 @@
-# Certificates come from Let's Encrypt over HTTP-01 (port 80) and are renewed automatically.
+# Certificates come from Let's Encrypt over TLS-ALPN-01 on 443 and are renewed automatically.
+# The ISP blocks inbound TCP 80, so the HTTP-01 challenge is disabled. Let's Encrypt is the only
+# issuer, because LiveKit reads the TURN certificate from Caddy's Let's Encrypt storage path.
 {
 	email {$ACME_EMAIL}
+	cert_issuer acme {
+		disable_http_challenge
+	}
 }
 
 # Browser signaling (WSS) and the API's RoomService calls.
