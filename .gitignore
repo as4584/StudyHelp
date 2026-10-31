@@ -24,3 +24,5 @@ test-results/
 playwright-report/
 web/test-results/
 infra/video/.env
+infra/edge/.env
+infra/edge/livekit.yaml

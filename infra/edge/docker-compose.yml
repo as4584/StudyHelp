@@ -1,0 +1,46 @@
+# Public media edge on the home server (Docker Desktop). Prepare with `python render.py`.
+#   docker compose -f infra/edge/docker-compose.yml up -d
+# Router forwards to this PC: TCP 80, TCP 443, TCP 7881, UDP 7882, UDP 3478. Nothing else.
+services:
+  haproxy:
+    image: haproxy:3.2.26-alpine
+    volumes: [./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro]
+    ports: ["80:80", "443:443"]
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    depends_on: [caddy, livekit]
+
+  caddy:
+    image: caddy:2.11.7-alpine
+    env_file: .env
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+
+  livekit:
+    image: livekit/livekit-server:v1.13.11
+    command: --config /etc/livekit.yaml
+    env_file: .env
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+      - caddy-data:/caddy:ro # Caddy's certificate store, for the TURN/TLS listener
+    ports:
+      - "7881:7881" # ICE/TCP
+      - "7882:7882/udp" # media (mux)
+      - "3478:3478/udp" # TURN/UDP
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+
+volumes:
+  caddy-data:
+  caddy-config:
