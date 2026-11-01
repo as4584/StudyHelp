@@ -5,8 +5,8 @@ Status:
 - **11** DONE (PR #5)
 - **12** DONE (PR #6); the load test is deferred to the real media node
 - **13** ACTIVE. The edge is live: router forwards, DNS, certificates and a real call through
-  `wss://rtc.lexmakesit.com`, 2026-10-31. What remains is the off-LAN network tests (cellular,
-  TCP fallback, TURN/TLS relay, reconnect) and the load test.
+  `wss://rtc.lexmakesit.com`, 2026-10-31. A cellular phone call passed direct and via the forced relay. What remains is
+  the 443-only/TCP fallback, reconnect and the load test.
 - **14–15** IN SCOPE. Alex decided on **no outside services**, so Supabase *and* Vercel are
   replaced by self-hosted equivalents. The payment processor (Stripe) and the domain's DNS stay
   external by necessity.

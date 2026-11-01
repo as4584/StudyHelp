@@ -43,11 +43,18 @@ Findings:
 - **If LiveKit ever starts with no network** (`docker inspect` shows `{}`), run
   `docker compose up -d --force-recreate livekit`.
 
+Off-LAN phone test (2026-10-31, iPhone / iOS 18.7 Mobile Safari on cellular, Wi-Fi off):
+- **Direct:** PASSED. UDP to `24.146.145.204:7882`, 51 ms round trip on the phone, camera and
+  audio both ways for 41 s.
+- **Relay forced** (`iceTransportPolicy: "relay"`): PASSED. The phone took a LiveKit TURN relay
+  candidate and the call connected with video both ways. No extra router range was needed.
+- LiveKit sees remote candidates as `172.25.0.1` (the Docker bridge gateway), so the client's real
+  address is masked by Docker's port publishing. Calls work; logs just lose the client IP.
+- The temporary test page (`infra/edge/calltest/`, gitignored) was removed after the test.
+
 Still to do:
-- Both test browsers ran on the LAN, so these tests must still run from outside:
-  - a phone on cellular (test 1)
-  - the UDP-blocked and 443-only cases (tests 2–3)
-  - a reconnect after a network flap (test 4)
+- TURN/TLS on 443 only (strict networks that block UDP) and the TCP 7881 fallback.
+- A reconnect after a network flap (Wi-Fi to cellular mid-call).
 - `lk load-test`.
 
 ## Production edge: DECIDED, option A (2026-10-30)
