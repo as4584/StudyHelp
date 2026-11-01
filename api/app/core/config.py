@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     git_sha: str = "unknown"
 
     database_url: str = "postgresql+asyncpg://postgres:postgres@127.0.0.1:54322/postgres"
+    # "none" on serverless hosts (Vercel): each instance holding its own pool of up to 15
+    # connections exhausts the Supabase pooler, so there a request opens and closes its own.
+    database_pool: Literal["queue", "none"] = "queue"
 
     # Supabase: the issuer is <SUPABASE_URL>/auth/v1 and keys come from its JWKS.
     supabase_url: str = "http://127.0.0.1:54321"
