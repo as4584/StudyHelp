@@ -1,0 +1,10 @@
+# The repo root is not a Vercel project (web/ and api/ are). If a deploy is ever started from
+# here by mistake, never upload secrets or the home-server edge config.
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+infra/
+artifacts/
