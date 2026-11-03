@@ -9,6 +9,7 @@ and prepare email-confirmed signup and a reviewable demo release.
 
 ## Scope
 - Regenerate the API contract and format the video E2E file omitted from PR #10.
+- Update the existing full demo E2E to use the approved $20 session price and $15 tutor net.
 - Verify the full gate and API-image CI before merging; close superseded #8/#9.
 - Inspect existing SMTP infrastructure without disclosing credentials.
 - Audit the additional client revenue and affiliate requests against implementation.
@@ -34,3 +35,7 @@ and prepare email-confirmed signup and a reviewable demo release.
 ## Outcome
 In progress. Original PR #10 CI: 140 API tests passed; OpenAPI drift failed before
 frontend/build/E2E. API image passed. PR #11 CI passed at its original head.
+Local direct python -m pytest: 140 passed. Frontend lint, types and formatting passed.
+The local canonical gate stops at the blocked Windows pytest shim; CI runs on Linux.
+Inspection also found the full demo E2E still submitting the retired $40 price; updated
+its inputs and expected 25% split without removing any assertions.
