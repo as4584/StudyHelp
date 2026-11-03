@@ -221,8 +221,6 @@
       "BidIn": {
         "properties": {
           "amount_cents": {
-            "maximum": 500000.0,
-            "minimum": 500.0,
             "title": "Amount Cents",
             "type": "integer"
           },
@@ -1109,8 +1107,6 @@
       "TaskIn": {
         "properties": {
           "budget_cents": {
-            "maximum": 500000.0,
-            "minimum": 500.0,
             "title": "Budget Cents",
             "type": "integer"
           },

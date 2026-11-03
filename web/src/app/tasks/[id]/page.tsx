@@ -16,6 +16,7 @@ import {
   Avatar,
   Badge,
   Button,
+  DemoPaymentNote,
   ErrorText,
   Field,
   Section,
@@ -372,6 +373,7 @@ function StudentActions({
                   </Button>
                 ))}
               </div>
+              <DemoPaymentNote className="mt-3" />
             </div>
           </>
         ) : (
@@ -465,11 +467,15 @@ function TutorActions({
             );
           }}
         >
-          <Field label="Your price (USD)" hint={`The student's budget is ${money(task.budget_cents)}.`}>
+          <Field
+            label="Your price (USD)"
+            hint={`The student's budget is ${money(task.budget_cents)}. Sessions are $15–$25.`}
+          >
             <input
               className={`${inputCls} tnum`}
               type="number"
-              min={5}
+              min={15}
+              max={25}
               step={1}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}

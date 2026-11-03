@@ -52,6 +52,9 @@ export default function Home() {
               <ShieldCheck size={16} strokeWidth={1.75} className="text-mastery" aria-hidden /> Payment held
             </li>
           </ul>
+          <p className="tnum mt-5 max-w-[34rem] text-[14px] text-muted" data-testid="pricing-line">
+            Live tutor sessions $15–$25 · AI tutor: 5 free questions a day, or Premium $9.99/month for unlimited
+          </p>
         </div>
         <DeskPreview />
       </section>
@@ -140,27 +143,27 @@ function DeskPreview() {
         <dl className="tnum mt-2 space-y-1 text-[13px]">
           <div className="flex justify-between text-ink-2">
             <dt>Session</dt>
-            <dd>$40.00</dd>
+            <dd>$25.00</dd>
           </div>
           <div className="flex justify-between text-ink-2">
             <dt>Tutor receives</dt>
-            <dd className="font-semibold text-ink">$30.00</dd>
+            <dd className="font-semibold text-ink">$18.75</dd>
           </div>
         </dl>
         <div className="mt-2 flex items-center gap-1.5 text-[12px] text-mastery">
           <Check size={13} strokeWidth={2.25} aria-hidden /> Released only when you confirm delivery
         </div>
       </div>
-      {/* A second, smaller request: sessions start at $10. */}
+      {/* A second, smaller request: sessions are $15–$25. */}
       <div className="relative mt-3 w-[86%] rounded-[10px] border border-rule bg-sheet px-5 py-4 shadow-[0_1px_2px_rgb(20_22_27/0.04),0_16px_32px_-20px_rgb(20_22_27/0.2)] sm:w-[70%]">
         <div className="flex items-center gap-1.5 text-[12px] font-semibold" style={{ color: "#9a3412" }}>
           <span className="size-1.5 rounded-full" style={{ background: "#d97706" }} /> English · High school
         </div>
         <div className="mt-1 flex items-baseline justify-between gap-4">
           <span className="font-serif text-[16px] font-medium text-ink">Tighten my essay introduction</span>
-          <span className="tnum font-serif text-[17px] font-medium text-ink">$10</span>
+          <span className="tnum font-serif text-[17px] font-medium text-ink">$15</span>
         </div>
-        <div className="mt-1 text-[12px] text-muted">3 tutor offers · sessions start at $10</div>
+        <div className="mt-1 text-[12px] text-muted">3 tutor offers · sessions are $15–$25</div>
       </div>
     </div>
   );

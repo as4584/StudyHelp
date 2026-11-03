@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     git_sha: str = "unknown"
 
     database_url: str = "postgresql+asyncpg://postgres:postgres@127.0.0.1:54322/postgres"
+    # "none" on serverless hosts (Vercel): each instance holding its own pool of up to 15
+    # connections exhausts the Supabase pooler, so there a request opens and closes its own.
+    database_pool: Literal["queue", "none"] = "queue"
 
     # Supabase: the issuer is <SUPABASE_URL>/auth/v1 and keys come from its JWKS.
     supabase_url: str = "http://127.0.0.1:54321"
@@ -27,6 +30,9 @@ class Settings(BaseSettings):
 
     # Marketplace commission in basis points; product policy is 20-30%.
     platform_fee_bps: int = 2500
+    # Session price range (client policy: $15-$25). Request budgets and tutor bids must fit it.
+    price_min_cents: int = Field(default=1500, ge=500)
+    price_max_cents: int = Field(default=2500, le=500000)
     premium_price_cents: int = 999
     # AI study assistant: free questions per UTC day, and the Premium fair-use cap per month.
     ai_free_daily: int = Field(default=5, ge=0)
@@ -79,6 +85,8 @@ class Settings(BaseSettings):
     def _validate(self) -> "Settings":
         if not 2000 <= self.platform_fee_bps <= 3000:
             raise ValueError("PLATFORM_FEE_BPS must be within the 20-30% policy (2000-3000)")
+        if self.price_min_cents > self.price_max_cents:
+            raise ValueError("PRICE_MIN_CENTS must not exceed PRICE_MAX_CENTS")
         if self.payments_provider == "stripe":
             if not self.stripe_secret_key.startswith(("sk_test_", "rk_test_")):
                 # Live keys are an explicit human approval boundary (AGENTS.md).

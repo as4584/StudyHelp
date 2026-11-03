@@ -68,7 +68,7 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
   await expect(student.getByRole("button", { name: "Post request" })).toBeDisabled(); // level is required
   await student.getByRole("group", { name: "Level" }).getByRole("button", { name: "College" }).click();
   await student.getByRole("group", { name: "Language" }).getByRole("button", { name: "Español" }).click();
-  await student.getByLabel("Budget (USD)").fill("40");
+  await student.getByLabel("Budget (USD)").fill("20");
   await student.getByRole("checkbox").check();
   await student.getByRole("button", { name: "Post request" }).click();
   await student.waitForURL(/\/tasks\/[0-9a-f-]{36}$/);
@@ -88,17 +88,17 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
   await expect(tutor.getByText("Your payout account is connected")).toBeVisible();
   await expect(tutor.getByText(title)).toBeVisible(); // tutor sees the open task
   await tutor.goto(taskUrl);
-  await tutor.getByLabel("Your price (USD)").fill("40");
+  await tutor.getByLabel("Your price (USD)").fill("20");
   await tutor.getByPlaceholder(/How you'll help/).fill("I'll walk you through 5 worked examples.");
   await tutor.getByRole("button", { name: "Submit bid" }).click();
-  await expect(tutor.getByText(/You bid \$40\.00/)).toBeVisible();
+  await expect(tutor.getByText(/You bid \$20\.00/)).toBeVisible();
 
   // --- Student hires and pays ----------------------------------------------------------
   await student.reload();
   await student.getByRole("button", { name: /Hire Prof\. Diego/ }).click();
   await expect(student.getByRole("status").filter({ hasText: "You hired" })).toBeVisible();
   await expect(student.getByTestId("status").first()).toHaveText("hired");
-  await student.getByRole("button", { name: /Pay \$40\.00 securely/ }).click();
+  await student.getByRole("button", { name: /Pay \$20\.00 securely/ }).click();
   await student.waitForURL(/\/pay$/);
   await expect(student.getByText("Your money is protected while you learn.")).toBeVisible();
   await student.getByRole("button", { name: "Continue to secure payment" }).click();
@@ -107,7 +107,7 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
   await student.waitForURL(/\/payments\/return/);
   await student.goto(taskUrl);
   await expect(student.getByTestId("status").first()).toHaveText("paid");
-  await expect(student.getByTestId("payment-card")).toContainText("$30.00");
+  await expect(student.getByTestId("payment-card")).toContainText("$15.00");
 
   // --- Translated chat both ways -------------------------------------------------------
   await student.getByLabel("Message").fill("Can you explain the chain rule?");

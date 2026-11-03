@@ -222,7 +222,7 @@ class Flow:
     bid_id: str = ""
     conversation_id: str = ""
 
-    async def post_task(self, budget: int = 4000) -> str:
+    async def post_task(self, budget: int = 2000) -> str:
         r = await self.client.post(
             "/tasks",
             headers=self.student.h,
@@ -238,7 +238,7 @@ class Flow:
         self.task_id = r.json()["id"]
         return self.task_id
 
-    async def bid(self, amount: int = 4000) -> str:
+    async def bid(self, amount: int = 2000) -> str:
         r = await self.client.post(
             f"/tasks/{self.task_id}/bids",
             headers=self.tutor.h,
@@ -274,7 +274,7 @@ class Flow:
         )
         assert r.status_code == 200, r.text
 
-    async def to(self, stage: str, amount: int = 4000) -> "Flow":
+    async def to(self, stage: str, amount: int = 2000) -> "Flow":
         steps = ["posted", "bid", "hired", "paid", "delivered"]
         await self.post_task(amount)
         if steps.index(stage) >= 1:

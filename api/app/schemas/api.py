@@ -4,12 +4,23 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.core.config import get_settings
 
 Lang = Field(pattern=r"^[a-z]{2}$")
 Level = Literal["high_school", "college"]
 # A client-resized profile photo as a data URL; "" clears it.
 AVATAR_PATTERN = r"^(|data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+)$"
+
+
+def _session_price(cents: int) -> int:
+    s = get_settings()
+    if not s.price_min_cents <= cents <= s.price_max_cents:
+        raise ValueError(
+            f"Session prices are ${s.price_min_cents / 100:.0f}-${s.price_max_cents / 100:.0f}"
+        )
+    return cents
 
 
 class ORM(BaseModel):
@@ -77,10 +88,12 @@ class TaskIn(BaseModel):
     subject: str = Field(min_length=1, max_length=60)
     title: str = Field(min_length=3, max_length=140)
     description: str = Field(min_length=1, max_length=5000)
-    budget_cents: int = Field(ge=500, le=500000)
+    budget_cents: int
     language: str = Field(default="en", pattern=r"^[a-z]{2}$")
     level: Level = "college"
     honor_code_ack: bool
+
+    _budget = field_validator("budget_cents")(_session_price)
 
 
 class TaskOut(ORM):
@@ -100,8 +113,10 @@ class TaskOut(ORM):
 
 
 class BidIn(BaseModel):
-    amount_cents: int = Field(ge=500, le=500000)
+    amount_cents: int
     message: str = Field(default="", max_length=2000)
+
+    _amount = field_validator("amount_cents")(_session_price)
 
 
 class BidOut(ORM):
