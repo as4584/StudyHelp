@@ -22,3 +22,22 @@ Five inbound allow rules named `GSHT*` from `infra/edge/firewall.ps1`. Undo: `fi
 - `A turn.lexmakesit.com → 24.146.145.204`, DNS-only, TTL 300
 
 Both carry the comment "GSHT video edge". Undo: delete the two records. No other record was touched.
+
+## 2026-11-01: host and edge hardening (branch security-hardening)
+
+- **Containers:**
+  - All three edge containers get `mem_limit` and `pids_limit`.
+  - Caddy is now `read_only` (tmpfs `/tmp`) and receives only `DOMAIN`/`ACME_EMAIL`, not the
+    LiveKit keys.
+  - Undo: revert `infra/edge/docker-compose.yml`, `docker compose up -d`.
+- **HAProxy flood guard:** connection rate/concurrency caps on 443 and 80.
+  - Docker Desktop hides client IPs (all clients appear as the bridge gateway `172.25.0.1`), so
+    this is one shared budget, not per IP.
+  - Undo: remove the `stick-table`/`tcp-request connection` lines.
+- **`infra/edge/harden-host.ps1`** (run as Administrator; `-Undo` reverts):
+  - sshd key-only (backup at `sshd_config.gsht-backup`).
+  - GSHT firewall rules scoped to the Docker backend program.
+  - Node rule limited to LAN + Tailscale.
+  - Firewall drop logging.
+  - Defender PUA + network protection.
+  - Reports disk encryption status.
