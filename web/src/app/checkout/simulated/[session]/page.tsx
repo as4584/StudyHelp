@@ -45,7 +45,15 @@ function SimulatedCheckout() {
         </div>
         <div className="mt-3 text-[15px] text-ink-2">{what}</div>
         <div className="tnum mt-1 font-serif text-[2.75rem] leading-none font-medium tracking-[-0.02em] text-ink">
-          {quote ? money(quote.amount_cents) : "—"}
+          {kind === "subscription" ? (
+            <>
+              $9.99<span className="text-[1.25rem] text-muted"> / month</span>
+            </>
+          ) : quote ? (
+            money(quote.amount_cents)
+          ) : (
+            "—"
+          )}
         </div>
         {quote && <p className="mt-2 text-[13px] text-muted">Held by StudyHelp until you confirm delivery.</p>}
         <div className="mt-6 flex items-center gap-3 rounded-[8px] border border-rule-strong px-3.5 py-3">

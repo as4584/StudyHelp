@@ -24,7 +24,8 @@ const MORE_SUBJECTS = [
   "Computer science",
   "Essay writing",
 ];
-const QUICK_BUDGETS = [10, 15, 25, 40];
+// Client pricing policy: every session is $15-$25 (the API enforces the same range).
+const QUICK_BUDGETS = [15, 20, 25];
 
 function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -66,7 +67,7 @@ function NewTaskForm() {
   const [moreSubjects, setMoreSubjects] = useState(false);
   const [level, setLevel] = useState("");
   const [language, setLanguage] = useState("en");
-  const [budget, setBudget] = useState("15");
+  const [budget, setBudget] = useState("20");
   const [ack, setAck] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const { pending, error, run } = useAction();
@@ -227,8 +228,8 @@ function NewTaskForm() {
                   aria-label="Budget (USD)"
                   className={`${inputCls} tnum pl-7 font-serif text-[18px]`}
                   type="number"
-                  min={5}
-                  max={5000}
+                  min={15}
+                  max={25}
                   step={1}
                   required
                   value={budget}

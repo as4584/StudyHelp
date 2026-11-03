@@ -3,7 +3,7 @@
 import { Sparkles, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { Button, ErrorText, useAction } from "@/components/ui";
+import { Button, DemoPaymentNote, ErrorText, useAction } from "@/components/ui";
 import { api, type Schemas } from "@/lib/api";
 
 export type AiQuota = Schemas["AiQuotaOut"];
@@ -108,6 +108,7 @@ export function LimitDialog({
               </Button>
               <span className="tnum text-[14px] text-muted">$9.99 / month</span>
             </div>
+            <DemoPaymentNote className="mt-4" />
           </>
         ) : (
           <>

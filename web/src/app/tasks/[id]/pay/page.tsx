@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 
 import { useRequireRole } from "@/components/auth";
 import { PathLine } from "@/components/path-line";
-import { Avatar, Button, ErrorText, Skeleton, Stars, useAction } from "@/components/ui";
+import { Avatar, Button, DemoPaymentNote, ErrorText, Skeleton, Stars, useAction } from "@/components/ui";
 import { api, money, type Bid, type Schemas, type Task } from "@/lib/api";
 import { accentFor } from "@/lib/subjects";
 
@@ -129,6 +129,7 @@ export default function ReviewPayment() {
               </div>
             </dl>
             <div className="px-6 pb-6 sm:px-7 sm:pb-7">
+              <DemoPaymentNote className="mb-4" />
               <ErrorText error={a.error} />
               <Button
                 className="h-12 w-full text-[16px]"
