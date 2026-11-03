@@ -186,3 +186,32 @@ scripts/check --fast     # quicker; lists what it skipped
    - Alex runs `infra/edge/harden-host.ps1` as Administrator
    - full app audit (auth on every route, input validation, dependency scans)
 8. Real translation (free: DeepL free tier or Ollama). Custom domain on the client's DNS at launch.
+
+## 10. Prompt to give the next AI (copy-paste)
+
+> You are continuing work on the Global Study Help Tutor repo (github.com/as4584/StudyHelp),
+> cloned at `C:\Users\AlexS\Projects\global-study-help-tutor`. First read `HANDOFF.md`, then
+> `AGENTS.md`, then `docs/architecture/system.md`. Follow every rule in HANDOFF.md §7. In
+> particular:
+> - never push to main
+> - never commit secrets (the repo is public)
+> - never touch the client's domain or DNS
+> - ask me before any production deploy, live database change, deletion or real-money action
+>
+> Work through HANDOFF.md §9 in order. For each change:
+> - work on a branch
+> - run `scripts/check`
+> - open a PR
+> - tell me in plain language what changed and what you need from me
+>
+> Private client notes are in `C:\Users\AlexS\Projects\gsht-private-notes.md`. Read them, but
+> never copy them into the repo.
+
+## 11. Sanity checks after any deploy
+
+```bash
+curl -s https://studyhelp-api.vercel.app/ready     # expect status ready, schema 0005_api_role_grants (or newer), video livekit
+curl -s -o /dev/null -w "%{http_code}\n" https://rtc.lexmakesit.com/   # expect 200 (video server up)
+```
+
+Then do one manual loop on two devices, with the student on one and the tutor on the other.
