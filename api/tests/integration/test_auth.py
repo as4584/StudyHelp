@@ -16,7 +16,7 @@ async def test_health_is_public_and_identifies_release(client: httpx.AsyncClient
     body = r.json()
     assert {"status", "version", "git_sha", "environment"} <= body.keys()
     r = await client.get("/ready")
-    assert r.status_code == 200 and r.json()["providers"]["schema"] == "0004_video_sessions"
+    assert r.status_code == 200 and r.json()["providers"]["schema"] == "0005_api_role_grants"
 
 
 async def test_no_token(client: httpx.AsyncClient) -> None:
@@ -173,7 +173,7 @@ async def test_role_guards(client: httpx.AsyncClient, make_user: UserFactory) ->
             "subject": "Math",
             "title": "Impersonate",
             "description": "x",
-            "budget_cents": 1000,
+            "budget_cents": 1500,
             "honor_code_ack": True,
         },
     )
@@ -181,7 +181,7 @@ async def test_role_guards(client: httpx.AsyncClient, make_user: UserFactory) ->
     r = await client.post(
         "/tasks/00000000-0000-0000-0000-000000000000/bids",
         headers=student.h,
-        json={"amount_cents": 1000},
+        json={"amount_cents": 1500},
     )
     assert r.status_code == 403  # student cannot act as tutor
 

@@ -19,13 +19,13 @@ async def _payment(db, task_id: str):  # type: ignore[no-untyped-def]
 
 
 async def test_charge_event_holds_funds_with_configured_fee(flow: Flow, db) -> None:  # type: ignore[no-untyped-def]
-    await flow.to("paid", amount=4000)
+    await flow.to("paid", amount=2000)
     p = await _payment(db, flow.task_id)
     assert p["status"] == "held"
     assert (p["platform_fee_bps"], p["platform_fee_cents"], p["tutor_net_cents"]) == (
         2500,
-        1000,
-        3000,
+        500,
+        1500,
     )
     assert p["charge_id"].startswith("ch_")
     task = await db.fetchrow("select status from tasks where id = $1", uuid.UUID(flow.task_id))
@@ -75,9 +75,9 @@ async def test_duplicate_webhook_event_is_ignored(flow: Flow, db) -> None:  # ty
 
 
 async def test_release_once_transfers_net_and_records_fee(flow: Flow, db) -> None:  # type: ignore[no-untyped-def]
-    await flow.to("delivered", amount=4000)
+    await flow.to("delivered", amount=2000)
     r = await flow.client.post(f"/tasks/{flow.task_id}/release", headers=flow.student.h)
-    assert r.status_code == 200 and r.json()["amount_cents"] == 3000
+    assert r.status_code == 200 and r.json()["amount_cents"] == 1500
     assert r.json()["provider_transfer_id"].startswith("tr_")
     r2 = await flow.client.post(f"/tasks/{flow.task_id}/release", headers=flow.student.h)
     assert r2.status_code == 409  # duplicate release prevented
@@ -85,7 +85,7 @@ async def test_release_once_transfers_net_and_records_fee(flow: Flow, db) -> Non
     p = await _payment(db, flow.task_id)
     assert p["status"] == "released"
     state = (await flow.client.get(f"/tasks/{flow.task_id}/payment", headers=flow.tutor.h)).json()
-    assert state["transfer"]["amount_cents"] == 3000
+    assert state["transfer"]["amount_cents"] == 1500
 
 
 async def test_cannot_release_before_delivery(flow: Flow) -> None:
@@ -155,7 +155,7 @@ async def test_admin_can_resolve_dispute_by_release(flow: Flow, make_user: UserF
     assert r.status_code == 200
     assert (await _payment(db, flow.task_id))["status"] == "released"
     rev = (await flow.client.get("/admin/revenue", headers=admin.h)).json()
-    assert rev["platform_fees_earned_cents"] == 1000 and rev["tutor_payouts_cents"] == 3000
+    assert rev["platform_fees_earned_cents"] == 500 and rev["tutor_payouts_cents"] == 1500
 
 
 async def test_tips_go_fully_to_tutor_and_are_validated(flow: Flow, db) -> None:  # type: ignore[no-untyped-def]
@@ -276,11 +276,11 @@ async def test_webhook_endpoint_rejects_unsigned(client) -> None:  # type: ignor
 
 
 async def test_quote_is_server_computed_and_owner_only(flow: Flow, make_user: UserFactory) -> None:
-    await flow.to("hired", amount=4000)
+    await flow.to("hired", amount=2000)
     r = await flow.client.get(f"/tasks/{flow.task_id}/quote", headers=flow.student.h)
     assert r.status_code == 200
     q = r.json()
-    assert (q["amount_cents"], q["platform_fee_cents"], q["tutor_net_cents"]) == (4000, 1000, 3000)
+    assert (q["amount_cents"], q["platform_fee_cents"], q["tutor_net_cents"]) == (2000, 500, 1500)
     other = await make_user("student")
     assert (
         await flow.client.get(f"/tasks/{flow.task_id}/quote", headers=other.h)

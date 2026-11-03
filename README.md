@@ -7,6 +7,8 @@ tutors; payments are held by the platform until delivery; chat is auto-translate
 - **API:** FastAPI, SQLAlchemy 2 (async) + Alembic — `api/`
 - **Infra:** Supabase (Postgres, Auth, Realtime, Storage), Stripe Connect (test mode)
 
+**Picking this up mid-project? Read [HANDOFF.md](HANDOFF.md) first** (state, deploys, open items).
+
 Start with **[AGENTS.md](AGENTS.md)** (contract + local setup), then
 [docs/architecture/system.md](docs/architecture/system.md) and the
 [demo script](docs/specs/demo.md).

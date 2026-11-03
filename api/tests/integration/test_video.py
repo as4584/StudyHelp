@@ -89,7 +89,7 @@ async def test_tutor_who_bid_but_was_not_hired_cannot_join(
     await flow.post_task()
     loser = await make_user("tutor")
     r = await flow.client.post(
-        f"/tasks/{flow.task_id}/bids", headers=loser.h, json={"amount_cents": 3000}
+        f"/tasks/{flow.task_id}/bids", headers=loser.h, json={"amount_cents": 2500}
     )
     assert r.status_code == 201
     await flow.bid()

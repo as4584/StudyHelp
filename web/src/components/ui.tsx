@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Check, Paperclip } from "lucide-react";
+import { AlertCircle, Check, FlaskConical, Paperclip } from "lucide-react";
 import Link from "next/link";
 
 import { useCapabilities } from "@/lib/capabilities";
@@ -494,5 +494,20 @@ export function DemoTagged({ text }: { text: string }) {
       </span>{" "}
       {text.slice(m[0].length)}
     </>
+  );
+}
+
+/** Every payment screen says so while the demo payment adapter runs: no real money moves. */
+export function DemoPaymentNote({ className = "" }: { className?: string }) {
+  const caps = useCapabilities();
+  if (!caps?.demoPayments) return null;
+  return (
+    <p
+      data-testid="demo-payment-note"
+      className={`flex items-start gap-2 rounded-[8px] bg-attention-soft px-3.5 py-3 text-[13px] leading-snug text-attention ${className}`}
+    >
+      <FlaskConical size={15} strokeWidth={1.75} className="mt-0.5 shrink-0" aria-hidden />
+      Demo mode — no real money moves and no card is charged.
+    </p>
   );
 }

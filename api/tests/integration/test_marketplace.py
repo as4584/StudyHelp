@@ -31,7 +31,7 @@ async def test_honor_code_required(flow: Flow) -> None:
             "subject": "Math",
             "title": "abc",
             "description": "x",
-            "budget_cents": 1000,
+            "budget_cents": 1500,
             "honor_code_ack": False,
         },
     )
@@ -43,7 +43,7 @@ async def test_unapproved_tutor_cannot_see_or_bid(flow: Flow, make_user: UserFac
     pending = await make_user("tutor", tutor_status="pending")
     assert (await flow.client.get("/tasks?scope=open", headers=pending.h)).json() == []
     r = await flow.client.post(
-        f"/tasks/{flow.task_id}/bids", headers=pending.h, json={"amount_cents": 1000}
+        f"/tasks/{flow.task_id}/bids", headers=pending.h, json={"amount_cents": 1500}
     )
     assert r.status_code == 403
 
@@ -70,7 +70,7 @@ async def test_hire_rejects_other_bids_and_closes_task(flow: Flow, make_user: Us
     await flow.post_task()
     rival = await make_user("tutor")
     r = await flow.client.post(
-        f"/tasks/{flow.task_id}/bids", headers=rival.h, json={"amount_cents": 3000}
+        f"/tasks/{flow.task_id}/bids", headers=rival.h, json={"amount_cents": 2500}
     )
     rival_bid = r.json()["id"]
     await flow.bid()
@@ -90,7 +90,7 @@ async def test_tutor_sees_only_own_bid(flow: Flow, make_user: UserFactory) -> No
     await flow.post_task()
     rival = await make_user("tutor")
     await flow.client.post(
-        f"/tasks/{flow.task_id}/bids", headers=rival.h, json={"amount_cents": 3000}
+        f"/tasks/{flow.task_id}/bids", headers=rival.h, json={"amount_cents": 2500}
     )
     await flow.bid()
     bids = (await flow.client.get(f"/tasks/{flow.task_id}/bids", headers=flow.tutor.h)).json()
@@ -158,7 +158,7 @@ async def test_task_language_defaults_to_english_and_is_validated(flow: Flow) ->
         "subject": "Math",
         "title": "Limits",
         "description": "x",
-        "budget_cents": 1000,
+        "budget_cents": 1500,
         "honor_code_ack": True,
     }
     c, h = flow.client, flow.student.h
@@ -172,7 +172,7 @@ async def test_task_language_defaults_to_english_and_is_validated(flow: Flow) ->
 
 async def test_tutors_only_see_requests_at_levels_they_teach(flow: Flow) -> None:
     c = flow.client
-    base = {"subject": "Math", "description": "x", "budget_cents": 1000, "honor_code_ack": True}
+    base = {"subject": "Math", "description": "x", "budget_cents": 1500, "honor_code_ack": True}
     hs = await c.post(
         "/tasks",
         headers=flow.student.h,
@@ -211,3 +211,17 @@ async def test_profile_photo_set_validated_and_cleared(flow: Flow) -> None:
     assert r.status_code == 422
     r = await c.patch("/me", headers=h, json={"avatar_url": ""})
     assert r.status_code == 200 and r.json()["profile"]["avatar_url"] is None
+
+
+async def test_session_prices_must_fit_the_15_to_25_dollar_range(flow: Flow) -> None:
+    c = flow.client
+    base = {"subject": "Math", "title": "Limits", "description": "x", "honor_code_ack": True}
+    for cents, status in [(1499, 422), (1500, 201), (2500, 201), (2501, 422)]:
+        r = await c.post("/tasks", headers=flow.student.h, json={**base, "budget_cents": cents})
+        assert r.status_code == status, (cents, r.text)
+    await flow.post_task()
+    for cents, status in [(1000, 422), (2600, 422), (2000, 201)]:
+        r = await c.post(
+            f"/tasks/{flow.task_id}/bids", headers=flow.tutor.h, json={"amount_cents": cents}
+        )
+        assert r.status_code == status, (cents, r.text)

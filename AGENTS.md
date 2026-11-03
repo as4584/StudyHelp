@@ -6,6 +6,7 @@ entry point for any agent. The repository — not chat history — is the memory
 
 ## Read order
 
+0. `HANDOFF.md`: current state, live environments, open PRs and next steps
 1. `AGENTS.md` (this file)
 2. `docs/architecture/system.md`, then the topic doc you are touching
    (`auth.md`, `payments.md`, `realtime.md`, `storage.md`, `ai-providers.md`)
