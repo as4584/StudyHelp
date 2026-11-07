@@ -30,10 +30,14 @@ class FakeGateway:
             self._idem[key] = f"{prefix}_fake_{uuid.uuid4().hex[:16]}"
         return self._idem[key]
 
-    def _checkout(self, key: str, metadata: dict[str, str] | None = None) -> CheckoutSession:
+    def _checkout(
+        self, key: str, metadata: dict[str, str] | None = None, amount_cents: int | None = None
+    ) -> CheckoutSession:
         sid = self._id("cs", key)
         meta = metadata or {}
-        query = urlencode([(k, meta[k]) for k in ("kind", "task_id") if k in meta])
+        # amount_cents is display-only on the simulated page; the charge comes from the server.
+        meta = meta | ({"amount_cents": str(amount_cents)} if amount_cents is not None else {})
+        query = urlencode([(k, meta[k]) for k in ("kind", "task_id", "amount_cents") if k in meta])
         url = f"{self._s.web_base_url}/checkout/simulated/{sid}" + (f"?{query}" if query else "")
         return CheckoutSession(id=sid, url=url)
 
@@ -47,7 +51,7 @@ class FakeGateway:
         customer_email: str | None,
         idempotency_key: str,
     ) -> CheckoutSession:
-        return self._checkout(idempotency_key, metadata)
+        return self._checkout(idempotency_key, metadata, amount_cents)
 
     async def create_subscription_checkout(
         self, *, metadata: dict[str, str], customer_email: str | None, idempotency_key: str

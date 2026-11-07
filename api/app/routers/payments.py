@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from app.api.dependencies import SessionDep, StudentDep, TutorDep, UserDep
 from app.core.config import get_settings
 from app.core.errors import NotFound
-from app.models.entities import Payment, Tip, Transfer, TutorProfile
+from app.models.entities import Payment, Subscription, Tip, Transfer, TutorProfile
 from app.providers.payments import get_gateway
 from app.providers.payments.base import PaymentGateway
 from app.schemas.api import (
@@ -180,6 +180,24 @@ async def simulated_checkout_complete(
         "id": f"evt_fake_{uuid.uuid4().hex}",
         "type": "checkout.session.completed",
         "data": {"object": obj},
+    }
+    return WebhookAck(result=await _push(gateway, session, evt))  # type: ignore[arg-type]
+
+
+@simulated.post("/premium/cancel", response_model=WebhookAck)
+async def simulated_premium_cancel(
+    student: StudentDep, session: SessionDep, gateway: GatewayDep
+) -> WebhookAck:
+    """Demo only: end the simulated subscription so testers can see the free plan again."""
+    sub = (
+        await session.execute(select(Subscription).where(Subscription.user_id == student.id))
+    ).scalar_one_or_none()
+    if sub is None or not await payments.is_premium(session, student.id):
+        raise NotFound("no active premium subscription")
+    evt = {
+        "id": f"evt_fake_{uuid.uuid4().hex}",
+        "type": "customer.subscription.deleted",
+        "data": {"object": {"id": sub.provider_subscription_id, "status": "canceled"}},
     }
     return WebhookAck(result=await _push(gateway, session, evt))  # type: ignore[arg-type]
 

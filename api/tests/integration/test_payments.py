@@ -173,6 +173,7 @@ async def test_tips_go_fully_to_tutor_and_are_validated(flow: Flow, db) -> None:
     r = await c.post(
         f"/tasks/{flow.task_id}/tips", headers=flow.student.h, json={"amount_cents": 500}
     )
+    assert "amount_cents=500" in r.json()["url"]  # the simulated checkout shows the tip amount
     sid = r.json()["url"].split("?")[0].rsplit("/", 1)[1]
     r = await c.post(f"/simulated/checkout/{sid}/complete", headers=flow.student.h)
     assert r.status_code == 200
@@ -217,6 +218,23 @@ async def test_subscription_activates_and_deactivates_premium(
     async with get_sessionmaker()() as session:
         await payments.process_event(session, get_gateway(), evt)
     assert (await client.get("/me", headers=s.h)).json()["premium"] is False
+
+
+async def test_demo_student_can_switch_premium_back_to_free(
+    client, make_user: UserFactory
+) -> None:  # type: ignore[no-untyped-def]
+    s = await make_user("student")
+    assert (await client.post("/simulated/premium/cancel", headers=s.h)).status_code == 404
+    r = await client.post("/premium/checkout", headers=s.h)
+    sid = r.json()["url"].split("?")[0].rsplit("/", 1)[1]
+    await client.post(f"/simulated/checkout/{sid}/complete", headers=s.h)
+    assert (await client.get("/me", headers=s.h)).json()["premium"] is True
+    tutor = await make_user("tutor")
+    assert (await client.post("/simulated/premium/cancel", headers=tutor.h)).status_code == 403
+    assert (await client.post("/simulated/premium/cancel", headers=s.h)).status_code == 200
+    assert (await client.get("/me", headers=s.h)).json()["premium"] is False
+    quota = (await client.get("/ai/quota", headers=s.h)).json()
+    assert quota["premium"] is False and quota["limit"] == 5
 
 
 async def test_ledger_is_append_only(flow: Flow, db) -> None:  # type: ignore[no-untyped-def]
