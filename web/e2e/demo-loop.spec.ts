@@ -55,6 +55,8 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
   await applicant.getByRole("button", { name: "Finish" }).click();
   await applicant.waitForURL(/\/tutor$/);
   await applicant.getByLabel("Subjects").fill("Chemistry, Biology");
+  await applicant.getByLabel("Main subject").selectOption("Biology");
+  await applicant.getByLabel("Years of teaching or tutoring experience").fill("4");
   await applicant.getByRole("button", { name: "Submit application" }).click();
   await expect(applicant.getByText("under review")).toBeVisible();
 
@@ -95,6 +97,8 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
 
   // --- Student hires and pays ----------------------------------------------------------
   await student.reload();
+  // Offers show the tutor's main subject and experience from their application.
+  await expect(student.getByTestId("offer-tutor-facts").first()).toContainText(/yrs? experience/);
   await student.getByRole("button", { name: /Hire Prof\. Diego/ }).click();
   await expect(student.getByRole("status").filter({ hasText: "You hired" })).toBeVisible();
   await expect(student.getByTestId("status").first()).toHaveText("hired");
@@ -183,6 +187,8 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
   const admin = await open("admin@demo.gsht");
   await expect(admin.getByTestId("stat-fees-earned")).not.toHaveText("$0.00");
   const row = admin.getByTestId("tutor-applications").locator("li", { hasText: applicantName });
+  await expect(row).toContainText("Biology, Chemistry"); // main subject first
+  await expect(row).toContainText("4 yrs experience");
   await row.getByRole("button", { name: "Approve" }).click();
   await expect(admin.getByText(`Tutor applications`)).toBeVisible();
   await expect(admin.getByTestId("tutor-applications").locator("li", { hasText: applicantName })).toHaveCount(0);

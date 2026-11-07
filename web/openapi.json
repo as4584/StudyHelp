@@ -329,6 +329,17 @@
             "title": "Tutor Id",
             "type": "string"
           },
+          "tutor_main_subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tutor Main Subject"
+          },
           "tutor_name": {
             "title": "Tutor Name",
             "type": "string"
@@ -340,6 +351,17 @@
           "tutor_rating_count": {
             "title": "Tutor Rating Count",
             "type": "integer"
+          },
+          "tutor_years_experience": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tutor Years Experience"
           }
         },
         "required": [
@@ -856,6 +878,19 @@
             "title": "Levels",
             "type": "array"
           },
+          "main_subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Stored as the first subject, so subject search needs no extra column.",
+            "readOnly": true,
+            "title": "Main Subject"
+          },
           "payouts_enabled": {
             "title": "Payouts Enabled",
             "type": "boolean"
@@ -883,6 +918,17 @@
             "format": "uuid",
             "title": "User Id",
             "type": "string"
+          },
+          "years_experience": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Years Experience"
           }
         },
         "required": [
@@ -895,7 +941,8 @@
           "payouts_enabled",
           "rating_avg",
           "rating_count",
-          "display_name"
+          "display_name",
+          "main_subject"
         ],
         "title": "PublicTutorOut",
         "type": "object"
@@ -1411,6 +1458,18 @@
             "title": "Levels",
             "type": "array"
           },
+          "main_subject": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Main Subject"
+          },
           "subjects": {
             "items": {
               "type": "string"
@@ -1419,6 +1478,19 @@
             "minItems": 1,
             "title": "Subjects",
             "type": "array"
+          },
+          "years_experience": {
+            "anyOf": [
+              {
+                "maximum": 60.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Years Experience"
           }
         },
         "required": [
@@ -1427,6 +1499,31 @@
           "hourly_rate_cents"
         ],
         "title": "TutorApplicationIn",
+        "type": "object"
+      },
+      "TutorDocumentIn": {
+        "properties": {
+          "filename": {
+            "maxLength": 200,
+            "minLength": 1,
+            "pattern": "^[\\w\\- ()][\\w.\\- ()]*$",
+            "title": "Filename",
+            "type": "string"
+          },
+          "kind": {
+            "default": "qualification",
+            "enum": [
+              "qualification",
+              "resume"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "filename"
+        ],
+        "title": "TutorDocumentIn",
         "type": "object"
       },
       "TutorOut": {
@@ -1445,6 +1542,19 @@
             },
             "title": "Levels",
             "type": "array"
+          },
+          "main_subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Stored as the first subject, so subject search needs no extra column.",
+            "readOnly": true,
+            "title": "Main Subject"
           },
           "payouts_enabled": {
             "title": "Payouts Enabled",
@@ -1473,6 +1583,17 @@
             "format": "uuid",
             "title": "User Id",
             "type": "string"
+          },
+          "years_experience": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Years Experience"
           }
         },
         "required": [
@@ -1484,7 +1605,8 @@
           "status",
           "payouts_enabled",
           "rating_avg",
-          "rating_count"
+          "rating_count",
+          "main_subject"
         ],
         "title": "TutorOut",
         "type": "object"
@@ -4002,7 +4124,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UploadIn"
+                "$ref": "#/components/schemas/TutorDocumentIn"
               }
             }
           },

@@ -225,3 +225,27 @@ async def test_session_prices_must_fit_the_15_to_25_dollar_range(flow: Flow) -> 
             f"/tasks/{flow.task_id}/bids", headers=flow.tutor.h, json={"amount_cents": cents}
         )
         assert r.status_code == status, (cents, r.text)
+
+
+async def test_application_main_subject_and_experience_show_on_offers(flow: Flow) -> None:
+    c = flow.client
+    base = {"bio": "Independent tutor", "subjects": ["Physics", "Math"], "hourly_rate_cents": 2000}
+    r = await c.put(
+        "/tutors/me/application",
+        headers=flow.tutor.h,
+        json={**base, "main_subject": "Math", "years_experience": 7},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["subjects"] == ["Math", "Physics"]  # the main subject is stored first
+    assert body["main_subject"] == "Math" and body["years_experience"] == 7
+
+    # The main subject must be one the tutor listed; experience must be realistic.
+    for bad in [{"main_subject": "Chemistry"}, {"years_experience": -1}, {"years_experience": 61}]:
+        r = await c.put("/tutors/me/application", headers=flow.tutor.h, json={**base, **bad})
+        assert r.status_code == 422, bad
+
+    await flow.post_task()
+    await flow.bid()
+    [offer] = (await c.get(f"/tasks/{flow.task_id}/bids", headers=flow.student.h)).json()
+    assert offer["tutor_main_subject"] == "Math" and offer["tutor_years_experience"] == 7

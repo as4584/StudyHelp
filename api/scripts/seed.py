@@ -99,9 +99,10 @@ async def main(reset: bool) -> None:
             if tstatus:
                 await db.execute(
                     text(
-                        "insert into tutor_profiles(user_id, bio, subjects, hourly_rate_cents,"
-                        " status) values (:id, :bio, :subjects, 1800, :st) on conflict (user_id)"
-                        " do update set status = excluded.status, subjects = excluded.subjects,"
+                        "insert into tutor_profiles(user_id, bio, subjects, years_experience,"
+                        " hourly_rate_cents, status) values (:id, :bio, :subjects, 10, 1800, :st)"
+                        " on conflict (user_id) do update set status = excluded.status,"
+                        " subjects = excluded.subjects, years_experience = 10,"
                         " bio = excluded.bio, payouts_enabled = false,"
                         " stripe_account_id = null, rating_avg = 0, rating_count = 0"
                     ),

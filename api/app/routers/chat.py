@@ -16,6 +16,7 @@ from app.schemas.api import (
     MessageOut,
     RedirectOut,
     TranslationOut,
+    TutorDocumentIn,
     UploadIn,
     UploadOut,
 )
@@ -137,13 +138,19 @@ async def download_task_file(
 
 @router.post("/tutors/me/documents", response_model=UploadOut, status_code=201)
 async def create_tutor_document(
-    body: UploadIn, tutor: TutorDep, session: SessionDep, storage: StorageDep
+    body: TutorDocumentIn, tutor: TutorDep, session: SessionDep, storage: StorageDep
 ) -> UploadOut:
     doc_id = uuid.uuid4()
     path = f"{tutor.id}/{doc_id}/{body.filename}"
     signed = await storage.signed_upload(TUTOR_BUCKET, path)
     session.add(
-        TutorDocument(id=doc_id, tutor_id=tutor.id, storage_path=path, filename=body.filename)
+        TutorDocument(
+            id=doc_id,
+            tutor_id=tutor.id,
+            storage_path=path,
+            filename=body.filename,
+            kind=body.kind,
+        )
     )
     await session.commit()
     return UploadOut(file_id=doc_id, upload_url=signed.url, token=signed.token, path=path)
@@ -159,8 +166,7 @@ async def list_tutor_documents(
         await session.execute(select(TutorDocument).where(TutorDocument.tutor_id == tutor_id))
     ).scalars()
     return [
-        FileOut(id=d.id, kind="qualification", filename=d.filename, created_at=d.created_at)
-        for d in docs
+        FileOut(id=d.id, kind=d.kind, filename=d.filename, created_at=d.created_at) for d in docs
     ]
 
 

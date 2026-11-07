@@ -78,11 +78,12 @@ async def submit_application(
             payouts_enabled=False,
             rating_avg=0,
             rating_count=0,
-            **body.model_dump(),
+            **body.model_dump(exclude={"main_subject"}),
         )
         session.add(tp)
     else:
         tp.bio, tp.subjects, tp.hourly_rate_cents = body.bio, body.subjects, body.hourly_rate_cents
+        tp.years_experience = body.years_experience
         tp.levels = list(body.levels)
         if tp.status == "rejected":
             tp.status = "pending"  # editing a rejected application resubmits it

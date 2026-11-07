@@ -110,6 +110,7 @@ export default function OperationsPage() {
                         <div className="truncate font-semibold text-ink">{t.display_name}</div>
                         <div className="tnum text-[13px] text-muted">
                           {t.subjects.join(", ")} · {money(t.hourly_rate_cents)}/hr
+                          {t.years_experience != null && ` · ${t.years_experience} yrs experience`}
                         </div>
                       </div>
                     </div>
@@ -137,6 +138,7 @@ export default function OperationsPage() {
                     </div>
                   </div>
                   {t.bio && <p className="mt-2 pl-[38px] font-serif text-[15px] leading-relaxed text-ink-2">{t.bio}</p>}
+                  <ApplicantDocuments tutorId={t.user_id} />
                 </li>
               ))}
             </ul>
@@ -322,5 +324,53 @@ function DisputeRow({
         <p className="mt-1 text-muted">{d.resolution_note}</p>
       )}
     </li>
+  );
+}
+
+const DOC_LABEL: Record<string, string> = { resume: "Resume", qualification: "Qualification" };
+
+/** The applicant's private uploads (resume, qualifications); each opens a short-lived link. */
+function ApplicantDocuments({ tutorId }: { tutorId: string }) {
+  const [docs, setDocs] = useState<Schemas["FileOut"][] | null>(null);
+  const a = useAction();
+  useEffect(() => {
+    api<Schemas["FileOut"][]>(`/tutors/${tutorId}/documents`).then(setDocs, () => setDocs([]));
+  }, [tutorId]);
+  if (!docs) return null;
+  return (
+    <div className="mt-2 pl-[38px] text-[13px]" data-testid="applicant-documents">
+      {docs.length === 0 ? (
+        <span className="text-muted">No resume or documents uploaded</span>
+      ) : (
+        <ul className="flex flex-wrap gap-x-4 gap-y-1">
+          {docs.map((d) => (
+            <li key={d.id}>
+              <button
+                type="button"
+                className="font-semibold text-tutor underline-offset-2 hover:underline"
+                disabled={a.pending}
+                onClick={() => {
+                  // Open the tab during the click so pop-up blockers allow it, then point it at the link.
+                  const tab = window.open("", "_blank");
+                  void a.run(async () => {
+                    try {
+                      const { url } = await api<{ url: string }>(`/tutor-documents/${d.id}/download`);
+                      if (tab) tab.location.href = url;
+                      else window.location.href = url;
+                    } catch (e) {
+                      tab?.close();
+                      throw e;
+                    }
+                  });
+                }}
+              >
+                {DOC_LABEL[d.kind] ?? d.kind}: {d.filename}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <ErrorText error={a.error} />
+    </div>
   );
 }
