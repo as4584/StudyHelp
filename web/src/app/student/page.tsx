@@ -1,6 +1,6 @@
 "use client";
 
-import { QuotaNote, startPremiumCheckout, useAiQuota } from "@/components/ai-quota";
+import { cancelDemoPremium, QuotaNote, startPremiumCheckout, useAiQuota } from "@/components/ai-quota";
 import { ArrowRight, ArrowUp, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,6 +10,7 @@ import { useRequireRole } from "@/components/auth";
 import { PathHistory, SessionPath } from "@/components/study-path";
 import { Badge, EmptyState, ErrorText, LinkButton, Skeleton, TIMELINE, useAction } from "@/components/ui";
 import { api, money, type Bid, type Task } from "@/lib/api";
+import { useCapabilities } from "@/lib/capabilities";
 import { isActive, studentNextStep } from "@/lib/next-step";
 import { accentFor, subjectFamily } from "@/lib/subjects";
 
@@ -278,7 +279,9 @@ function AskTutor({ premium }: { premium: boolean }) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const upgrade = useAction();
+  const downgrade = useAction();
   const { quota } = useAiQuota();
+  const caps = useCapabilities();
   return (
     <section
       aria-labelledby="ai-h"
@@ -337,6 +340,23 @@ function AskTutor({ premium }: { premium: boolean }) {
               Upgrade to Premium · $9.99/mo for unlimited
             </button>
             <ErrorText error={upgrade.error} />
+          </div>
+        )}
+        {premium && (
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-white/15 pt-4">
+            <QuotaNote quota={quota} tone="dark" />
+            {caps?.demoPayments && (
+              <button
+                type="button"
+                disabled={downgrade.pending}
+                onClick={() => downgrade.run(cancelDemoPremium)}
+                className="text-[13px] font-semibold text-white underline-offset-4 hover:underline"
+                data-testid="demo-cancel-premium"
+              >
+                Switch back to free (demo)
+              </button>
+            )}
+            <ErrorText error={downgrade.error} />
           </div>
         )}
       </form>

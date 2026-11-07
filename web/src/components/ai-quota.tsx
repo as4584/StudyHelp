@@ -29,15 +29,17 @@ const resetsIn = (iso: string) => {
   return h >= 24 ? `in ${Math.ceil(h / 24)} days` : `in ${h} hour${h === 1 ? "" : "s"}`;
 };
 
-/** "3 of 5 free questions left today" — only shown to free students. */
+/** "3 of 5 free questions left today" for free students; the plan and its price for Premium. */
 export function QuotaNote({ quota, tone = "light" }: { quota: AiQuota | null; tone?: "light" | "dark" }) {
-  if (!quota || quota.premium) return null;
+  if (!quota) return null;
   const cls = tone === "dark" ? "text-lavender/90" : "text-muted";
   return (
     <p className={`tnum text-[13px] ${cls}`} data-testid="ai-quota">
-      {quota.remaining > 0
-        ? `${quota.remaining} of ${quota.limit} free questions left today`
-        : `Free questions reset ${resetsIn(quota.resets_at)}`}
+      {quota.premium
+        ? "Premium · $9.99/month · unlimited questions"
+        : quota.remaining > 0
+          ? `${quota.remaining} of ${quota.limit} free questions left today`
+          : `Free questions reset ${resetsIn(quota.resets_at)}`}
     </p>
   );
 }
@@ -45,6 +47,12 @@ export function QuotaNote({ quota, tone = "light" }: { quota: AiQuota | null; to
 export async function startPremiumCheckout() {
   const { url } = await api<{ url: string }>("/premium/checkout", { body: {} });
   window.location.href = url;
+}
+
+/** Demo only (simulated payments): end Premium so testers can see the free plan again. */
+export async function cancelDemoPremium() {
+  await api("/simulated/premium/cancel", { body: {} });
+  window.location.reload();
 }
 
 /** Shown when the server refuses a question: free daily limit (upgrade) or Premium fair use. */

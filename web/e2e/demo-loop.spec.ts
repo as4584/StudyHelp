@@ -135,6 +135,7 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
   await student.getByRole("button", { name: "Submit review" }).click();
   await expect(student.getByText("You rated this session")).toBeVisible(); // no silent submit
   await student.getByRole("button", { name: "Tip $5.00" }).click();
+  await expect(student.getByText("$5.00", { exact: true })).toBeVisible(); // checkout shows the amount
   await student.getByRole("button", { name: "Pay now" }).click();
   await student.waitForURL(/\/payments\/return/);
   await student.goto(taskUrl);
@@ -156,6 +157,11 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
     await student.getByRole("button", { name: "Pay now" }).click();
     await student.waitForURL(/\/payments\/return/);
   }
+  // Premium shows its plan and price; on the demo a tester can switch back to free.
+  await student.goto("/student");
+  await expect(student.getByTestId("ai-quota")).toContainText("Premium · $9.99/month");
+  await student.getByTestId("demo-cancel-premium").click();
+  await expect(student.getByTestId("ai-quota")).toContainText(/of 5 free questions left today/);
   await student.goto("/assistant");
   await student.getByPlaceholder("Subject (e.g. Calculus)").fill("Physics");
   await student.getByLabel("Question", { exact: true }).fill("Why does a heavier object not fall faster?");

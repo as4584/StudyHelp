@@ -26,17 +26,38 @@ export class ApiError extends Error {
  * Calls FastAPI with the current Supabase access token. The server derives identity and
  * role from that token + the database; we never send user ids or roles for ourselves.
  */
+const TIMEOUT_MS = 20_000;
+const RETRYABLE = new Set([502, 503, 504]);
+
 export async function api<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
   const { data } = await supabase().auth.getSession();
   const token = data.session?.access_token;
-  const res = await fetch(`${API_URL}${path}`, {
-    method: init.method ?? (init.body === undefined ? "GET" : "POST"),
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}),
-    },
-    body: init.body === undefined ? undefined : JSON.stringify(init.body),
-  });
+  const method = init.method ?? (init.body === undefined ? "GET" : "POST");
+  const send = () =>
+    fetch(`${API_URL}${path}`, {
+      method,
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}),
+      },
+      body: init.body === undefined ? undefined : JSON.stringify(init.body),
+      // Never leave a page on "Loading…" forever.
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+  let res: Response;
+  try {
+    res = await send();
+    // Reads are safe to repeat once (cold start or a dropped connection); writes are not.
+    if (method === "GET" && RETRYABLE.has(res.status)) res = await send();
+  } catch {
+    const slow = new ApiError(0, "The server took too long to respond. Please try again.");
+    if (method !== "GET") throw slow;
+    try {
+      res = await send();
+    } catch {
+      throw slow;
+    }
+  }
   if (!res.ok) {
     let detail = res.statusText;
     let code: string | undefined;

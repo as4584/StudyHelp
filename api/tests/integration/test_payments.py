@@ -220,9 +220,7 @@ async def test_subscription_activates_and_deactivates_premium(
     assert (await client.get("/me", headers=s.h)).json()["premium"] is False
 
 
-async def test_demo_student_can_switch_premium_back_to_free(
-    client, make_user: UserFactory
-) -> None:  # type: ignore[no-untyped-def]
+async def test_demo_student_can_switch_premium_back_to_free(client, make_user: UserFactory) -> None:  # type: ignore[no-untyped-def]
     s = await make_user("student")
     assert (await client.post("/simulated/premium/cancel", headers=s.h)).status_code == 404
     r = await client.post("/premium/checkout", headers=s.h)
