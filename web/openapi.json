@@ -1494,7 +1494,7 @@
           "filename": {
             "maxLength": 200,
             "minLength": 1,
-            "pattern": "^[\\w.\\- ()]+$",
+            "pattern": "^[\\w\\- ()][\\w.\\- ()]*$",
             "title": "Filename",
             "type": "string"
           },
@@ -2695,6 +2695,33 @@
           }
         ],
         "summary": "Simulated Connect Complete",
+        "tags": [
+          "simulated-payments"
+        ]
+      }
+    },
+    "/simulated/premium/cancel": {
+      "post": {
+        "description": "Demo only: end the simulated subscription so testers can see the free plan again.",
+        "operationId": "simulated_premium_cancel_simulated_premium_cancel_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookAck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Simulated Premium Cancel",
         "tags": [
           "simulated-payments"
         ]

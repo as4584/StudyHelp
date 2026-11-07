@@ -384,6 +384,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/simulated/premium/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Simulated Premium Cancel
+         * @description Demo only: end the simulated subscription so testers can see the free plan again.
+         */
+        post: operations["simulated_premium_cancel_simulated_premium_cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tasks": {
         parameters: {
             query?: never;
@@ -2204,6 +2224,26 @@ export interface operations {
         };
     };
     simulated_connect_complete_simulated_connect_complete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookAck"];
+                };
+            };
+        };
+    };
+    simulated_premium_cancel_simulated_premium_cancel_post: {
         parameters: {
             query?: never;
             header?: never;

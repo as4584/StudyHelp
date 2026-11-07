@@ -1,7 +1,7 @@
 "use client";
 
 import { createBrowserClient } from "@supabase/ssr";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { processLock, type SupabaseClient } from "@supabase/supabase-js";
 
 let client: SupabaseClient | null = null;
 
@@ -11,6 +11,9 @@ export function supabase(): SupabaseClient {
     client = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:54321",
       process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "",
+      // The default cross-tab navigator.locks lock can stall getSession() for a long time
+      // when another tab (often a throttled background one) holds it; lock per tab instead.
+      { auth: { lock: processLock } },
     );
   }
   return client;

@@ -17,6 +17,8 @@ function SimulatedCheckout() {
   const q = useSearchParams();
   const taskId = q.get("task_id");
   const kind = q.get("kind");
+  // Display only: the server set this amount when it created the checkout and charges that.
+  const linkAmount = Number(q.get("amount_cents"));
   useRequireRole("student");
   const router = useRouter();
   const a = useAction();
@@ -51,6 +53,8 @@ function SimulatedCheckout() {
             </>
           ) : quote ? (
             money(quote.amount_cents)
+          ) : linkAmount > 0 ? (
+            money(linkAmount)
           ) : (
             "—"
           )}

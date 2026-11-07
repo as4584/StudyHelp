@@ -254,7 +254,8 @@ class ConversationOut(ORM):
 
 
 class UploadIn(BaseModel):
-    filename: str = Field(min_length=1, max_length=200, pattern=r"^[\w.\- ()]+$")
+    # No leading dot: rules out "." / ".." path segments and hidden files.
+    filename: str = Field(min_length=1, max_length=200, pattern=r"^[\w\- ()][\w.\- ()]*$")
     kind: Literal["rubric", "deliverable"] = "rubric"
 
 

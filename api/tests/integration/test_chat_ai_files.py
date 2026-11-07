@@ -102,6 +102,13 @@ async def test_task_files_are_private(flow: Flow, make_user: UserFactory) -> Non
         json={"filename": "../../etc/passwd", "kind": "rubric"},
     )
     assert r.status_code == 422
+    for bad in ("..", ".", ".env"):
+        r = await c.post(
+            f"/tasks/{flow.task_id}/files",
+            headers=flow.student.h,
+            json={"filename": bad, "kind": "rubric"},
+        )
+        assert r.status_code == 422, bad
 
 
 async def test_tutor_documents_private(client: httpx.AsyncClient, make_user: UserFactory) -> None:
