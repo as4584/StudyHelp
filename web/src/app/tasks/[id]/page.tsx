@@ -289,6 +289,17 @@ function StudentActions({
                     <div className="min-w-0">
                       <div className="truncate font-semibold text-ink">{b.tutor_name}</div>
                       <Stars value={b.tutor_rating_avg} count={b.tutor_rating_count} />
+                      {(b.tutor_main_subject || b.tutor_years_experience != null) && (
+                        <div className="tnum text-[13px] text-muted" data-testid="offer-tutor-facts">
+                          {[
+                            b.tutor_main_subject,
+                            b.tutor_years_experience != null &&
+                              `${b.tutor_years_experience} ${b.tutor_years_experience === 1 ? "yr" : "yrs"} experience`,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="tnum font-serif text-[1.25rem] font-medium text-ink">{money(b.amount_cents)}</div>

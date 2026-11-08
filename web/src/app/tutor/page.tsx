@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useRequireRole } from "@/components/auth";
+import { ProfilePhoto } from "@/components/profile-photo";
 import { PathLine, sessionStages } from "@/components/path-line";
 import {
   Badge,
@@ -20,7 +21,7 @@ import {
   inputCls,
   useAction,
 } from "@/components/ui";
-import { api, LANGUAGES, LEVELS, money, type PaymentState, type Task } from "@/lib/api";
+import { api, LANGUAGES, LEVELS, money, type PaymentState, type Schemas, type Task } from "@/lib/api";
 import { accentFor } from "@/lib/subjects";
 import { uploadToSignedUrl } from "@/lib/upload";
 import { useToast } from "@/components/toast";
@@ -251,23 +252,40 @@ function Application({
   onSaved,
   startOpen,
 }: {
-  existing: { bio: string; subjects: string[]; levels: string[]; hourly_rate_cents: number; status: string } | null;
+  existing: Schemas["TutorOut"] | null;
   onSaved: () => Promise<void>;
   startOpen: boolean;
 }) {
   const [bio, setBio] = useState(existing?.bio ?? "");
   const [subjects, setSubjects] = useState(existing?.subjects.join(", ") ?? "");
+  const [main, setMain] = useState(existing?.main_subject ?? "");
+  const [years, setYears] = useState(existing?.years_experience == null ? "" : String(existing.years_experience));
   const [levels, setLevels] = useState<string[]>(existing?.levels ?? ["high_school", "college"]);
   const [rate, setRate] = useState(String((existing?.hourly_rate_cents ?? 2000) / 100));
   const [doc, setDoc] = useState<File | null>(null);
+  const [resume, setResume] = useState<File | null>(null);
   const a = useAction();
   const toast = useToast();
   const [open, setOpen] = useState(startOpen);
 
+  const subjectList = subjects
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const mainSubject = subjectList.includes(main) ? main : subjectList[0];
+
   if (!open) {
     return (
       <Section title="Your profile">
-        <p className="text-[15px] text-ink-2">{existing?.subjects.join(" · ")}</p>
+        <p className="text-[15px] text-ink-2">
+          {existing?.main_subject && <span className="font-semibold text-ink">{existing.main_subject}</span>}
+          {(existing?.subjects ?? []).slice(1).map((s) => ` · ${s}`)}
+        </p>
+        {existing?.years_experience != null && (
+          <p className="mt-1 text-[14px] text-muted">
+            {existing.years_experience} {existing.years_experience === 1 ? "year" : "years"} of teaching experience
+          </p>
+        )}
         <p className="mt-1 text-[14px] text-muted">
           Teaches {(existing?.levels ?? []).map((l) => LEVELS[l] ?? l).join(" and ")}
         </p>
@@ -293,15 +311,15 @@ function Application({
               method: "PUT",
               body: {
                 bio,
-                subjects: subjects
-                  .split(",")
-                  .map((s) => s.trim())
-                  .filter(Boolean),
+                subjects: subjectList,
+                main_subject: mainSubject ?? null,
+                years_experience: years === "" ? null : Number(years),
                 levels: levels as ("high_school" | "college")[],
                 hourly_rate_cents: Math.round(Number(rate) * 100),
               },
             });
-            if (doc) await uploadToSignedUrl("/tutors/me/documents", doc);
+            if (doc) await uploadToSignedUrl("/tutors/me/documents", doc, "qualification");
+            if (resume) await uploadToSignedUrl("/tutors/me/documents", resume, "resume");
             await onSaved();
             setOpen(false);
             toast(existing ? "Application saved" : "Application submitted — we'll review it soon");
@@ -310,6 +328,26 @@ function Application({
       >
         <Field label="Subjects" hint="Comma separated, e.g. Calculus, Physics">
           <input className={inputCls} required value={subjects} onChange={(e) => setSubjects(e.target.value)} />
+        </Field>
+        {subjectList.length > 1 && (
+          <Field label="Main subject" hint="Shown first on your profile once you're approved.">
+            <select className={inputCls} value={mainSubject} onChange={(e) => setMain(e.target.value)}>
+              {subjectList.map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+          </Field>
+        )}
+        <Field label="Years of teaching or tutoring experience">
+          <input
+            className={`${inputCls} tnum`}
+            type="number"
+            min={0}
+            max={60}
+            required
+            value={years}
+            onChange={(e) => setYears(e.target.value)}
+          />
         </Field>
         <Field label="Levels you teach" hint="You'll only see requests at these levels.">
           <div className="flex flex-wrap gap-2" role="group" aria-label="Levels you teach">
@@ -332,7 +370,7 @@ function Application({
             })}
           </div>
         </Field>
-        <Field label="Hourly rate (USD)">
+        <Field label="Your hourly rate (USD)" hint="You set your own rate. Each session offer is $15–$25.">
           <input
             className={`${inputCls} tnum`}
             type="number"
@@ -350,11 +388,25 @@ function Application({
           />
         </Field>
         <FileButton
+          label="Resume or CV"
+          accept="image/*,.pdf,.doc,.docx"
+          onFile={setResume}
+          hint="PDF or Word. Private — only admins can view it."
+        />
+        <FileButton
           label="Qualification document"
           accept="image/*,.pdf"
           onFile={setDoc}
           hint="Degree, transcript or certificate. Private — only admins can view it."
         />
+        <div className="flex items-center gap-3 text-[14px] text-ink-2">
+          <ProfilePhoto />
+          <span>Profile photo: tap to add or change it. Students see it next to your offers.</span>
+        </div>
+        <p className="text-[13px] leading-relaxed text-muted">
+          Tutors are independent contractors: you set your own rate, choose which requests to take and decide when you
+          work.
+        </p>
         <ErrorText error={a.error} />
         <Button type="submit" disabled={a.pending} loading={a.pending} className="w-full">
           {existing ? "Save" : "Submit application"}

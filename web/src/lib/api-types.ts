@@ -1007,12 +1007,16 @@ export interface components {
              * Format: uuid
              */
             tutor_id: string;
+            /** Tutor Main Subject */
+            tutor_main_subject?: string | null;
             /** Tutor Name */
             tutor_name: string;
             /** Tutor Rating Avg */
             tutor_rating_avg: number;
             /** Tutor Rating Count */
             tutor_rating_count: number;
+            /** Tutor Years Experience */
+            tutor_years_experience?: number | null;
         };
         /** ConversationOut */
         ConversationOut: {
@@ -1236,6 +1240,11 @@ export interface components {
             hourly_rate_cents: number;
             /** Levels */
             levels: string[];
+            /**
+             * Main Subject
+             * @description Stored as the first subject, so subject search needs no extra column.
+             */
+            readonly main_subject: string | null;
             /** Payouts Enabled */
             payouts_enabled: boolean;
             /** Rating Avg */
@@ -1251,6 +1260,8 @@ export interface components {
              * Format: uuid
              */
             user_id: string;
+            /** Years Experience */
+            years_experience?: number | null;
         };
         /** QuoteOut */
         QuoteOut: {
@@ -1461,8 +1472,23 @@ export interface components {
              *     ]
              */
             levels: ("high_school" | "college")[];
+            /** Main Subject */
+            main_subject?: string | null;
             /** Subjects */
             subjects: string[];
+            /** Years Experience */
+            years_experience?: number | null;
+        };
+        /** TutorDocumentIn */
+        TutorDocumentIn: {
+            /** Filename */
+            filename: string;
+            /**
+             * Kind
+             * @default qualification
+             * @enum {string}
+             */
+            kind: "qualification" | "resume";
         };
         /** TutorOut */
         TutorOut: {
@@ -1472,6 +1498,11 @@ export interface components {
             hourly_rate_cents: number;
             /** Levels */
             levels: string[];
+            /**
+             * Main Subject
+             * @description Stored as the first subject, so subject search needs no extra column.
+             */
+            readonly main_subject: string | null;
             /** Payouts Enabled */
             payouts_enabled: boolean;
             /** Rating Avg */
@@ -1487,6 +1518,8 @@ export interface components {
              * Format: uuid
              */
             user_id: string;
+            /** Years Experience */
+            years_experience?: number | null;
         };
         /** UploadIn */
         UploadIn: {
@@ -3068,7 +3101,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UploadIn"];
+                "application/json": components["schemas"]["TutorDocumentIn"];
             };
         };
         responses: {

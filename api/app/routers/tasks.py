@@ -62,6 +62,8 @@ async def list_bids(
                     TutorProfile.rating_avg,
                     TutorProfile.rating_count,
                     Profile.avatar_url,
+                    TutorProfile.subjects,
+                    TutorProfile.years_experience,
                 )
                 .join(TutorProfile, TutorProfile.user_id == Profile.id)
                 .where(Profile.id == b.tutor_id)
@@ -74,6 +76,8 @@ async def list_bids(
                 tutor_avatar_url=row[3],
                 tutor_rating_avg=float(row[1]),
                 tutor_rating_count=row[2],
+                tutor_main_subject=row[4][0] if row[4] else None,
+                tutor_years_experience=row[5],
             )
         )
     return out

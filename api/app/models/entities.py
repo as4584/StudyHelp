@@ -50,7 +50,8 @@ class TutorProfile(Base):
         UUID(as_uuid=True), ForeignKey("profiles.id"), primary_key=True
     )
     bio: Mapped[str] = mapped_column(Text, default="")
-    subjects: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
+    subjects: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)  # main subject first
+    years_experience: Mapped[int | None] = mapped_column(Integer, nullable=True)
     levels: Mapped[list[str]] = mapped_column(
         ARRAY(String), default=lambda: ["high_school", "college"]
     )
@@ -69,6 +70,7 @@ class TutorDocument(Base):
     tutor_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("profiles.id"))
     storage_path: Mapped[str] = mapped_column(String, unique=True)
     filename: Mapped[str] = mapped_column(String)
+    kind: Mapped[str] = mapped_column(String, default="qualification")
     created_at: Mapped[datetime] = _created()
 
 

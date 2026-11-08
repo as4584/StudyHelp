@@ -126,6 +126,16 @@ async def test_tutor_documents_private(client: httpx.AsyncClient, make_user: Use
     assert (
         await client.get(f"/tutor-documents/{doc}/download", headers=admin.h)
     ).status_code == 200
+    r = await client.post(
+        "/tutors/me/documents", headers=tutor.h, json={"filename": "cv.docx", "kind": "resume"}
+    )
+    assert r.status_code == 201
+    r = await client.post(
+        "/tutors/me/documents", headers=tutor.h, json={"filename": "x.pdf", "kind": "rubric"}
+    )
+    assert r.status_code == 422
+    docs = (await client.get(f"/tutors/{tutor.id}/documents", headers=admin.h)).json()
+    assert sorted(d["kind"] for d in docs) == ["qualification", "resume"]
 
 
 async def test_free_students_get_five_ai_questions_per_day(

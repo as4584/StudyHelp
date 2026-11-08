@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
 from app.core.config import get_settings
 
@@ -12,6 +12,8 @@ Lang = Field(pattern=r"^[a-z]{2}$")
 Level = Literal["high_school", "college"]
 # A client-resized profile photo as a data URL; "" clears it.
 AVATAR_PATTERN = r"^(|data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+)$"
+# No leading dot: rules out "." / ".." path segments and hidden files.
+SAFE_FILENAME = r"^[\w\- ()][\w.\- ()]*$"
 
 
 def _session_price(cents: int) -> int:
@@ -45,20 +47,39 @@ class ProfilePatch(BaseModel):
 class TutorApplicationIn(BaseModel):
     bio: str = Field(max_length=2000)
     subjects: list[str] = Field(min_length=1, max_length=10)
+    # The subject shown first on the tutor's profile; must be one of `subjects`.
+    main_subject: str | None = Field(default=None, max_length=80)
+    years_experience: int | None = Field(default=None, ge=0, le=60)
     levels: list[Level] = Field(default=["high_school", "college"], min_length=1, max_length=2)
     hourly_rate_cents: int = Field(ge=100, le=100000)
+
+    @model_validator(mode="after")
+    def _main_subject_first(self) -> "TutorApplicationIn":
+        if self.main_subject is not None:
+            if self.main_subject not in self.subjects:
+                raise ValueError("main_subject must be one of subjects")
+            rest = [s for s in self.subjects if s != self.main_subject]
+            self.subjects = [self.main_subject, *rest]
+        return self
 
 
 class TutorOut(ORM):
     user_id: uuid.UUID
     bio: str
     subjects: list[str]
+    years_experience: int | None = None
     levels: list[str]
     hourly_rate_cents: int
     status: str
     payouts_enabled: bool
     rating_avg: float
     rating_count: int
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def main_subject(self) -> str | None:
+        """Stored as the first subject, so subject search needs no extra column."""
+        return self.subjects[0] if self.subjects else None
 
 
 class PublicTutorOut(TutorOut):
@@ -134,6 +155,8 @@ class BidWithTutorOut(BidOut):
     tutor_avatar_url: str | None
     tutor_rating_avg: float
     tutor_rating_count: int
+    tutor_main_subject: str | None = None
+    tutor_years_experience: int | None = None
 
 
 class HireIn(BaseModel):
@@ -254,9 +277,13 @@ class ConversationOut(ORM):
 
 
 class UploadIn(BaseModel):
-    # No leading dot: rules out "." / ".." path segments and hidden files.
-    filename: str = Field(min_length=1, max_length=200, pattern=r"^[\w\- ()][\w.\- ()]*$")
+    filename: str = Field(min_length=1, max_length=200, pattern=SAFE_FILENAME)
     kind: Literal["rubric", "deliverable"] = "rubric"
+
+
+class TutorDocumentIn(BaseModel):
+    filename: str = Field(min_length=1, max_length=200, pattern=SAFE_FILENAME)
+    kind: Literal["qualification", "resume"] = "qualification"
 
 
 class UploadOut(BaseModel):
