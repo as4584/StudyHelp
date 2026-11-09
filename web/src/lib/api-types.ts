@@ -72,6 +72,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/policy-acceptances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Policy Acceptances
+         * @description Every policy acceptance on record, newest first (the admin page exports it as CSV).
+         */
+        get: operations["policy_acceptances_admin_policy_acceptances_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/revenue": {
         parameters: {
             query?: never;
@@ -307,9 +327,31 @@ export interface paths {
         put?: never;
         /**
          * Onboard
-         * @description Create the caller's profile. The id always comes from the verified token.
+         * @description Create the caller's profile, together with their policy acceptance. The id always comes
+         *     from the verified token.
          */
         post: operations["onboard_me_onboard_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept Policy
+         * @description Accept the current policy version later: existing accounts, new versions, or a parent's
+         *     consent for a student under 18.
+         */
+        post: operations["accept_policy_me_policy_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1127,6 +1169,7 @@ export interface components {
         };
         /** MeOut */
         MeOut: {
+            policy: components["schemas"]["PolicyStatusOut"];
             /** Premium */
             premium: boolean;
             profile: components["schemas"]["ProfileOut"];
@@ -1165,6 +1208,7 @@ export interface components {
         OnboardIn: {
             /** Display Name */
             display_name: string;
+            policy: components["schemas"]["PolicyAcceptIn"];
             /** Preferred Language */
             preferred_language: string;
             /**
@@ -1200,6 +1244,99 @@ export interface components {
             task_id: string;
             /** Tutor Net Cents */
             tutor_net_cents: number;
+        };
+        /**
+         * PolicyAcceptIn
+         * @description Acceptance of the caller's sign-up policy. Tutors' full name is their e-signature.
+         */
+        PolicyAcceptIn: {
+            /**
+             * Agree
+             * @constant
+             */
+            agree: true;
+            /** Date Of Birth */
+            date_of_birth?: string | null;
+            /** Full Name */
+            full_name: string;
+            /**
+             * Guardian Consent
+             * @default false
+             */
+            guardian_consent: boolean;
+            /** Guardian Email */
+            guardian_email?: string | null;
+            /** Guardian Name */
+            guardian_name?: string | null;
+        };
+        /** PolicyAcceptanceOut */
+        PolicyAcceptanceOut: {
+            /**
+             * Accepted At
+             * Format: date-time
+             */
+            accepted_at: string;
+            /** Accepted By */
+            accepted_by: string;
+            /** Account Name */
+            account_name: string;
+            /** Email */
+            email: string;
+            /** Full Name */
+            full_name: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Policy */
+            policy: string;
+            /** Policy Version */
+            policy_version: string;
+            /** Role */
+            role: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** PolicyStatusOut */
+        PolicyStatusOut: {
+            /**
+             * Accepted
+             * @default false
+             */
+            accepted: boolean;
+            /** Accepted Name */
+            accepted_name?: string | null;
+            /** Date Of Birth */
+            date_of_birth?: string | null;
+            /**
+             * Guardian Consent
+             * @default false
+             */
+            guardian_consent: boolean;
+            /** Guardian Email */
+            guardian_email?: string | null;
+            /** Guardian Name */
+            guardian_name?: string | null;
+            /**
+             * Minor
+             * @default false
+             */
+            minor: boolean;
+            /** Policy */
+            policy?: string | null;
+            /**
+             * Ready
+             * @default false
+             */
+            ready: boolean;
+            /** Title */
+            title?: string | null;
+            /** Version */
+            version?: string | null;
         };
         /** ProfileOut */
         ProfileOut: {
@@ -1697,6 +1834,26 @@ export interface operations {
             };
         };
     };
+    policy_acceptances_admin_policy_acceptances_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolicyAcceptanceOut"][];
+                };
+            };
+        };
+    };
     revenue_admin_revenue_get: {
         parameters: {
             query?: never;
@@ -2167,6 +2324,39 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_policy_me_policy_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PolicyAcceptIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

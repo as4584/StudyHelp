@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { useRequireRole } from "@/components/auth";
+import { PolicyGate } from "@/components/policy-gate";
 import { PathHistory, SessionPath } from "@/components/study-path";
 import { Badge, EmptyState, ErrorText, LinkButton, Skeleton, TIMELINE, useAction } from "@/components/ui";
 import { api, money, type Bid, type Task } from "@/lib/api";
@@ -75,6 +76,8 @@ export default function StudyDesk() {
           Request a tutor
         </LinkButton>
       </header>
+
+      <PolicyGate />
 
       {tasks === null ? (
         <div className="rounded-[16px] border border-rule bg-sheet p-8">

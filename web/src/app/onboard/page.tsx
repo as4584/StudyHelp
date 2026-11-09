@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { AuthFrame } from "@/components/auth-frame";
 import { useAuth } from "@/components/auth";
+import { EMPTY_POLICY, PolicyFields, policyBody } from "@/components/policy-fields";
 import { Button, ErrorText, Field, inputCls, useAction } from "@/components/ui";
 import { api, LANGUAGES } from "@/lib/api";
 
@@ -20,16 +21,19 @@ export default function OnboardPage() {
   const [role, setRole] = useState<"student" | "tutor">("student");
   const [name, setName] = useState("");
   const [lang, setLang] = useState("en");
+  const [policy, setPolicy] = useState(EMPTY_POLICY);
   const { pending, error, run } = useAction();
 
   return (
-    <AuthFrame title="Set up your desk" lede="Two quick details and you're in.">
+    <AuthFrame title="Set up your desk" lede="A few quick details and you're in.">
       <form
         className="space-y-5"
         onSubmit={(e) => {
           e.preventDefault();
           void run(async () => {
-            await api("/me/onboard", { body: { role, display_name: name, preferred_language: lang } });
+            await api("/me/onboard", {
+              body: { role, display_name: name, preferred_language: lang, policy: policyBody(role, policy) },
+            });
             await refresh();
             router.push(role === "tutor" ? "/tutor" : "/student");
           });
@@ -72,8 +76,9 @@ export default function OnboardPage() {
             ))}
           </select>
         </Field>
+        <PolicyFields role={role} value={policy} onChange={setPolicy} />
         <ErrorText error={error} />
-        <Button type="submit" disabled={pending} loading={pending} className="w-full">
+        <Button type="submit" disabled={pending || !policy.agree} loading={pending} className="w-full">
           Finish
         </Button>
       </form>

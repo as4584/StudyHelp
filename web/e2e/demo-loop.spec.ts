@@ -52,6 +52,10 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
   await applicant.getByRole("button", { name: /I'm a tutor/ }).click();
   await applicant.getByLabel("Display name").fill(applicantName);
   await applicant.getByLabel("Preferred language").selectOption("fr");
+  // No account without signing the contractor agreement: typed legal name + required checkbox.
+  await expect(applicant.getByRole("button", { name: "Finish" })).toBeDisabled();
+  await applicant.getByLabel("Full legal name").fill(`Applicant Legal ${runId}`);
+  await applicant.getByRole("checkbox", { name: /I have read and agree to the Tutor Policy/ }).check();
   await applicant.getByRole("button", { name: "Finish" }).click();
   await applicant.waitForURL(/\/tutor$/);
   await applicant.getByLabel("Subjects").fill("Chemistry, Biology");
@@ -189,6 +193,7 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
   const row = admin.getByTestId("tutor-applications").locator("li", { hasText: applicantName });
   await expect(row).toContainText("Biology, Chemistry"); // main subject first
   await expect(row).toContainText("4 yrs experience");
+  await expect(admin.getByTestId("policy-acceptances")).toContainText(`Applicant Legal ${runId}`);
   await row.getByRole("button", { name: "Approve" }).click();
   await expect(admin.getByText(`Tutor applications`)).toBeVisible();
   await expect(admin.getByTestId("tutor-applications").locator("li", { hasText: applicantName })).toHaveCount(0);

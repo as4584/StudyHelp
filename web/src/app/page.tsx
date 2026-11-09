@@ -89,10 +89,7 @@ export default function Home() {
         </p>
       </section>
 
-      <footer className="mt-24 flex flex-wrap justify-between gap-4 border-t border-rule pt-6 text-[13px] text-muted">
-        <span>StudyHelp · Global Study Help Tutor</span>
-        <span>Demo build — payments run in test mode</span>
-      </footer>
+      <p className="mt-24 text-[13px] text-muted">Demo build — payments run in test mode</p>
     </div>
   );
 }

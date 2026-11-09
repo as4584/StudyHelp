@@ -591,6 +591,9 @@
       },
       "MeOut": {
         "properties": {
+          "policy": {
+            "$ref": "#/components/schemas/PolicyStatusOut"
+          },
           "premium": {
             "title": "Premium",
             "type": "boolean"
@@ -612,7 +615,8 @@
         "required": [
           "profile",
           "tutor",
-          "premium"
+          "premium",
+          "policy"
         ],
         "title": "MeOut",
         "type": "object"
@@ -684,6 +688,9 @@
             "title": "Display Name",
             "type": "string"
           },
+          "policy": {
+            "$ref": "#/components/schemas/PolicyAcceptIn"
+          },
           "preferred_language": {
             "pattern": "^[a-z]{2}$",
             "title": "Preferred Language",
@@ -701,7 +708,8 @@
         "required": [
           "role",
           "display_name",
-          "preferred_language"
+          "preferred_language",
+          "policy"
         ],
         "title": "OnboardIn",
         "type": "object"
@@ -755,6 +763,236 @@
           "created_at"
         ],
         "title": "PaymentOut",
+        "type": "object"
+      },
+      "PolicyAcceptIn": {
+        "description": "Acceptance of the caller's sign-up policy. Tutors' full name is their e-signature.",
+        "properties": {
+          "agree": {
+            "const": true,
+            "title": "Agree",
+            "type": "boolean"
+          },
+          "date_of_birth": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Of Birth"
+          },
+          "full_name": {
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Full Name",
+            "type": "string"
+          },
+          "guardian_consent": {
+            "default": false,
+            "title": "Guardian Consent",
+            "type": "boolean"
+          },
+          "guardian_email": {
+            "anyOf": [
+              {
+                "maxLength": 254,
+                "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guardian Email"
+          },
+          "guardian_name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guardian Name"
+          }
+        },
+        "required": [
+          "agree",
+          "full_name"
+        ],
+        "title": "PolicyAcceptIn",
+        "type": "object"
+      },
+      "PolicyAcceptanceOut": {
+        "properties": {
+          "accepted_at": {
+            "format": "date-time",
+            "title": "Accepted At",
+            "type": "string"
+          },
+          "accepted_by": {
+            "title": "Accepted By",
+            "type": "string"
+          },
+          "account_name": {
+            "title": "Account Name",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "policy": {
+            "title": "Policy",
+            "type": "string"
+          },
+          "policy_version": {
+            "title": "Policy Version",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "account_name",
+          "role",
+          "policy",
+          "policy_version",
+          "accepted_by",
+          "full_name",
+          "email",
+          "accepted_at"
+        ],
+        "title": "PolicyAcceptanceOut",
+        "type": "object"
+      },
+      "PolicyStatusOut": {
+        "properties": {
+          "accepted": {
+            "default": false,
+            "title": "Accepted",
+            "type": "boolean"
+          },
+          "accepted_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted Name"
+          },
+          "date_of_birth": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Of Birth"
+          },
+          "guardian_consent": {
+            "default": false,
+            "title": "Guardian Consent",
+            "type": "boolean"
+          },
+          "guardian_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guardian Email"
+          },
+          "guardian_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guardian Name"
+          },
+          "minor": {
+            "default": false,
+            "title": "Minor",
+            "type": "boolean"
+          },
+          "policy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Policy"
+          },
+          "ready": {
+            "default": false,
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "title": "PolicyStatusOut",
         "type": "object"
       },
       "ProfileOut": {
@@ -1942,6 +2180,37 @@
         ]
       }
     },
+    "/admin/policy-acceptances": {
+      "get": {
+        "description": "Every policy acceptance on record, newest first (the admin page exports it as CSV).",
+        "operationId": "policy_acceptances_admin_policy_acceptances_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PolicyAcceptanceOut"
+                  },
+                  "title": "Response Policy Acceptances Admin Policy Acceptances Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Policy Acceptances",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/admin/revenue": {
       "get": {
         "operationId": "revenue_admin_revenue_get",
@@ -2657,7 +2926,7 @@
     },
     "/me/onboard": {
       "post": {
-        "description": "Create the caller's profile. The id always comes from the verified token.",
+        "description": "Create the caller's profile, together with their policy acceptance. The id always comes\nfrom the verified token.",
         "operationId": "onboard_me_onboard_post",
         "requestBody": {
           "content": {
@@ -2697,6 +2966,53 @@
           }
         ],
         "summary": "Onboard",
+        "tags": [
+          "profile"
+        ]
+      }
+    },
+    "/me/policy": {
+      "post": {
+        "description": "Accept the current policy version later: existing accounts, new versions, or a parent's\nconsent for a student under 18.",
+        "operationId": "accept_policy_me_policy_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyAcceptIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Accept Policy",
         "tags": [
           "profile"
         ]

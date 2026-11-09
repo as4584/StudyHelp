@@ -6,6 +6,7 @@ Requires SUPABASE_URL, SUPABASE_SECRET_KEY and DATABASE_URL (local or demo proje
 
 import asyncio
 import sys
+from datetime import date
 from pathlib import Path
 
 import httpx
@@ -16,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.db import get_sessionmaker, reset_engine
+from app.services.policies import POLICIES, VERSIONS
 
 DEMO_PASSWORD = "demo-password-123"  # noqa: S105 - published demo credential, local/demo only
 
@@ -80,7 +82,7 @@ async def main(reset: bool) -> None:
                     "truncate audit_logs, ai_usage, ai_messages, ai_chats, disputes, reviews, "
                     "message_translations, messages, conversations, subscriptions, transfers, "
                     "payment_events, provider_events, tips, payments, bids, task_files, tasks, "
-                    "tutor_documents restart identity cascade"
+                    "tutor_documents, policy_acceptances restart identity cascade"
                 )
             )
             await db.commit()
@@ -112,6 +114,21 @@ async def main(reset: bool) -> None:
                         "subjects": ["Calculus", "Physics"],
                         "bio": "10 years teaching university calculus and physics.",
                     },
+                )
+            if role in POLICIES:
+                # Demo accounts have already accepted their policy (Maya is an adult student).
+                policy = POLICIES[role][0]
+                await db.execute(
+                    text("update profiles set date_of_birth = :dob where id = :id"),
+                    {"id": uid, "dob": date(2004, 3, 14) if role == "student" else None},
+                )
+                await db.execute(
+                    text(
+                        "insert into policy_acceptances(user_id, policy, policy_version,"
+                        " accepted_by, full_name, email) values (:id, :p, :v, 'user', :n, :e)"
+                        " on conflict do nothing"
+                    ),
+                    {"id": uid, "p": policy, "v": VERSIONS[policy], "n": name, "e": email},
                 )
             print(f"seeded {role:8} {email}")
         await db.commit()

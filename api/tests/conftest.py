@@ -46,6 +46,7 @@ from app.api.dependencies import get_verifier  # noqa: E402
 from app.core.config import get_settings  # noqa: E402
 from app.core.db import reset_engine  # noqa: E402
 from app.security.jwt import StaticKeySource, TokenVerifier  # noqa: E402
+from app.services.policies import POLICIES, VERSIONS  # noqa: E402
 
 ISSUER = "http://supabase.test/auth/v1"
 
@@ -129,7 +130,8 @@ async def database() -> AsyncIterator[None]:
 TABLES = (
     "audit_logs, ai_usage, ai_messages, ai_chats, disputes, reviews, message_translations, "
     "messages, conversations, subscriptions, transfers, payment_events, provider_events, tips, "
-    "payments, bids, task_files, video_sessions, tasks, tutor_documents, tutor_profiles, profiles"
+    "payments, bids, task_files, video_sessions, tasks, tutor_documents, tutor_profiles, "
+    "policy_acceptances, profiles"
 )
 
 
@@ -180,6 +182,7 @@ def make_user(db: asyncpg.Connection) -> UserFactory:
         payouts: bool = True,
         premium: bool = False,
         name: str | None = None,
+        policy: bool = True,
     ) -> User:
         uid = uuid.uuid4()
         await db.execute("insert into auth.users(id, email) values ($1, $2)", uid, f"{uid}@t")
@@ -198,6 +201,18 @@ def make_user(db: asyncpg.Connection) -> UserFactory:
                 tutor_status,
                 f"acct_fake_{uid.hex[:12]}" if payouts else None,
                 payouts,
+            )
+        if policy and role in POLICIES:
+            # An adult who has accepted the current version of their role's policy.
+            p = POLICIES[role][0]
+            await db.execute("update profiles set date_of_birth = '1990-01-01' where id = $1", uid)
+            await db.execute(
+                "insert into policy_acceptances(user_id, policy, policy_version, accepted_by,"
+                " full_name, email) values ($1, $2, $3, 'user', 'Test Person', $4)",
+                uid,
+                p,
+                VERSIONS[p],
+                f"{uid}@t",
             )
         if premium:
             await db.execute(

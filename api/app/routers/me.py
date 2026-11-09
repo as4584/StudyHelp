@@ -7,12 +7,14 @@ from app.models.entities import Profile, TutorProfile
 from app.schemas.api import (
     MeOut,
     OnboardIn,
+    PolicyAcceptIn,
     ProfileOut,
     ProfilePatch,
     PublicTutorOut,
     TutorApplicationIn,
     TutorOut,
 )
+from app.services import policies
 from app.services.audit import audit
 from app.services.payments import is_premium
 
@@ -25,6 +27,7 @@ async def _me(session: SessionDep, profile: Profile) -> MeOut:
         profile=ProfileOut.model_validate(profile),
         tutor=TutorOut.model_validate(tutor) if tutor else None,
         premium=await is_premium(session, profile.id),
+        policy=await policies.status(session, profile),
     )
 
 
@@ -35,7 +38,8 @@ async def get_me(user: UserDep, session: SessionDep) -> MeOut:
 
 @router.post("/me/onboard", response_model=MeOut, status_code=201)
 async def onboard(body: OnboardIn, claims: ClaimsDep, session: SessionDep) -> MeOut:
-    """Create the caller's profile. The id always comes from the verified token."""
+    """Create the caller's profile, together with their policy acceptance. The id always comes
+    from the verified token."""
     import uuid
 
     profile = Profile(
@@ -46,11 +50,22 @@ async def onboard(body: OnboardIn, claims: ClaimsDep, session: SessionDep) -> Me
     )
     session.add(profile)
     try:
+        await session.flush()
+        await policies.accept(session, profile, claims.email, body.policy)
         await session.commit()
     except IntegrityError as exc:
         await session.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, "Profile already exists") from exc
     return await _me(session, profile)
+
+
+@router.post("/me/policy", response_model=MeOut)
+async def accept_policy(body: PolicyAcceptIn, user: UserDep, session: SessionDep) -> MeOut:
+    """Accept the current policy version later: existing accounts, new versions, or a parent's
+    consent for a student under 18."""
+    await policies.accept(session, user.profile, user.email, body)
+    await session.commit()
+    return await _me(session, user.profile)
 
 
 @router.patch("/me", response_model=MeOut)

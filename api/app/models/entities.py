@@ -1,13 +1,14 @@
 """ORM mappings. The authoritative DDL (constraints, RLS) lives in Alembic migrations."""
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from sqlalchemy import (
     ARRAY,
     BigInteger,
     Boolean,
+    Date,
     DateTime,
     ForeignKey,
     Integer,
@@ -41,7 +42,27 @@ class Profile(Base):
     preferred_language: Mapped[str] = mapped_column(String, default="en")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     stripe_customer_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Students only: age decides whether a parent/guardian must consent before booking.
+    date_of_birth: Mapped[date | None] = mapped_column(Date, nullable=True)
+    guardian_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    guardian_email: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = _created()
+
+
+class PolicyAcceptance(Base):
+    """Append-only: who accepted which policy version, and when."""
+
+    __tablename__ = "policy_acceptances"
+    id: Mapped[uuid.UUID] = _pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("profiles.id"))
+    policy: Mapped[str] = mapped_column(String)
+    policy_version: Mapped[str] = mapped_column(String)
+    accepted_by: Mapped[str] = mapped_column(String)  # "user" or "guardian"
+    full_name: Mapped[str] = mapped_column(Text)
+    email: Mapped[str] = mapped_column(Text, default="")
+    accepted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
 
 class TutorProfile(Base):
