@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.dependencies import CurrentUser
 from app.core.errors import Conflict, Forbidden, InvalidState, NotFound
 from app.models.entities import Bid, Conversation, Dispute, Profile, Review, Task, TutorProfile
+from app.services import policies
 from app.services.audit import audit
 from app.services.state import ensure_transition
 
@@ -102,6 +103,7 @@ async def place_bid(
 ) -> Bid:
     if not await tutor_is_approved(session, tutor.id):
         raise Forbidden("tutor application is not approved")
+    await policies.require_tutor_signed(session, tutor.id)
     task = await get_visible_task(session, tutor, task_id)
     if task.status != "open":
         raise InvalidState("task is not open for bids")
@@ -131,6 +133,7 @@ async def hire(
     task = await get_visible_task(session, student, task_id, for_update=True)
     if task.student_id != student.id:
         raise NotFound("task not found")
+    await policies.require_can_book(session, student.profile)
     ensure_transition(task.status, "hired")
     bid = await session.get(Bid, bid_id, with_for_update=True)
     if bid is None or bid.task_id != task.id or bid.status != "pending":

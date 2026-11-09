@@ -25,6 +25,7 @@ type Dispute = Schemas["DisputeOut"];
 type Payment = Schemas["PaymentOut"];
 type User = Schemas["AdminUserOut"];
 type Audit = Schemas["AuditOut"];
+type Acceptance = Schemas["PolicyAcceptanceOut"];
 
 export default function OperationsPage() {
   const { me } = useRequireRole("admin");
@@ -234,6 +235,8 @@ export default function OperationsPage() {
           </ul>
         </Section>
 
+        <PolicyAcceptances />
+
         <Section title="Audit log">
           {audit.length === 0 ? (
             <EmptyState>Privileged actions are recorded here.</EmptyState>
@@ -372,5 +375,104 @@ function ApplicantDocuments({ tutorId }: { tutorId: string }) {
       )}
       <ErrorText error={a.error} />
     </div>
+  );
+}
+
+const POLICY_NAMES: Record<string, string> = {
+  tutor_agreement: "Tutor Policy and Contractor Agreement",
+  student_policy: "Student and Parent Policy",
+};
+
+/** A spreadsheet cell: quoted, and never read as a formula (names are user-typed). */
+function csvCell(v: string) {
+  const safe = /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
+  return `"${safe.replace(/"/g, '""')}"`;
+}
+
+/** Every policy acceptance on record (who, which policy and version, when), exportable as CSV. */
+function PolicyAcceptances() {
+  const [rows, setRows] = useState<Acceptance[] | null>(null);
+  useEffect(() => {
+    api<Acceptance[]>("/admin/policy-acceptances").then(setRows, () => setRows([]));
+  }, []);
+
+  const download = () => {
+    const head = ["Accepted at (UTC)", "Full name", "Email", "Policy", "Version", "Accepted by", "Account", "Role"];
+    const lines = (rows ?? []).map((r) =>
+      [
+        r.accepted_at,
+        r.full_name,
+        r.email,
+        POLICY_NAMES[r.policy] ?? r.policy,
+        r.policy_version,
+        r.accepted_by === "guardian" ? "Parent/guardian" : "Account holder",
+        r.account_name,
+        r.role,
+      ]
+        .map(csvCell)
+        .join(","),
+    );
+    const blob = new Blob([[head.map(csvCell).join(","), ...lines].join("\r\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `policy-acceptances-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <Section title={`Policy acceptances · ${rows?.length ?? "…"}`} className="lg:col-span-2">
+      <div data-testid="policy-acceptances">
+        {rows === null ? (
+          <Skeleton lines={2} />
+        ) : rows.length === 0 ? (
+          <EmptyState>Every signed policy is recorded here.</EmptyState>
+        ) : (
+          <>
+            <Button variant="secondary" onClick={download}>
+              Download CSV
+            </Button>
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full min-w-[40rem] text-left text-[14px]">
+                <thead className="micro text-muted">
+                  <tr>
+                    <th className="py-2 pr-4 font-semibold">Name</th>
+                    <th className="py-2 pr-4 font-semibold">Policy</th>
+                    <th className="py-2 pr-4 font-semibold">Accepted by</th>
+                    <th className="py-2 font-semibold">When</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-rule">
+                  {rows.slice(0, 10).map((r) => (
+                    <tr key={r.id}>
+                      <td className="py-2 pr-4">
+                        <span className="block font-semibold text-ink">{r.full_name}</span>
+                        <span className="text-[13px] text-muted">{r.email}</span>
+                      </td>
+                      <td className="py-2 pr-4 text-ink-2">{POLICY_NAMES[r.policy] ?? r.policy}</td>
+                      <td className="py-2 pr-4 text-ink-2">
+                        {r.accepted_by === "guardian" ? `Parent/guardian of ${r.account_name}` : "Account holder"}
+                      </td>
+                      <td className="tnum py-2 text-[13px] whitespace-nowrap text-muted">
+                        {new Date(r.accepted_at).toLocaleString([], {
+                          month: "short",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {rows.length > 10 && (
+              <p className="mt-3 text-[13px] text-muted">Showing the latest 10. The CSV has all {rows.length}.</p>
+            )}
+          </>
+        )}
+      </div>
+    </Section>
   );
 }

@@ -6,6 +6,8 @@ import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
+import { POLICIES, policyHref } from "@/content/policies";
+
 import { useAuth } from "./auth";
 
 type NavItem = { href: string; label: string; icon: LucideIcon; match?: RegExp };
@@ -43,7 +45,7 @@ function useNav() {
 }
 
 /** Public pages (landing, auth) render without the workspace chrome. */
-const BARE = /^\/($|login|signup|onboard)/;
+const BARE = /^\/($|login|signup|onboard|policies\/)/;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
@@ -53,8 +55,33 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="lg:grid lg:min-h-dvh lg:grid-cols-[232px_1fr]">
       <Sidebar />
       <MobileBar />
-      <main className="mx-auto w-full max-w-[1120px] px-5 pt-6 pb-20 sm:px-8 lg:px-10 lg:pt-12">{children}</main>
+      <div className="min-w-0">
+        <main className="mx-auto w-full max-w-[1120px] px-5 pt-6 pb-20 sm:px-8 lg:px-10 lg:pt-12">{children}</main>
+        <SiteFooter className="px-5 sm:px-8 lg:px-10" />
+      </div>
     </div>
+  );
+}
+
+/** On every page: the sign-up policies, always one click away. */
+function SiteFooter({ className = "" }: { className?: string }) {
+  return (
+    <footer className={`mx-auto w-full max-w-[1120px] pb-10 ${className}`}>
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-rule pt-6 text-[13px] text-muted">
+        <span>StudyHelp · Global Study Help Tutor</span>
+        <nav aria-label="Policies" className="flex flex-wrap gap-x-5 gap-y-2">
+          {Object.values(POLICIES).map((p) => (
+            <Link
+              key={p.slug}
+              href={policyHref(p.slug)}
+              className="font-semibold text-ink-2 hover:text-ink hover:underline"
+            >
+              {p.shortTitle}
+            </Link>
+          ))}
+        </nav>
+      </div>
+    </footer>
   );
 }
 
@@ -81,6 +108,7 @@ function PublicFrame({ children, signedIn }: { children: React.ReactNode; signed
         </nav>
       </header>
       <main className="mx-auto w-full max-w-[1120px] px-5 pb-20 sm:px-8">{children}</main>
+      <SiteFooter className="px-5 sm:px-8" />
     </div>
   );
 }

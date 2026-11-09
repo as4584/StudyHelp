@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useRequireRole } from "@/components/auth";
+import { PolicyGate } from "@/components/policy-gate";
 import { ProfilePhoto } from "@/components/profile-photo";
 import { PathLine, sessionStages } from "@/components/path-line";
 import {
@@ -103,6 +104,8 @@ export default function TutorDesk() {
           </div>
         )}
       </header>
+
+      <PolicyGate />
 
       {tutor?.status === "pending" && (
         <p className="mb-10 max-w-[60ch] font-serif text-[18px] leading-relaxed text-ink-2">

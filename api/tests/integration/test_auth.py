@@ -16,9 +16,7 @@ async def test_health_is_public_and_identifies_release(client: httpx.AsyncClient
     body = r.json()
     assert {"status", "version", "git_sha", "environment"} <= body.keys()
     r = await client.get("/ready")
-    assert (
-        r.status_code == 200 and r.json()["providers"]["schema"] == "0007_tutor_application_fields"
-    )
+    assert r.status_code == 200 and r.json()["providers"]["schema"] == "0008_policy_acceptances"
 
 
 async def test_no_token(client: httpx.AsyncClient) -> None:
@@ -143,13 +141,23 @@ async def test_onboard_cannot_self_assign_admin(client: httpx.AsyncClient, db) -
     r = await client.post(
         "/me/onboard",
         headers=h,
-        json={"role": "student", "display_name": "x", "preferred_language": "en"},
+        json={
+            "role": "student",
+            "display_name": "x",
+            "preferred_language": "en",
+            "policy": {"agree": True, "full_name": "Sam Student", "date_of_birth": "2000-01-01"},
+        },
     )
     assert r.status_code == 201 and r.json()["profile"]["role"] == "student"
     r = await client.post(
         "/me/onboard",
         headers=h,
-        json={"role": "tutor", "display_name": "x", "preferred_language": "en"},
+        json={
+            "role": "tutor",
+            "display_name": "x",
+            "preferred_language": "en",
+            "policy": {"agree": True, "full_name": "Sam Student"},
+        },
     )
     assert r.status_code == 409  # cannot re-onboard into another role
 

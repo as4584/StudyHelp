@@ -1,7 +1,7 @@
 """Request/response contracts. Clients never send user ids or roles for themselves."""
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
@@ -14,6 +14,7 @@ Level = Literal["high_school", "college"]
 AVATAR_PATTERN = r"^(|data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+)$"
 # No leading dot: rules out "." / ".." path segments and hidden files.
 SAFE_FILENAME = r"^[\w\- ()][\w.\- ()]*$"
+EMAIL = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
 
 
 def _session_price(cents: int) -> int:
@@ -32,10 +33,41 @@ class ORM(BaseModel):
 # ----------------------------------------------------------------- profiles / tutors
 
 
+class PolicyAcceptIn(BaseModel):
+    """Acceptance of the caller's sign-up policy. Tutors' full name is their e-signature."""
+
+    agree: Literal[True]  # the unchecked box never creates an acceptance
+    full_name: str = Field(min_length=2, max_length=120)
+    date_of_birth: date | None = None  # students
+    guardian_name: str | None = Field(default=None, min_length=2, max_length=120)
+    guardian_email: str | None = Field(default=None, max_length=254, pattern=EMAIL)
+    guardian_consent: bool = False  # the parent/guardian ticks this; required before booking
+
+    @field_validator("full_name", "guardian_name")
+    @classmethod
+    def _strip(cls, v: str | None) -> str | None:
+        return v.strip() if v is not None else None
+
+
+class PolicyStatusOut(BaseModel):
+    policy: str | None = None  # None: this role has no sign-up policy (admins)
+    title: str | None = None
+    version: str | None = None
+    accepted: bool = False
+    accepted_name: str | None = None
+    date_of_birth: date | None = None
+    minor: bool = False
+    guardian_name: str | None = None
+    guardian_email: str | None = None
+    guardian_consent: bool = False
+    ready: bool = False  # tutors may send offers / students may book
+
+
 class OnboardIn(BaseModel):
     role: Literal["student", "tutor"]  # admin is never self-assignable
     display_name: str = Field(min_length=1, max_length=80)
     preferred_language: str = Lang
+    policy: PolicyAcceptIn  # no account without accepting the role's policy
 
 
 class ProfilePatch(BaseModel):
@@ -100,6 +132,7 @@ class MeOut(BaseModel):
     profile: ProfileOut
     tutor: TutorOut | None
     premium: bool
+    policy: PolicyStatusOut
 
 
 # ----------------------------------------------------------------- tasks / bids
@@ -368,6 +401,19 @@ class RevenueOut(BaseModel):
     refunded_cents: int
     tips_cents: int
     payments_count: int
+
+
+class PolicyAcceptanceOut(ORM):
+    id: uuid.UUID
+    user_id: uuid.UUID
+    account_name: str
+    role: str
+    policy: str
+    policy_version: str
+    accepted_by: str
+    full_name: str
+    email: str
+    accepted_at: datetime
 
 
 class AuditOut(ORM):

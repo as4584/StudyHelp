@@ -6,7 +6,14 @@ from sqlalchemy import select
 
 from app.api.dependencies import AdminDep, SessionDep
 from app.core.config import get_settings
-from app.models.entities import AuditLog, Dispute, Payment, Profile, TutorProfile
+from app.models.entities import (
+    AuditLog,
+    Dispute,
+    Payment,
+    PolicyAcceptance,
+    Profile,
+    TutorProfile,
+)
 from app.providers.payments import get_gateway
 from app.providers.payments.base import PaymentGateway
 from app.schemas.api import (
@@ -14,6 +21,7 @@ from app.schemas.api import (
     AuditOut,
     DisputeOut,
     PaymentOut,
+    PolicyAcceptanceOut,
     PublicTutorOut,
     ResolveDisputeIn,
     RevenueOut,
@@ -117,3 +125,26 @@ async def audit_log(_: AdminDep, session: SessionDep) -> list[AuditOut]:
         await session.execute(select(AuditLog).order_by(AuditLog.id.desc()).limit(200))
     ).scalars()
     return [AuditOut.model_validate(a) for a in rows]
+
+
+@router.get("/policy-acceptances", response_model=list[PolicyAcceptanceOut])
+async def policy_acceptances(_: AdminDep, session: SessionDep) -> list[PolicyAcceptanceOut]:
+    """Every policy acceptance on record, newest first (the admin page exports it as CSV)."""
+    rows = (
+        await session.execute(
+            select(PolicyAcceptance, Profile.display_name, Profile.role)
+            .join(Profile, Profile.id == PolicyAcceptance.user_id)
+            .order_by(PolicyAcceptance.accepted_at.desc())
+            .limit(5000)
+        )
+    ).all()
+    return [
+        PolicyAcceptanceOut.model_validate(
+            {
+                **{c: getattr(a, c) for c in PolicyAcceptanceOut.model_fields if hasattr(a, c)},
+                "account_name": name,
+                "role": role,
+            }
+        )
+        for a, name, role in rows
+    ]

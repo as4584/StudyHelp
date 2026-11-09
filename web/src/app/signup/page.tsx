@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { AuthFrame } from "@/components/auth-frame";
+import { POLICIES, policyHref } from "@/content/policies";
 import { Button, ErrorText, Field, inputCls, useAction } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
 
@@ -31,10 +32,23 @@ export default function SignupPage() {
       }}
       footer={
         <>
-          Already have an account?{" "}
-          <Link className="font-semibold text-tutor underline-offset-4 hover:underline" href="/login">
-            Sign in
-          </Link>
+          <p>
+            Next you&apos;ll choose student or tutor and accept the{" "}
+            <Link className="font-semibold text-tutor underline-offset-4 hover:underline" href={policyHref("student")}>
+              {POLICIES.student.shortTitle}
+            </Link>{" "}
+            or the{" "}
+            <Link className="font-semibold text-tutor underline-offset-4 hover:underline" href={policyHref("tutor")}>
+              {POLICIES.tutor.shortTitle}
+            </Link>
+            .
+          </p>
+          <p className="mt-3">
+            Already have an account?{" "}
+            <Link className="font-semibold text-tutor underline-offset-4 hover:underline" href="/login">
+              Sign in
+            </Link>
+          </p>
         </>
       }
     >
