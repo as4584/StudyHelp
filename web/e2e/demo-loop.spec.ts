@@ -55,6 +55,11 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
   // No account without signing the contractor agreement: typed legal name + required checkbox.
   await expect(applicant.getByRole("button", { name: "Finish" })).toBeDisabled();
   await applicant.getByLabel("Full legal name").fill(`Applicant Legal ${runId}`);
+  for (const box of await applicant
+    .getByRole("group", { name: /Check each rule/ })
+    .getByRole("checkbox")
+    .all())
+    await box.check();
   await applicant.getByRole("checkbox", { name: /I have read and agree to the Tutor Policy/ }).check();
   await applicant.getByRole("button", { name: "Finish" }).click();
   await applicant.waitForURL(/\/tutor$/);

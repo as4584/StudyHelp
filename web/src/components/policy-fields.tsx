@@ -13,6 +13,7 @@ export type PolicyValues = {
   guardianName: string;
   guardianEmail: string;
   guardianConsent: boolean;
+  rules: boolean[]; // the policy's acknowledgment checklist, in order
 };
 
 export const EMPTY_POLICY: PolicyValues = {
@@ -22,6 +23,7 @@ export const EMPTY_POLICY: PolicyValues = {
   guardianName: "",
   guardianEmail: "",
   guardianConsent: false,
+  rules: [],
 };
 
 /** Prefill from what is already on record (later acceptance, or a parent completing consent). */
@@ -43,9 +45,23 @@ export function ageOn(dob: string, today = new Date()): number | null {
   return today.getFullYear() - y - (before ? 1 : 0);
 }
 
+export const MIN_STUDENT_AGE = 13; // Student and Parent Policy 1.4
+
 export function isMinor(v: PolicyValues) {
   const age = ageOn(v.dob);
   return age !== null && age < 18;
+}
+
+function tooYoung(v: PolicyValues) {
+  const age = ageOn(v.dob);
+  return age !== null && age < MIN_STUDENT_AGE;
+}
+
+/** Every rule ticked and the agreement checked: the only state that may be submitted. */
+export function policyComplete(role: "student" | "tutor", v: PolicyValues) {
+  const ruleCount = POLICIES[role].rules.length;
+  const rulesOk = POLICIES[role].rules.every((_, i) => v.rules[i]) && ruleCount > 0;
+  return v.agree && rulesOk && !(role === "student" && tooYoung(v));
 }
 
 /** Request body for /me/onboard `policy` and /me/policy. */
@@ -63,7 +79,8 @@ export function policyBody(role: "student" | "tutor", v: PolicyValues): Schemas[
 
 /**
  * The policy part of sign-up: name (a tutor's e-signature), a student's date of birth with
- * parent/guardian details under 18, and the required agreement checkbox (unchecked by default).
+ * parent/guardian details under 18, the policy's rule checklist and the required agreement
+ * checkbox. Every box starts unchecked.
  */
 export function PolicyFields({
   role,
@@ -113,7 +130,12 @@ export function PolicyFields({
           />
         </Field>
       )}
-      {minor && (
+      {role === "student" && tooYoung(value) && (
+        <p role="alert" className="text-[14px] text-danger">
+          Students must be {MIN_STUDENT_AGE} or older to use StudyHelp.
+        </p>
+      )}
+      {minor && !tooYoung(value) && (
         <fieldset className="space-y-4 rounded-[8px] border border-rule bg-sunken/40 p-4">
           <legend className="px-1 text-[14px] font-semibold text-ink">Parent or guardian</legend>
           <p className="text-[13px] leading-snug text-muted">
@@ -146,12 +168,33 @@ export function PolicyFields({
               onChange={(e) => set({ guardianConsent: e.target.checked })}
             />
             <span>
-              I am this student&apos;s parent or guardian. I have read the {link} and I consent to them using StudyHelp.{" "}
+              I am this student&apos;s parent or guardian. I have read the {link}, accept it on their behalf and accept
+              responsibility for payments on the account.{" "}
               <span className="text-muted">(Can be done later, but sessions can&apos;t be booked until it is.)</span>
             </span>
           </label>
         </fieldset>
       )}
+      <fieldset className="space-y-2.5">
+        <legend className="mb-2 text-[14px] font-semibold text-ink">Check each rule to show you understand it</legend>
+        {policy.rules.map((r, i) => (
+          <label key={r.label} className="flex items-start gap-3 text-[14px] leading-snug text-ink-2">
+            <input
+              type="checkbox"
+              required
+              className="mt-0.5 size-[18px] shrink-0 accent-[#0f766e]"
+              checked={!!value.rules[i]}
+              onChange={(e) => {
+                const rules = policy.rules.map((_, j) => (j === i ? e.target.checked : !!value.rules[j]));
+                set({ rules });
+              }}
+            />
+            <span>
+              <span className="font-semibold text-ink">{r.label}:</span> {r.text}
+            </span>
+          </label>
+        ))}
+      </fieldset>
       <label className="flex items-start gap-3 text-[14px] leading-snug text-ink-2">
         <input
           type="checkbox"

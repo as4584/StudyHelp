@@ -25,6 +25,7 @@ POLICIES = {
 }
 VERSIONS = {"tutor_agreement": "draft-2026-11-08", "student_policy": "draft-2026-11-08"}
 ADULT_AGE = 18
+MIN_STUDENT_AGE = 13  # Student and Parent Policy 1.4
 
 
 def age_on(dob: date, today: date) -> int:
@@ -86,6 +87,8 @@ async def accept(
         today = _today()
         if dob > today or age_on(dob, today) > 120:
             raise InvalidState("enter a real date of birth")
+        if age_on(dob, today) < MIN_STUDENT_AGE:
+            raise InvalidState(f"students must be {MIN_STUDENT_AGE} or older to use StudyHelp")
         profile.date_of_birth = dob
         if age_on(dob, today) < ADULT_AGE:
             name = body.guardian_name or profile.guardian_name

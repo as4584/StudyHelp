@@ -6,7 +6,7 @@ import { useState } from "react";
 
 import { AuthFrame } from "@/components/auth-frame";
 import { useAuth } from "@/components/auth";
-import { EMPTY_POLICY, PolicyFields, policyBody } from "@/components/policy-fields";
+import { EMPTY_POLICY, PolicyFields, policyBody, policyComplete } from "@/components/policy-fields";
 import { Button, ErrorText, Field, inputCls, useAction } from "@/components/ui";
 import { api, LANGUAGES } from "@/lib/api";
 
@@ -78,7 +78,7 @@ export default function OnboardPage() {
         </Field>
         <PolicyFields role={role} value={policy} onChange={setPolicy} />
         <ErrorText error={error} />
-        <Button type="submit" disabled={pending || !policy.agree} loading={pending} className="w-full">
+        <Button type="submit" disabled={pending || !policyComplete(role, policy)} loading={pending} className="w-full">
           Finish
         </Button>
       </form>

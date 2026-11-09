@@ -28,12 +28,19 @@ test("policies are linked everywhere and a minor needs a parent's consent", asyn
 
   await page.getByLabel("Display name").fill("Kai");
   await page.getByLabel("Full name").fill("Kai Moana");
+  await page.getByLabel("Date of birth").fill(yearsAgo(12));
+  await expect(page.getByText("Students must be 13 or older")).toBeVisible();
   await page.getByLabel("Date of birth").fill(yearsAgo(15));
   // Under 18: the parent/guardian fields appear.
   await page.getByLabel("Parent or guardian's full name").fill("Lani Moana");
   await page.getByLabel("Parent or guardian's email").fill("lani@example.com");
-  await expect(page.getByRole("button", { name: "Finish" })).toBeDisabled();
   await page.getByRole("checkbox", { name: /I have read and agree to the Student and Parent Policy/ }).check();
+  await expect(page.getByRole("button", { name: "Finish" })).toBeDisabled(); // every rule must be ticked
+  for (const box of await page
+    .getByRole("group", { name: /Check each rule/ })
+    .getByRole("checkbox")
+    .all())
+    await box.check();
   await page.getByRole("button", { name: "Finish" }).click();
   await page.waitForURL(/\/student$/);
 
@@ -42,6 +49,11 @@ test("policies are linked everywhere and a minor needs a parent's consent", asyn
   await expect(gate.getByRole("button", { name: "Record consent" })).toBeDisabled();
   await gate.getByRole("checkbox", { name: /I am this student's parent or guardian/ }).check();
   await gate.getByRole("checkbox", { name: /I have read and agree/ }).check();
+  for (const box of await gate
+    .getByRole("group", { name: /Check each rule/ })
+    .getByRole("checkbox")
+    .all())
+    await box.check();
   await gate.getByRole("button", { name: "Record consent" }).click();
   await expect(gate).toHaveCount(0);
 

@@ -4,7 +4,7 @@ import { FileSignature } from "lucide-react";
 import { useState } from "react";
 
 import { useAuth } from "@/components/auth";
-import { PolicyFields, policyBody, policyValuesFrom } from "@/components/policy-fields";
+import { PolicyFields, policyBody, policyComplete, policyValuesFrom } from "@/components/policy-fields";
 import { Button, ErrorText, useAction } from "@/components/ui";
 import { api } from "@/lib/api";
 
@@ -55,7 +55,11 @@ export function PolicyGate() {
       >
         <PolicyFields role={role} value={value} onChange={setValue} lockDob={!!status.date_of_birth} />
         <ErrorText error={a.error} />
-        <Button type="submit" disabled={!value.agree || (needsGuardian && !value.guardianConsent)} loading={a.pending}>
+        <Button
+          type="submit"
+          disabled={!policyComplete(role, value) || (needsGuardian && !value.guardianConsent)}
+          loading={a.pending}
+        >
           {needsGuardian ? "Record consent" : role === "tutor" ? "Sign agreement" : "Accept policy"}
         </Button>
       </form>

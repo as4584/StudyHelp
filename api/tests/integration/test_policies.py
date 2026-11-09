@@ -181,3 +181,20 @@ async def test_acceptances_are_append_only(db: asyncpg.Connection, make_user: Us
         await db.execute("update policy_acceptances set full_name = 'Someone Else'")
     with pytest.raises(asyncpg.RaiseError, match="append-only"):
         await db.execute("delete from policy_acceptances")
+
+
+async def test_students_must_be_13_or_older(
+    client: httpx.AsyncClient, make_user: UserFactory
+) -> None:
+    s = await make_user("student", policy=False)
+    body = {
+        "agree": True,
+        "full_name": "Kid Tester",
+        "guardian_name": "Pat Tester",
+        "guardian_email": "pat@example.com",
+        "guardian_consent": True,
+    }
+    r = await client.post("/me/policy", headers=s.h, json={**body, "date_of_birth": _years_ago(12)})
+    assert r.status_code == 409 and "13 or older" in r.text
+    r = await client.post("/me/policy", headers=s.h, json={**body, "date_of_birth": _years_ago(13)})
+    assert r.status_code == 200 and r.json()["policy"]["ready"]
