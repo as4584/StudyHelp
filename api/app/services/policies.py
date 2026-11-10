@@ -7,7 +7,7 @@ Gates check the CURRENT policy version, so publishing a new version asks everyon
 """
 
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import Forbidden, InvalidState
 from app.models.entities import PolicyAcceptance, Profile
-from app.schemas.api import PolicyAcceptIn, PolicyStatusOut
+from app.schemas.api import GuardianConsentIn, PolicyAcceptIn, PolicyStatusOut
 from app.services.audit import audit
 
 # Bump a version whenever its policy text changes (web/src/content/policies.ts shows the text).
@@ -24,6 +24,8 @@ POLICIES = {
     "student": ("student_policy", "Student and Parent Policy and Terms of Use"),
 }
 VERSIONS = {"tutor_agreement": "draft-2026-11-08", "student_policy": "draft-2026-11-08"}
+# How many rules each policy's acknowledgment checklist has (the `rules` arrays in policies.ts).
+RULE_COUNTS = {"tutor_agreement": 5, "student_policy": 4}
 ADULT_AGE = 18
 MIN_STUDENT_AGE = 13  # Student and Parent Policy 1.4
 
@@ -33,7 +35,19 @@ def age_on(dob: date, today: date) -> int:
 
 
 def _today() -> date:
-    return datetime.now(UTC).date()
+    """The latest calendar date anywhere on Earth (UTC+14). Someone whose birthday has already
+    begun where they live is never told they are a year younger than they are."""
+    return (datetime.now(UTC) + timedelta(hours=14)).date()
+
+
+def _same_email(a: str | None, b: str | None) -> bool:
+    return bool(a) and bool(b) and a.strip().lower() == b.strip().lower()  # type: ignore[union-attr]
+
+
+def _set_guardian(profile: Profile, email: str | None, name: str, mail: str) -> None:
+    if _same_email(mail, email):
+        raise InvalidState("the parent or guardian's email must be their own, not the student's")
+    profile.guardian_name, profile.guardian_email = name, mail
 
 
 async def _accepted_by(session: AsyncSession, user_id: uuid.UUID, policy: str) -> dict[str, str]:
@@ -79,6 +93,8 @@ async def accept(
     if profile.role not in POLICIES:
         raise InvalidState("this account has no sign-up policy to accept")
     policy, _ = POLICIES[profile.role]
+    if len(body.rules) != RULE_COUNTS[policy] or not all(body.rules):
+        raise InvalidState("check each rule to show you understand it")
     rows = [("user", body.full_name, email or "")]
     if profile.role == "student":
         dob = profile.date_of_birth or body.date_of_birth
@@ -91,13 +107,18 @@ async def accept(
             raise InvalidState(f"students must be {MIN_STUDENT_AGE} or older to use StudyHelp")
         profile.date_of_birth = dob
         if age_on(dob, today) < ADULT_AGE:
-            name = body.guardian_name or profile.guardian_name
-            mail = body.guardian_email or profile.guardian_email
+            consented = "guardian" in await _accepted_by(session, profile.id, policy)
+            if consented:  # the guardian on record stays the one who consented
+                name, mail = profile.guardian_name, profile.guardian_email
+            else:
+                name = body.guardian_name or profile.guardian_name
+                mail = body.guardian_email or profile.guardian_email
             if not name or not mail:
                 raise InvalidState("students under 18 need a parent or guardian's name and email")
-            profile.guardian_name, profile.guardian_email = name, mail
-            if body.guardian_consent:
-                rows.append(("guardian", name, mail))
+            if not consented:
+                _set_guardian(profile, email, name, mail)
+                if body.guardian_consent:
+                    rows.append(("guardian", name, mail))
     for by, name, mail in rows:
         await session.execute(
             insert(PolicyAcceptance)
@@ -121,9 +142,49 @@ async def accept(
     )
 
 
+async def guardian_consent(
+    session: AsyncSession, profile: Profile, email: str | None, body: GuardianConsentIn
+) -> None:
+    """Record a parent/guardian's consent for a student under 18 who already accepted the policy.
+    Once consent is on record the guardian's details are fixed; repeating it changes nothing."""
+    s = await status(session, profile)
+    if profile.role != "student" or not s.accepted:
+        raise InvalidState("accept the Student and Parent Policy first")
+    if not s.minor:
+        raise InvalidState("parent or guardian consent is only needed for students under 18")
+    if s.guardian_consent:
+        return
+    _set_guardian(profile, email, body.guardian_name, body.guardian_email)
+    policy = POLICIES["student"][0]
+    await session.execute(
+        insert(PolicyAcceptance)
+        .values(
+            user_id=profile.id,
+            policy=policy,
+            policy_version=VERSIONS[policy],
+            accepted_by="guardian",
+            full_name=body.guardian_name,
+            email=body.guardian_email,
+        )
+        .on_conflict_do_nothing()
+    )
+    audit(
+        session,
+        actor=profile.id,
+        action="policy.accepted",
+        entity_type="profile",
+        entity_id=profile.id,
+        metadata={"policy": policy, "version": VERSIONS[policy], "by": ["guardian"]},
+    )
+
+
 async def require_tutor_signed(session: AsyncSession, tutor_id: uuid.UUID) -> None:
     if "user" not in await _accepted_by(session, tutor_id, "tutor_agreement"):
         raise Forbidden("sign the Tutor Policy and Contractor Agreement before sending offers")
+
+
+async def tutor_signed(session: AsyncSession, tutor_id: uuid.UUID) -> bool:
+    return "user" in await _accepted_by(session, tutor_id, "tutor_agreement")
 
 
 async def require_can_book(session: AsyncSession, student: Profile) -> None:

@@ -526,6 +526,35 @@
         "title": "FileOut",
         "type": "object"
       },
+      "GuardianConsentIn": {
+        "description": "A parent/guardian's consent for a student under 18 who has already accepted the policy.",
+        "properties": {
+          "consent": {
+            "const": true,
+            "title": "Consent",
+            "type": "boolean"
+          },
+          "guardian_email": {
+            "maxLength": 254,
+            "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+            "title": "Guardian Email",
+            "type": "string"
+          },
+          "guardian_name": {
+            "maxLength": 120,
+            "minLength": 2,
+            "title": "Guardian Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "consent",
+          "guardian_name",
+          "guardian_email"
+        ],
+        "title": "GuardianConsentIn",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -821,11 +850,20 @@
               }
             ],
             "title": "Guardian Name"
+          },
+          "rules": {
+            "items": {
+              "type": "boolean"
+            },
+            "maxItems": 20,
+            "title": "Rules",
+            "type": "array"
           }
         },
         "required": [
           "agree",
-          "full_name"
+          "full_name",
+          "rules"
         ],
         "title": "PolicyAcceptIn",
         "type": "object"
@@ -3013,6 +3051,53 @@
           }
         ],
         "summary": "Accept Policy",
+        "tags": [
+          "profile"
+        ]
+      }
+    },
+    "/me/policy/guardian": {
+      "post": {
+        "description": "A parent/guardian's consent for a student under 18, given after sign-up.",
+        "operationId": "guardian_consent_me_policy_guardian_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuardianConsentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Guardian Consent",
         "tags": [
           "profile"
         ]

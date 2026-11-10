@@ -42,11 +42,26 @@ class PolicyAcceptIn(BaseModel):
     guardian_name: str | None = Field(default=None, min_length=2, max_length=120)
     guardian_email: str | None = Field(default=None, max_length=254, pattern=EMAIL)
     guardian_consent: bool = False  # the parent/guardian ticks this; required before booking
+    rules: list[bool] = Field(max_length=20)  # the policy's rule checklist, every box ticked
 
-    @field_validator("full_name", "guardian_name")
+    # "before": the length limits then apply to the trimmed name, so "  a " is a 422, not a 500.
+    @field_validator("full_name", "guardian_name", "guardian_email", mode="before")
     @classmethod
-    def _strip(cls, v: str | None) -> str | None:
-        return v.strip() if v is not None else None
+    def _strip(cls, v: object) -> object:
+        return v.strip() if isinstance(v, str) else v
+
+
+class GuardianConsentIn(BaseModel):
+    """A parent/guardian's consent for a student under 18 who has already accepted the policy."""
+
+    consent: Literal[True]
+    guardian_name: str = Field(min_length=2, max_length=120)
+    guardian_email: str = Field(max_length=254, pattern=EMAIL)
+
+    @field_validator("guardian_name", "guardian_email", mode="before")
+    @classmethod
+    def _strip(cls, v: object) -> object:
+        return v.strip() if isinstance(v, str) else v
 
 
 class PolicyStatusOut(BaseModel):

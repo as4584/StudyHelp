@@ -145,7 +145,12 @@ async def test_onboard_cannot_self_assign_admin(client: httpx.AsyncClient, db) -
             "role": "student",
             "display_name": "x",
             "preferred_language": "en",
-            "policy": {"agree": True, "full_name": "Sam Student", "date_of_birth": "2000-01-01"},
+            "policy": {
+                "agree": True,
+                "full_name": "Sam Student",
+                "date_of_birth": "2000-01-01",
+                "rules": [True] * 4,
+            },
         },
     )
     assert r.status_code == 201 and r.json()["profile"]["role"] == "student"
@@ -156,7 +161,7 @@ async def test_onboard_cannot_self_assign_admin(client: httpx.AsyncClient, db) -
             "role": "tutor",
             "display_name": "x",
             "preferred_language": "en",
-            "policy": {"agree": True, "full_name": "Sam Student"},
+            "policy": {"agree": True, "full_name": "Sam Student", "rules": [True] * 5},
         },
     )
     assert r.status_code == 409  # cannot re-onboard into another role

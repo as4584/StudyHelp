@@ -26,6 +26,12 @@ test("policies are linked everywhere and a minor needs a parent's consent", asyn
   await page.getByRole("button", { name: "Continue" }).click();
   await page.waitForURL(/\/onboard$/);
 
+  // Ticking one role's boxes and then switching role starts the policy part over.
+  await page.getByRole("checkbox", { name: /I have read and agree/ }).check();
+  await page.getByRole("button", { name: /I'm a tutor/ }).click();
+  await expect(page.getByRole("checkbox", { name: /I have read and agree/ })).not.toBeChecked();
+  await page.getByRole("button", { name: /I'm a student/ }).click();
+
   await page.getByLabel("Display name").fill("Kai");
   await page.getByLabel("Full name").fill("Kai Moana");
   await page.getByLabel("Date of birth").fill(yearsAgo(12));
@@ -47,13 +53,10 @@ test("policies are linked everywhere and a minor needs a parent's consent", asyn
   const gate = page.getByTestId("policy-gate");
   await expect(gate).toContainText("A parent or guardian needs to give consent");
   await expect(gate.getByRole("button", { name: "Record consent" })).toBeDisabled();
+  // Only the parent's part: the student's own boxes aren't asked for again.
+  await expect(gate.getByRole("group", { name: /Check each rule/ })).toHaveCount(0);
+  await expect(gate.getByLabel("Parent or guardian's email")).toHaveValue("lani@example.com");
   await gate.getByRole("checkbox", { name: /I am this student's parent or guardian/ }).check();
-  await gate.getByRole("checkbox", { name: /I have read and agree/ }).check();
-  for (const box of await gate
-    .getByRole("group", { name: /Check each rule/ })
-    .getByRole("checkbox")
-    .all())
-    await box.check();
   await gate.getByRole("button", { name: "Record consent" }).click();
   await expect(gate).toHaveCount(0);
 
