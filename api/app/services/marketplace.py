@@ -141,8 +141,13 @@ async def hire(
     bid = await session.get(Bid, bid_id, with_for_update=True)
     if bid is None or bid.task_id != task.id or bid.status != "pending":
         raise NotFound("bid not found")
+    # Application edits lock this row too. Revalidate the offer against what the tutor
+    # currently teaches, keeping that state stable until the hire is committed.
+    tp = await session.get(TutorProfile, bid.tutor_id, with_for_update=True)
     if not await tutor_is_approved(session, bid.tutor_id):
         raise InvalidState("this tutor is no longer approved")
+    if tp is None or task.level not in tp.levels:
+        raise InvalidState("this tutor no longer teaches the requested level")
     if not await policies.tutor_signed(session, bid.tutor_id):
         raise InvalidState("this tutor hasn't signed the current Tutor Agreement yet")
     bid.status = "accepted"
