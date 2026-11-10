@@ -12,6 +12,15 @@ export type PaymentState = Schemas["TaskPaymentState"];
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
+/** FastAPI's 422 detail is a list of field errors; show the first as a readable sentence. */
+function validationMessage(detail: unknown): string {
+  const first = Array.isArray(detail) ? detail[0] : null;
+  if (!first || typeof first.msg !== "string") return "Please check the form and try again.";
+  const field = Array.isArray(first.loc) ? String(first.loc[first.loc.length - 1]).replace(/_/g, " ") : "";
+  const msg = first.msg.replace(/^Value error, /, "");
+  return field && field !== "body" ? `${field[0].toUpperCase()}${field.slice(1)}: ${msg}` : msg;
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -63,7 +72,7 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
     let code: string | undefined;
     try {
       const j = await res.json();
-      detail = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail);
+      detail = typeof j.detail === "string" ? j.detail : validationMessage(j.detail);
       code = typeof j.code === "string" ? j.code : undefined;
     } catch {
       /* non-JSON error */

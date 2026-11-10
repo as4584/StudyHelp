@@ -358,6 +358,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/policy/guardian": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Guardian Consent
+         * @description A parent/guardian's consent for a student under 18, given after sign-up.
+         */
+        post: operations["guardian_consent_me_policy_guardian_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/premium/checkout": {
         parameters: {
             query?: never;
@@ -1139,6 +1159,21 @@ export interface components {
             /** Kind */
             kind: string;
         };
+        /**
+         * GuardianConsentIn
+         * @description A parent/guardian's consent for a student under 18 who has already accepted the policy.
+         */
+        GuardianConsentIn: {
+            /**
+             * Consent
+             * @constant
+             */
+            consent: true;
+            /** Guardian Email */
+            guardian_email: string;
+            /** Guardian Name */
+            guardian_name: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1268,6 +1303,8 @@ export interface components {
             guardian_email?: string | null;
             /** Guardian Name */
             guardian_name?: string | null;
+            /** Rules */
+            rules: boolean[];
         };
         /** PolicyAcceptanceOut */
         PolicyAcceptanceOut: {
@@ -2352,6 +2389,39 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["PolicyAcceptIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    guardian_consent_me_policy_guardian_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GuardianConsentIn"];
             };
         };
         responses: {

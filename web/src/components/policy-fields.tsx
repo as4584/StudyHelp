@@ -74,6 +74,7 @@ export function policyBody(role: "student" | "tutor", v: PolicyValues): Schemas[
     guardian_name: minor ? v.guardianName.trim() : null,
     guardian_email: minor ? v.guardianEmail.trim() : null,
     guardian_consent: minor && v.guardianConsent,
+    rules: POLICIES[role].rules.map((_, i) => !!v.rules[i]),
   };
 }
 

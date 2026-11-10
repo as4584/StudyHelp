@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from app.api.dependencies import ClaimsDep, SessionDep, TutorDep, UserDep
 from app.models.entities import Profile, TutorProfile
 from app.schemas.api import (
+    GuardianConsentIn,
     MeOut,
     OnboardIn,
     PolicyAcceptIn,
@@ -64,6 +65,14 @@ async def accept_policy(body: PolicyAcceptIn, user: UserDep, session: SessionDep
     """Accept the current policy version later: existing accounts, new versions, or a parent's
     consent for a student under 18."""
     await policies.accept(session, user.profile, user.email, body)
+    await session.commit()
+    return await _me(session, user.profile)
+
+
+@router.post("/me/policy/guardian", response_model=MeOut)
+async def guardian_consent(body: GuardianConsentIn, user: UserDep, session: SessionDep) -> MeOut:
+    """A parent/guardian's consent for a student under 18, given after sign-up."""
+    await policies.guardian_consent(session, user.profile, user.email, body)
     await session.commit()
     return await _me(session, user.profile)
 

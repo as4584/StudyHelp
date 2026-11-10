@@ -140,6 +140,8 @@ async def hire(
         raise NotFound("bid not found")
     if not await tutor_is_approved(session, bid.tutor_id):
         raise InvalidState("this tutor is no longer approved")
+    if not await policies.tutor_signed(session, bid.tutor_id):
+        raise InvalidState("this tutor hasn't signed the current Tutor Agreement yet")
     bid.status = "accepted"
     await session.execute(
         update(Bid)

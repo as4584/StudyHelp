@@ -49,7 +49,10 @@ export default function OnboardPage() {
                   type="button"
                   key={r.id}
                   aria-pressed={active}
-                  onClick={() => setRole(r.id)}
+                  onClick={() => {
+                    if (r.id !== role) setPolicy(EMPTY_POLICY);
+                    setRole(r.id);
+                  }}
                   className={`flex items-center gap-3 rounded-[6px] border px-3.5 py-3 text-left transition-colors ${
                     active ? "border-tutor bg-tutor-soft" : "border-rule-strong hover:border-ink-2/40"
                   }`}

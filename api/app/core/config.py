@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,7 +12,10 @@ class Settings(BaseSettings):
 
     environment: Literal["development", "test", "demo", "production"] = "development"
     version: str = "0.1.0"
-    git_sha: str = "unknown"
+    # The commit Vercel built (VERCEL_GIT_COMMIT_SHA), else GIT_SHA, else "unknown".
+    git_sha: str = Field(
+        default="unknown", validation_alias=AliasChoices("vercel_git_commit_sha", "git_sha")
+    )
 
     database_url: str = "postgresql+asyncpg://postgres:postgres@127.0.0.1:54322/postgres"
     # "none" on serverless hosts (Vercel): each instance holding its own pool of up to 15

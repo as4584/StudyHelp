@@ -383,17 +383,20 @@ const POLICY_NAMES: Record<string, string> = {
   student_policy: "Student and Parent Policy",
 };
 
+const ACCEPTANCES_LIMIT = 5000; // matches GET /admin/policy-acceptances
+
 /** A spreadsheet cell: quoted, and never read as a formula (names are user-typed). */
 function csvCell(v: string) {
-  const safe = /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
+  const safe = /^\s*[=+\-@]|^[\t\r]/.test(v) ? `'${v}` : v;
   return `"${safe.replace(/"/g, '""')}"`;
 }
 
 /** Every policy acceptance on record (who, which policy and version, when), exportable as CSV. */
 function PolicyAcceptances() {
   const [rows, setRows] = useState<Acceptance[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
   useEffect(() => {
-    api<Acceptance[]>("/admin/policy-acceptances").then(setRows, () => setRows([]));
+    api<Acceptance[]>("/admin/policy-acceptances").then(setRows, (e: Error) => setError(e.message));
   }, []);
 
   const download = () => {
@@ -412,7 +415,8 @@ function PolicyAcceptances() {
         .map(csvCell)
         .join(","),
     );
-    const blob = new Blob([[head.map(csvCell).join(","), ...lines].join("\r\n")], { type: "text/csv" });
+    const csv = "\uFEFF" + [head.map(csvCell).join(","), ...lines].join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -424,7 +428,9 @@ function PolicyAcceptances() {
   return (
     <Section title={`Policy acceptances · ${rows?.length ?? "…"}`} className="lg:col-span-2">
       <div data-testid="policy-acceptances">
-        {rows === null ? (
+        {error ? (
+          <ErrorText error={`Couldn't load policy acceptances: ${error}`} />
+        ) : rows === null ? (
           <Skeleton lines={2} />
         ) : rows.length === 0 ? (
           <EmptyState>Every signed policy is recorded here.</EmptyState>
@@ -456,6 +462,7 @@ function PolicyAcceptances() {
                       </td>
                       <td className="tnum py-2 text-[13px] whitespace-nowrap text-muted">
                         {new Date(r.accepted_at).toLocaleString([], {
+                          year: "numeric",
                           month: "short",
                           day: "numeric",
                           hour: "numeric",
@@ -468,7 +475,13 @@ function PolicyAcceptances() {
               </table>
             </div>
             {rows.length > 10 && (
-              <p className="mt-3 text-[13px] text-muted">Showing the latest 10. The CSV has all {rows.length}.</p>
+              <p className="mt-3 text-[13px] text-muted">
+                Showing the latest 10. The CSV has all {rows.length}
+                {rows.length >= ACCEPTANCES_LIMIT
+                  ? " (the most recent; ask for a full export if you need older ones)"
+                  : ""}
+                .
+              </p>
             )}
           </>
         )}
