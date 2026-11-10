@@ -95,9 +95,9 @@ why = "only the two parties may join"
 
 [[mutant]]
 file = "app/services/video.py"
-old = "    if vs is not None and vs.status == \"ended\":\n        raise InvalidState"
-new = "    if vs is not None and vs.status == \"never\":\n        raise InvalidState"
-why = "an ended session issues no new credentials"
+old = "        vs.room_name, vs.status, vs.ended_at = new_room_name(), \"created\", None"
+new = "        vs.status, vs.ended_at = \"created\", None"
+why = "a new call after an ended one gets a new room (old credentials stay useless)"
 
 [[mutant]]
 file = "app/services/video.py"
@@ -137,9 +137,9 @@ why = "browsing tutors cannot read a session's video status"
 
 [[mutant]]
 file = "app/services/video.py"
-old = '    return state, task.status in JOINABLE and state != "ended"'
-new = "    return state, task.status in JOINABLE"
-why = "an ended session is not joinable"
+old = "    return state, task.status in JOINABLE"
+new = "    return state, True"
+why = "video is joinable only while the session is funded"
 
 [[mutant]]
 file = "app/services/video.py"
