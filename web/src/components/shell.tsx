@@ -9,6 +9,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { POLICIES, policyHref } from "@/content/policies";
 
 import { useAuth } from "./auth";
+import { WebsiteLanguagePicker } from "./website-language";
 
 type NavItem = { href: string; label: string; icon: LucideIcon; match?: RegExp };
 
@@ -69,6 +70,7 @@ function SiteFooter({ className = "" }: { className?: string }) {
     <footer className={`mx-auto w-full max-w-[1120px] pb-10 ${className}`}>
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-rule pt-6 text-[13px] text-muted">
         <span>StudyHelp · Global Study Help Tutor</span>
+        <WebsiteLanguagePicker />
         <nav aria-label="Policies" className="flex flex-wrap gap-x-5 gap-y-2">
           {Object.values(POLICIES).map((p) => (
             <Link
