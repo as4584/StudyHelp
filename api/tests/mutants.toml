@@ -206,3 +206,16 @@ file = "app/core/config.py"
 old = "            self.video_provider if self.video_enabled else None,"
 new = "            None,"
 why = "production refuses fake video"
+
+# ---------------------------------------------------------------- Current teaching levels
+[[mutant]]
+file = "app/services/marketplace.py"
+old = "    tp = await session.get(TutorProfile, bid.tutor_id, with_for_update=True)"
+new = "    tp = await session.get(TutorProfile, bid.tutor_id)"
+why = "hiring serializes with teaching-level application edits"
+
+[[mutant]]
+file = "app/services/marketplace.py"
+old = "    if tp is None or task.level not in tp.levels:\n        raise InvalidState(\"this tutor no longer teaches the requested level\")\n"
+new = ""
+why = "hiring rechecks the tutor's current teaching levels"
