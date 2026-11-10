@@ -1458,6 +1458,12 @@ export interface components {
             /** Url */
             url: string;
         };
+        /** ReleaseOut */
+        ReleaseOut: {
+            /** Queued */
+            queued: boolean;
+            transfer?: components["schemas"]["TransferOut"] | null;
+        };
         /** ResolveDisputeIn */
         ResolveDisputeIn: {
             /** Note */
@@ -1580,6 +1586,11 @@ export interface components {
             language: string;
             /** Level */
             level: string;
+            /**
+             * Reviewed
+             * @default false
+             */
+            reviewed: boolean;
             /** Status */
             status: string;
             /**
@@ -3060,7 +3071,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TransferOut"];
+                    "application/json": components["schemas"]["ReleaseOut"];
                 };
             };
             /** @description Validation Error */

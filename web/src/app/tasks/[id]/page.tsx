@@ -117,7 +117,7 @@ export default function TaskPage() {
         <div className="min-w-0 space-y-6 lg:col-start-1 lg:row-start-1">
           {(isStudent || isTutor) && <VideoSessionCard taskId={task.id} />}
           {isStudent && <StudentActions task={task} bids={bids} pay={pay} reload={reload} />}
-          {role === "tutor" && <TutorActions task={task} bids={bids} isHired={isTutor} reload={reload} />}
+          {role === "tutor" && <TutorActions task={task} bids={bids} pay={pay} isHired={isTutor} reload={reload} />}
         </div>
 
         {hasChat && (
@@ -225,7 +225,7 @@ function StudentActions({
   const a = useAction();
   const router = useRouter();
   const [rating, setRating] = useState(5);
-  const [reviewed, setReviewed] = useState<number | null>(null);
+  const [rated, setRated] = useState<number | null>(null);
   const [comment, setComment] = useState("");
   const [reason, setReason] = useState("");
   const redirect = async (path: string, body: unknown = {}) => {
@@ -240,6 +240,29 @@ function StudentActions({
       if (ok) toast(ok);
     });
   const accepted = bids.find((b) => b.status === "accepted");
+  const reviewed = task.reviewed || rated !== null;
+
+  const cancel = (
+    <details className="group border-t border-rule pt-4 text-[14px]">
+      <summary className="cursor-pointer list-none font-semibold text-muted hover:text-ink">
+        Cancel this request
+      </summary>
+      <div className="mt-3 space-y-3">
+        <p className="text-ink-2">
+          {task.status === "hired"
+            ? "You haven't paid, so nothing is charged. Your tutor is told the request was cancelled."
+            : "Tutors will no longer see it or send offers."}
+        </p>
+        <Button
+          variant="danger"
+          disabled={a.pending}
+          onClick={() => act(() => api(`/tasks/${task.id}/cancel`, { body: {} }), "Request cancelled")}
+        >
+          Cancel request
+        </Button>
+      </div>
+    </details>
+  );
 
   const dispute = (task.status === "paid" || task.status === "delivered") && (
     <details className="group border-t border-rule pt-4 text-[14px]">
@@ -277,6 +300,7 @@ function StudentActions({
           <p className="text-[15px] text-ink-2">
             Vetted tutors in {task.subject} can see your request. Offers appear here.
           </p>
+          {cancel}
         </ActionSheet>
       ) : (
         <ActionSheet title={`Choose a tutor — ${bids.length} ${bids.length === 1 ? "offer" : "offers"}`}>
@@ -317,6 +341,7 @@ function StudentActions({
               </li>
             ))}
           </ul>
+          {cancel}
         </ActionSheet>
       );
   } else if (task.status === "hired") {
@@ -334,6 +359,7 @@ function StudentActions({
             Checkout started — we confirm the payment directly with the payment provider.
           </p>
         )}
+        {cancel}
       </ActionSheet>
     );
   } else if (task.status === "paid") {
@@ -354,7 +380,17 @@ function StudentActions({
         <Button
           className="w-full"
           disabled={a.pending}
-          onClick={() => act(() => api(`/tasks/${task.id}/release`, { body: {} }), "Payment released to your tutor")}
+          onClick={() =>
+            a.run(async () => {
+              const r = await api<{ queued: boolean }>(`/tasks/${task.id}/release`, { body: {} });
+              await reload();
+              toast(
+                r.queued
+                  ? "Released — your tutor receives it as soon as their payout setup is finished"
+                  : "Payment released to your tutor",
+              );
+            })
+          }
         >
           Release payment to tutor
         </Button>
@@ -365,28 +401,9 @@ function StudentActions({
     body = (
       <ActionSheet title="Session complete" tone="mastery">
         {reviewed ? (
-          <>
-            <p className="enter flex items-center gap-2 text-[15px] text-ink-2">
-              <Stars value={reviewed} /> You rated this session — thank you.
-            </p>
-            {/* Tipping comes right after the review, while the session is fresh. */}
-            <div className="enter border-t border-rule pt-4">
-              <p className="mb-2 text-[14px] font-semibold text-ink">Say thanks with a tip — 100% goes to your tutor</p>
-              <div className="grid grid-cols-3 gap-2 [&>button]:px-2 [&>button]:text-[14px]">
-                {[200, 500, 1000].map((c) => (
-                  <Button
-                    key={c}
-                    variant="secondary"
-                    disabled={a.pending}
-                    onClick={() => a.run(() => redirect(`/tasks/${task.id}/tips`, { amount_cents: c }))}
-                  >
-                    Tip {money(c)}
-                  </Button>
-                ))}
-              </div>
-              <DemoPaymentNote className="mt-3" />
-            </div>
-          </>
+          <p className="enter flex items-center gap-2 text-[15px] text-ink-2">
+            {rated !== null && <Stars value={rated} />} You rated this session — thank you.
+          </p>
         ) : (
           <form
             className="space-y-3"
@@ -394,7 +411,7 @@ function StudentActions({
               e.preventDefault();
               void a.run(async () => {
                 await api(`/tasks/${task.id}/review`, { body: { rating, comment } });
-                setReviewed(rating);
+                setRated(rating);
                 toast("Thanks — your review is saved");
               });
             }}
@@ -419,6 +436,23 @@ function StudentActions({
             </Button>
           </form>
         )}
+        {/* Tipping is open any time after the session, as often as the student likes. */}
+        <div className="enter border-t border-rule pt-4">
+          <p className="mb-2 text-[14px] font-semibold text-ink">Say thanks with a tip — 100% goes to your tutor</p>
+          <div className="grid grid-cols-3 gap-2 [&>button]:px-2 [&>button]:text-[14px]">
+            {[200, 500, 1000].map((c) => (
+              <Button
+                key={c}
+                variant="secondary"
+                disabled={a.pending}
+                onClick={() => a.run(() => redirect(`/tasks/${task.id}/tips`, { amount_cents: c }))}
+              >
+                Tip {money(c)}
+              </Button>
+            ))}
+          </div>
+          <DemoPaymentNote className="mt-3" />
+        </div>
       </ActionSheet>
     );
   } else if (task.status === "disputed") {
@@ -442,11 +476,13 @@ function StudentActions({
 function TutorActions({
   task,
   bids,
+  pay,
   isHired,
   reload,
 }: {
   task: Task;
   bids: Bid[];
+  pay: PaymentState | null;
   isHired: boolean;
   reload: () => Promise<void>;
 }) {
@@ -548,6 +584,15 @@ function TutorActions({
     body = (
       <ActionSheet title="Delivered" tone="mastery">
         <p className="text-[15px] text-ink-2">Delivered. The student will release your payment.</p>
+      </ActionSheet>
+    );
+  } else if (isHired && task.status === "completed" && pay?.payment?.status === "held") {
+    body = (
+      <ActionSheet title="Released — waiting for your payout setup" tone="tutor">
+        <p className="text-[15px] text-ink-2">
+          The student released your payment. Finish setting up payouts on your desk and it&apos;s sent to you
+          automatically, along with any tips.
+        </p>
       </ActionSheet>
     );
   } else if (isHired && task.status === "completed") {

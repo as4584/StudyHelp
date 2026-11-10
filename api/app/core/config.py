@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import AliasChoices, Field, model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,10 +12,10 @@ class Settings(BaseSettings):
 
     environment: Literal["development", "test", "demo", "production"] = "development"
     version: str = "0.1.0"
-    # The commit Vercel built (VERCEL_GIT_COMMIT_SHA), else GIT_SHA, else "unknown".
-    git_sha: str = Field(
-        default="unknown", validation_alias=AliasChoices("vercel_git_commit_sha", "git_sha")
-    )
+    # GIT_SHA, else the commit Vercel built (VERCEL_GIT_COMMIT_SHA), else "unknown".
+    # Empty values count as unset (Vercel sets the commit variable empty on CLI deploys).
+    git_sha: str = "unknown"
+    vercel_git_commit_sha: str = ""
 
     database_url: str = "postgresql+asyncpg://postgres:postgres@127.0.0.1:54322/postgres"
     # "none" on serverless hosts (Vercel): each instance holding its own pool of up to 15
@@ -86,6 +86,8 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _validate(self) -> "Settings":
+        if self.git_sha in ("", "unknown"):
+            self.git_sha = self.vercel_git_commit_sha[:7] or "unknown"
         if not 2000 <= self.platform_fee_bps <= 3000:
             raise ValueError("PLATFORM_FEE_BPS must be within the 20-30% policy (2000-3000)")
         if self.price_min_cents > self.price_max_cents:

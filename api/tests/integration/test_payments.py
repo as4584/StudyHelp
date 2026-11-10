@@ -77,8 +77,8 @@ async def test_duplicate_webhook_event_is_ignored(flow: Flow, db) -> None:  # ty
 async def test_release_once_transfers_net_and_records_fee(flow: Flow, db) -> None:  # type: ignore[no-untyped-def]
     await flow.to("delivered", amount=2000)
     r = await flow.client.post(f"/tasks/{flow.task_id}/release", headers=flow.student.h)
-    assert r.status_code == 200 and r.json()["amount_cents"] == 1500
-    assert r.json()["provider_transfer_id"].startswith("tr_")
+    assert r.status_code == 200 and r.json()["transfer"]["amount_cents"] == 1500
+    assert r.json()["transfer"]["provider_transfer_id"].startswith("tr_")
     r2 = await flow.client.post(f"/tasks/{flow.task_id}/release", headers=flow.student.h)
     assert r2.status_code == 409  # duplicate release prevented
     assert await db.fetchval("select count(*) from transfers") == 1
@@ -100,11 +100,30 @@ async def test_tutor_cannot_release_own_payment(flow: Flow) -> None:
     assert r.status_code == 403
 
 
-async def test_release_blocked_without_payout_onboarding(client, make_user: UserFactory) -> None:  # type: ignore[no-untyped-def]
+async def test_release_and_tips_wait_for_payout_onboarding(
+    client, make_user: UserFactory, db
+) -> None:  # type: ignore[no-untyped-def]
     f = Flow(client, await make_user("student"), await make_user("tutor", payouts=False))
     await f.to("delivered")
     r = await client.post(f"/tasks/{f.task_id}/release", headers=f.student.h)
-    assert r.status_code == 409 and "onboarding" in r.json()["detail"]
+    assert r.status_code == 200 and r.json() == {"queued": True, "transfer": None}
+    task = (await client.get(f"/tasks/{f.task_id}", headers=f.student.h)).json()
+    assert task["status"] == "completed"  # the student is done; the review and tips open
+    assert (await _payment(db, f.task_id))["status"] == "held"
+    r = await client.post(
+        f"/tasks/{f.task_id}/tips", headers=f.student.h, json={"amount_cents": 500}
+    )
+    sid = r.json()["url"].split("?")[0].rsplit("/", 1)[1]
+    await client.post(f"/simulated/checkout/{sid}/complete", headers=f.student.h)
+    assert await db.fetchval("select status from tips") == "paid"
+    assert await db.fetchval("select count(*) from transfers") == 0
+
+    # The tutor finishes payout setup: everything that waited is paid out.
+    assert (await client.post("/tutors/me/connect", headers=f.tutor.h, json={})).status_code == 200
+    assert (await client.post("/simulated/connect/complete", headers=f.tutor.h)).status_code == 200
+    assert (await _payment(db, f.task_id))["status"] == "released"
+    assert await db.fetchval("select status from tips") == "transferred"
+    assert await db.fetchval("select count(*) from transfers") == 2
 
 
 async def test_disputed_task_cannot_be_released(flow: Flow, make_user: UserFactory, db) -> None:  # type: ignore[no-untyped-def]
@@ -310,3 +329,56 @@ async def test_checkout_url_carries_task_context(flow: Flow) -> None:
     await flow.to("hired")
     r = await flow.client.post(f"/tasks/{flow.task_id}/checkout", headers=flow.student.h)
     assert f"task_id={flow.task_id}" in r.json()["url"] and "kind=task_payment" in r.json()["url"]
+
+
+async def test_stripe_dashboard_refund_closes_the_task(
+    flow: Flow, make_user: UserFactory, db
+) -> None:  # type: ignore[no-untyped-def]
+    await flow.to("delivered")
+    await flow.client.post(
+        f"/tasks/{flow.task_id}/disputes", headers=flow.student.h, json={"reason": "Not as agreed"}
+    )
+    from app.core.db import get_sessionmaker
+    from app.providers.payments import get_gateway
+
+    charge = (await _payment(db, flow.task_id))["charge_id"]
+    evt = {"id": "evt_refund_dash", "type": "charge.refunded", "data": {"object": {"id": charge}}}
+    async with get_sessionmaker()() as session:
+        await payments.process_event(session, get_gateway(), evt)
+    task = (await flow.client.get(f"/tasks/{flow.task_id}", headers=flow.student.h)).json()
+    assert task["status"] == "refunded"
+    admin = await make_user("admin")
+    disputes = (await flow.client.get("/admin/disputes", headers=admin.h)).json()
+    assert all(d["status"] != "open" for d in disputes if d["task_id"] == flow.task_id)
+
+
+async def test_paying_twice_reuses_the_checkout_and_never_grants_premium(
+    flow: Flow, make_user: UserFactory
+) -> None:
+    await flow.to("hired")
+    urls = [
+        (await flow.client.post(f"/tasks/{flow.task_id}/checkout", headers=flow.student.h)).json()[
+            "url"
+        ]
+        for _ in range(2)
+    ]
+    assert urls[0] == urls[1]
+    # A checkout id that matches nothing is a 404, not a free Premium subscription.
+    r = await flow.client.post(
+        "/simulated/checkout/cs_fake_0123456789abcdef/complete", headers=flow.student.h
+    )
+    assert r.status_code == 404
+    assert (await flow.client.get("/me", headers=flow.student.h)).json()["premium"] is False
+
+
+async def test_simulated_webhooks_cannot_be_forged(client) -> None:  # type: ignore[no-untyped-def]
+    payload = json.dumps(
+        {"id": "evt_forged", "type": "checkout.session.completed", "data": {"object": {}}}
+    )
+    sig = hmac.new(b"fake-gateway-local-only", payload.encode(), hashlib.sha256).hexdigest()
+    r = await client.post(
+        "/webhooks/stripe",
+        content=payload,
+        headers={"stripe-signature": sig, "content-type": "application/json"},
+    )
+    assert r.status_code == 400

@@ -17,6 +17,7 @@ import {
   FileButton,
   Section,
   Sheet,
+  LoadError,
   Skeleton,
   Stars,
   inputCls,
@@ -39,16 +40,30 @@ export default function TutorDesk() {
   const [payState, setPayState] = useState<Record<string, PaymentState>>({});
   const tutor = me?.tutor ?? null;
 
+  const [loadError, setLoadError] = useState<string | null>(null);
   const load = useCallback(async () => {
-    const [o, m] = await Promise.all([api<Task[]>("/tasks?scope=open"), api<Task[]>("/tasks?scope=mine")]);
+    setLoadError(null);
+    let o: Task[], m: Task[];
+    try {
+      [o, m] = await Promise.all([api<Task[]>("/tasks?scope=open"), api<Task[]>("/tasks?scope=mine")]);
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : String(e));
+      return;
+    }
     setOpen(o);
     setMine(m);
+    // Earnings are secondary: one failed lookup leaves that task out instead of breaking the desk.
     const states = await Promise.all(
       m
         .filter((t) => t.status !== "hired")
-        .map((t) => api<PaymentState>(`/tasks/${t.id}/payment`).then((p) => [t.id, p] as const)),
+        .map((t) =>
+          api<PaymentState>(`/tasks/${t.id}/payment`).then(
+            (p) => [t.id, p] as const,
+            () => null,
+          ),
+        ),
     );
-    setPayState(Object.fromEntries(states));
+    setPayState(Object.fromEntries(states.filter((s) => s !== null)));
   }, []);
   useEffect(() => {
     if (me) void load();
@@ -130,7 +145,7 @@ export default function TutorDesk() {
         <div className="min-w-0 space-y-12">
           {approved && (
             <>
-              <Requests tasks={open} />
+              <Requests tasks={open} error={loadError} onRetry={() => void load()} />
               <Sessions tasks={mine} />
             </>
           )}
@@ -160,18 +175,16 @@ function Metric({ label, value, strong, muted }: { label: string; value: string;
   );
 }
 
-function Requests({ tasks }: { tasks: Task[] | null }) {
+function Requests({ tasks, error, onRetry }: { tasks: Task[] | null; error: string | null; onRetry: () => void }) {
   return (
     <section aria-labelledby="req-h">
       <h2 id="req-h" className="font-serif text-[1.75rem] leading-tight font-medium tracking-[-0.02em]">
         Open requests
       </h2>
       {tasks === null ? (
-        <div className="mt-4">
-          <Skeleton />
-        </div>
+        <div className="mt-4">{error ? <LoadError error={error} onRetry={onRetry} /> : <Skeleton />}</div>
       ) : tasks.length === 0 ? (
-        <EmptyState>No open requests in your subjects right now.</EmptyState>
+        <EmptyState>No open requests at the levels you teach right now.</EmptyState>
       ) : (
         <ul className="mt-4 divide-y divide-rule border-y border-rule">
           {tasks.map((t) => {

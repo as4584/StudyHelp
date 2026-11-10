@@ -12,6 +12,7 @@ import {
   ErrorText,
   PageHeader,
   Section,
+  LoadError,
   Skeleton,
   inputCls,
   useAction,
@@ -36,9 +37,11 @@ export default function OperationsPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [audit, setAudit] = useState<Audit[]>([]);
   const a = useAction();
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const [r, t, d, p, u, l] = await Promise.all([
+    setLoadError(null);
+    const all = Promise.all([
       api<Revenue>("/admin/revenue"),
       api<Tutor[]>("/admin/tutors?status=pending"),
       api<Dispute[]>("/admin/disputes"),
@@ -46,6 +49,13 @@ export default function OperationsPage() {
       api<User[]>("/admin/users"),
       api<Audit[]>("/admin/audit"),
     ]);
+    let r: Revenue, t: Tutor[], d: Dispute[], p: Payment[], u: User[], l: Audit[];
+    try {
+      [r, t, d, p, u, l] = await all;
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : String(e));
+      return;
+    }
     setRev(r);
     setPending(t);
     setDisputes(d);
@@ -64,7 +74,8 @@ export default function OperationsPage() {
       if (ok) toast(ok);
     });
 
-  if (!me || !rev) return <Skeleton lines={5} />;
+  if (!me) return <Skeleton lines={5} />;
+  if (!rev) return loadError ? <LoadError error={loadError} onRetry={() => void load()} /> : <Skeleton lines={5} />;
   const openDisputes = disputes.filter((d) => d.status === "open");
 
   return (

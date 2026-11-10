@@ -8,7 +8,7 @@ webhook processing code used for real Stripe events. Refused in production by co
 import hashlib
 import hmac
 import json
-import uuid
+import secrets
 from typing import Any
 from urllib.parse import urlencode
 
@@ -18,23 +18,24 @@ from app.providers.payments.base import CheckoutSession, ConnectOnboarding
 
 class FakeGateway:
     name = "fake"
-    SIGNING_SECRET = b"fake-gateway-local-only"
+    # Random per process: simulated events are signed and verified inside this process only,
+    # so nobody can forge one against /webhooks/stripe.
+    SIGNING_SECRET = secrets.token_bytes(32)
 
     def __init__(self, settings: Settings) -> None:
         self._s = settings
-        self._idem: dict[str, str] = {}
 
     def _id(self, prefix: str, key: str) -> str:
-        # Mirrors Stripe idempotency: the same key returns the same object id.
-        if key not in self._idem:
-            self._idem[key] = f"{prefix}_fake_{uuid.uuid4().hex[:16]}"
-        return self._idem[key]
+        # Mirrors Stripe idempotency: the same key returns the same object id, on every
+        # instance (serverless hosts run many), so it is derived from the key.
+        return f"{prefix}_fake_{hashlib.sha256(key.encode()).hexdigest()[:24]}"
 
     def _checkout(
         self, key: str, metadata: dict[str, str] | None = None, amount_cents: int | None = None
     ) -> CheckoutSession:
-        sid = self._id("cs", key)
         meta = metadata or {}
+        # A subscription checkout is recognisable by its id alone (simulated completion).
+        sid = self._id("cs_sub" if meta.get("kind") == "subscription" else "cs", key)
         # amount_cents is display-only on the simulated page; the charge comes from the server.
         meta = meta | ({"amount_cents": str(amount_cents)} if amount_cents is not None else {})
         query = urlencode([(k, meta[k]) for k in ("kind", "task_id", "amount_cents") if k in meta])

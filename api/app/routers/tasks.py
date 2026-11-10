@@ -2,11 +2,11 @@ import uuid
 from typing import Literal
 
 from fastapi import APIRouter
-from sqlalchemy import select
+from sqlalchemy import exists, select
 
 from app.api.dependencies import SessionDep, StudentDep, TutorDep, UserDep
 from app.core.errors import Forbidden
-from app.models.entities import Profile, TutorProfile
+from app.models.entities import Profile, Review, TutorProfile
 from app.schemas.api import (
     BidIn,
     BidOut,
@@ -40,7 +40,9 @@ async def list_tasks(
 
 @router.get("/{task_id}", response_model=TaskOut)
 async def get_task(task_id: uuid.UUID, user: UserDep, session: SessionDep) -> TaskOut:
-    return TaskOut.model_validate(await marketplace.get_visible_task(session, user, task_id))
+    task = await marketplace.get_visible_task(session, user, task_id)
+    reviewed = await session.scalar(select(exists().where(Review.task_id == task.id)))
+    return TaskOut.model_validate(task).model_copy(update={"reviewed": bool(reviewed)})
 
 
 @router.post("/{task_id}/cancel", response_model=TaskOut)

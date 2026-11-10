@@ -179,6 +179,7 @@ class TaskOut(ORM):
     accepted_bid_id: uuid.UUID | None
     delivery_note: str | None
     created_at: datetime
+    reviewed: bool = False  # set on the single-task read: the student has left their review
 
 
 class BidIn(BaseModel):
@@ -282,6 +283,12 @@ class TransferOut(ORM):
     amount_cents: int
     status: str
     provider_transfer_id: str | None
+
+
+class ReleaseOut(BaseModel):
+    # queued: the tutor's payout account isn't ready; the transfer happens once it is.
+    queued: bool
+    transfer: TransferOut | None = None
 
 
 class TaskPaymentState(BaseModel):

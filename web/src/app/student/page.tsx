@@ -4,12 +4,12 @@ import { cancelDemoPremium, QuotaNote, startPremiumCheckout, useAiQuota } from "
 import { ArrowRight, ArrowUp, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useRequireRole } from "@/components/auth";
 import { PolicyGate } from "@/components/policy-gate";
 import { PathHistory, SessionPath } from "@/components/study-path";
-import { Badge, EmptyState, ErrorText, LinkButton, Skeleton, TIMELINE, useAction } from "@/components/ui";
+import { Badge, EmptyState, ErrorText, LinkButton, LoadError, Skeleton, TIMELINE, useAction } from "@/components/ui";
 import { api, money, type Bid, type Task } from "@/lib/api";
 import { useCapabilities } from "@/lib/capabilities";
 import { isActive, studentNextStep } from "@/lib/next-step";
@@ -30,10 +30,12 @@ export default function StudyDesk() {
   const { me } = useRequireRole("student");
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [bidCounts, setBidCounts] = useState<Record<string, number>>({});
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!me) return;
-    api<Task[]>("/tasks?scope=mine").then(async (ts) => {
+  const load = useCallback(async () => {
+    setLoadError(null);
+    try {
+      const ts = await api<Task[]>("/tasks?scope=mine");
       const open = ts.filter((t) => t.status === "open");
       const counts = await Promise.all(
         open.map((t) => api<Bid[]>(`/tasks/${t.id}/bids`).then((b) => [t.id, b.length] as const)),
@@ -41,8 +43,13 @@ export default function StudyDesk() {
       // Set together so "Today's focus" never flips headline after first paint.
       setBidCounts(Object.fromEntries(counts));
       setTasks(ts);
-    });
-  }, [me]);
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : String(e));
+    }
+  }, []);
+  useEffect(() => {
+    if (me) void load();
+  }, [me, load]);
 
   const view = useMemo(() => {
     const ts = (tasks ?? []).filter((t) => t.status !== "cancelled");
@@ -81,7 +88,7 @@ export default function StudyDesk() {
 
       {tasks === null ? (
         <div className="rounded-[16px] border border-rule bg-sheet p-8">
-          <Skeleton lines={4} />
+          {loadError ? <LoadError error={loadError} onRetry={() => void load()} /> : <Skeleton lines={4} />}
         </div>
       ) : view.next ? (
         <Focus task={view.next} bids={bidCounts[view.next.id] ?? 0} />

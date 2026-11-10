@@ -66,11 +66,12 @@ async def join(
     # The task row lock serializes the first two joins so both land in the same room.
     task = await _task_for_party(session, user, task_id, for_update=True)
     vs = await _get(session, task.id)
-    if vs is not None and vs.status == "ended":
-        raise InvalidState("this video session has ended")
     if task.status not in JOINABLE:
         raise InvalidState("video opens once the session is paid")
     now = datetime.now(UTC)
+    if vs is not None and vs.status == "ended":
+        # A new call after an ended one: a fresh room, so old credentials stay useless.
+        vs.room_name, vs.status, vs.ended_at = new_room_name(), "created", None
     if vs is None:
         vs = VideoSession(task_id=task.id, room_name=new_room_name(), status="created")
         session.add(vs)
@@ -99,7 +100,7 @@ async def status(session: AsyncSession, user: CurrentUser, task_id: uuid.UUID) -
         raise NotFound("task not found")
     vs = await _get(session, task.id)
     state = vs.status if vs else "none"
-    return state, task.status in JOINABLE and state != "ended"
+    return state, task.status in JOINABLE
 
 
 async def end(

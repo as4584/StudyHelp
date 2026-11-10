@@ -1270,6 +1270,29 @@
         "title": "RedirectOut",
         "type": "object"
       },
+      "ReleaseOut": {
+        "properties": {
+          "queued": {
+            "title": "Queued",
+            "type": "boolean"
+          },
+          "transfer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TransferOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "queued"
+        ],
+        "title": "ReleaseOut",
+        "type": "object"
+      },
       "ResolveDisputeIn": {
         "properties": {
           "note": {
@@ -1543,6 +1566,11 @@
           "level": {
             "title": "Level",
             "type": "string"
+          },
+          "reviewed": {
+            "default": false,
+            "title": "Reviewed",
+            "type": "boolean"
           },
           "status": {
             "title": "Status",
@@ -4051,7 +4079,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TransferOut"
+                  "$ref": "#/components/schemas/ReleaseOut"
                 }
               }
             },

@@ -70,6 +70,8 @@ async def resolve_dispute(
         raise InvalidState("dispute is already resolved")
     task = await session.get(Task, dispute.task_id, with_for_update=True)
     assert task is not None
+    if task.status != "disputed":
+        raise InvalidState(f"the task is '{task.status}', not disputed")
     if outcome == "release":
         await payments.admin_release(session, gateway, admin, task)
         dispute.status = "resolved_release"

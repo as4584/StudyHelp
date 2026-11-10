@@ -312,6 +312,18 @@ export function ErrorText({ error }: { error: string | null }) {
   );
 }
 
+/** A section whose data couldn't load: say so and offer a retry, never an endless skeleton. */
+export function LoadError({ error, onRetry }: { error: string; onRetry: () => void }) {
+  return (
+    <div className="space-y-3">
+      <ErrorText error={`Couldn't load this: ${error}`} />
+      <Button variant="secondary" onClick={onRetry}>
+        Try again
+      </Button>
+    </div>
+  );
+}
+
 /** Wraps an async action with pending + error state. */
 export function useAction() {
   const [pending, setPending] = useState(false);
