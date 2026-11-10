@@ -142,11 +142,13 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
   await expect(student.getByTestId("status").first()).toHaveText("completed");
   await expect(student.getByTestId("payment-card")).toContainText("released");
 
-  // Review first; the tip is offered right after it.
-  await expect(student.getByRole("button", { name: "Tip $5.00" })).toHaveCount(0);
+  // Review, and the review stays recorded after a reload (no second review form).
   await student.getByLabel("Rate your tutor").selectOption("5");
   await student.getByRole("button", { name: "Submit review" }).click();
   await expect(student.getByText("You rated this session")).toBeVisible(); // no silent submit
+  await student.reload();
+  await expect(student.getByText("You rated this session")).toBeVisible();
+  await expect(student.getByRole("button", { name: "Submit review" })).toHaveCount(0);
   await student.getByRole("button", { name: "Tip $5.00" }).click();
   await expect(student.getByText("$5.00", { exact: true })).toBeVisible(); // checkout shows the amount
   await student.getByRole("button", { name: "Pay now" }).click();
