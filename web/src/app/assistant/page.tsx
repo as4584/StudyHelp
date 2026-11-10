@@ -189,7 +189,7 @@ function Workspace() {
             onSubmit={(e) => {
               e.preventDefault();
               const q = question.trim();
-              if (!q) return;
+              if (!q || a.pending || locked) return;
               setQuestion("");
               void ask(q);
             }}
