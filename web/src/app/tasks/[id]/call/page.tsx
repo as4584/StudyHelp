@@ -65,6 +65,8 @@ export default function CallPage() {
   const [camOn, setCamOn] = useState(true);
   const [micOn, setMicOn] = useState(true);
   const [sharing, setSharing] = useState(false);
+  const [confirmEnd, setConfirmEnd] = useState(false);
+  const [canRestart, setCanRestart] = useState(false); // ended here, task still funded
   const [remotes, setRemotes] = useState<Remote[]>([]);
   const room = useRef<Room | null>(null);
   const local = useRef<{ cam: LocalVideoTrack | null; mic: LocalAudioTrack | null }>({ cam: null, mic: null });
@@ -81,7 +83,7 @@ export default function CallPage() {
         if (live) setPhase("unavailable");
         return;
       }
-      if (s.status === "ended") return live && setPhase("ended");
+      if (s.status === "ended" && !s.joinable) return live && setPhase("ended");
       if (!s.joinable) return live && setPhase("not-open");
       const lk = await import("livekit-client");
       const res = lk.VideoPresets.h720.resolution;
@@ -219,6 +221,8 @@ export default function CallPage() {
       await room.current?.disconnect();
       local.current.cam?.stop();
       local.current.mic?.stop();
+      setConfirmEnd(false);
+      setCanRestart(true);
       setPhase("ended");
     }
   };
@@ -249,6 +253,10 @@ export default function CallPage() {
           {phase === "left" || phase === "error" ? (
             <Button className="mt-4" onClick={join}>
               Rejoin
+            </Button>
+          ) : phase === "ended" && canRestart ? (
+            <Button className="mt-4" variant="secondary" onClick={() => window.location.reload()}>
+              Start a new call
             </Button>
           ) : null}
         </Sheet>
@@ -352,9 +360,20 @@ export default function CallPage() {
                 Leave
               </Button>
             )}
-            <Button variant="danger" onClick={end}>
-              <PhoneOff size={17} aria-hidden /> End session
-            </Button>
+            {confirmEnd ? (
+              <>
+                <Button variant="danger" onClick={end}>
+                  <PhoneOff size={17} aria-hidden /> End for both of you
+                </Button>
+                <Button variant="secondary" onClick={() => setConfirmEnd(false)}>
+                  Keep the call
+                </Button>
+              </>
+            ) : (
+              <Button variant="danger" onClick={() => setConfirmEnd(true)}>
+                <PhoneOff size={17} aria-hidden /> End session
+              </Button>
+            )}
           </>
         )}
       </div>

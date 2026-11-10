@@ -132,8 +132,22 @@ async def test_unknown_task_and_bad_ids(client: httpx.AsyncClient, make_user: Us
     assert (await client.get("/tasks/not-a-uuid", headers=u.h)).status_code == 422
 
 
-async def test_hired_task_cannot_be_cancelled(flow: Flow) -> None:
+async def test_hired_but_unpaid_task_can_be_cancelled(flow: Flow, db) -> None:  # type: ignore[no-untyped-def]
     await flow.to("hired")
+    # The student opened a checkout but never paid: the request isn't stuck forever.
+    assert (
+        await flow.client.post(f"/tasks/{flow.task_id}/checkout", headers=flow.student.h)
+    ).status_code == 200
+    r = await flow.client.post(f"/tasks/{flow.task_id}/cancel", headers=flow.student.h)
+    assert r.status_code == 200 and r.json()["status"] == "cancelled"
+    statuses = await db.fetch(
+        "select status from payments where task_id = $1", uuid.UUID(flow.task_id)
+    )
+    assert [p["status"] for p in statuses] == ["expired"]
+
+
+async def test_paid_task_cannot_be_cancelled(flow: Flow) -> None:
+    await flow.to("paid")
     r = await flow.client.post(f"/tasks/{flow.task_id}/cancel", headers=flow.student.h)
     assert r.status_code == 409
 
@@ -227,7 +241,7 @@ async def test_session_prices_must_fit_the_15_to_25_dollar_range(flow: Flow) -> 
         assert r.status_code == status, (cents, r.text)
 
 
-async def test_application_main_subject_and_experience_show_on_offers(flow: Flow) -> None:
+async def test_application_main_subject_and_experience_show_on_offers(flow: Flow, db) -> None:  # type: ignore[no-untyped-def]
     c = flow.client
     base = {"bio": "Independent tutor", "subjects": ["Physics", "Math"], "hourly_rate_cents": 2000}
     r = await c.put(
@@ -245,7 +259,86 @@ async def test_application_main_subject_and_experience_show_on_offers(flow: Flow
         r = await c.put("/tutors/me/application", headers=flow.tutor.h, json={**base, **bad})
         assert r.status_code == 422, bad
 
+    # Adding Physics sent the application back for review; an admin approves it again.
+    await db.execute(
+        "update tutor_profiles set status = 'approved' where user_id = $1", flow.tutor.id
+    )
     await flow.post_task()
     await flow.bid()
     [offer] = (await c.get(f"/tasks/{flow.task_id}/bids", headers=flow.student.h)).json()
     assert offer["tutor_main_subject"] == "Math" and offer["tutor_years_experience"] == 7
+
+
+async def test_tutor_cannot_deliver_their_way_out_of_a_dispute(
+    flow: Flow, make_user: UserFactory
+) -> None:
+    await flow.to("paid")
+    r = await flow.client.post(
+        f"/tasks/{flow.task_id}/disputes",
+        headers=flow.student.h,
+        json={"reason": "Tutor never showed up"},
+    )
+    assert r.status_code == 201
+    r = await flow.client.post(
+        f"/tasks/{flow.task_id}/deliver", headers=flow.tutor.h, json={"note": "Here you go"}
+    )
+    assert r.status_code == 409
+    task = (await flow.client.get(f"/tasks/{flow.task_id}", headers=flow.student.h)).json()
+    assert task["status"] == "disputed"
+    r = await flow.client.post(
+        f"/tasks/{flow.task_id}/disputes", headers=flow.student.h, json={"reason": "again"}
+    )
+    assert r.status_code == 409  # never a 500
+    admin = await make_user("admin")
+    d = (await flow.client.get("/admin/disputes", headers=admin.h)).json()[0]
+    r = await flow.client.post(
+        f"/admin/disputes/{d['id']}/resolve",
+        headers=admin.h,
+        json={"outcome": "refund", "note": "ok"},
+    )
+    assert r.status_code == 200
+
+
+async def test_tutor_cannot_bid_outside_their_levels(flow: Flow, db) -> None:  # type: ignore[no-untyped-def]
+    await flow.post_task()
+    await db.execute(
+        "update tutor_profiles set levels = '{high_school}' where user_id = $1", flow.tutor.id
+    )
+    r = await flow.client.post(
+        f"/tasks/{flow.task_id}/bids", headers=flow.tutor.h, json={"amount_cents": 2000}
+    )
+    assert r.status_code == 404
+
+
+async def test_approved_tutor_changing_what_they_teach_is_reviewed_again(flow: Flow) -> None:
+    app = {
+        "bio": "I teach calculus and physics.",
+        "subjects": ["Math"],
+        "levels": ["college"],  # dropping a level needs no review
+        "hourly_rate_cents": 2000,
+        "years_experience": 5,
+    }
+    r = await flow.client.put("/tutors/me/application", headers=flow.tutor.h, json=app)
+    assert r.status_code == 200, r.text
+    assert r.json()["status"] == "approved"  # same subjects and levels: still approved
+    r = await flow.client.put(
+        "/tutors/me/application",
+        headers=flow.tutor.h,
+        json={**app, "subjects": ["Math", "Chemistry"]},
+    )
+    assert r.json()["status"] == "pending"
+
+
+async def test_task_says_whether_it_was_reviewed(flow: Flow) -> None:
+    await flow.to("delivered")
+    await flow.client.post(f"/tasks/{flow.task_id}/release", headers=flow.student.h)
+    task = (await flow.client.get(f"/tasks/{flow.task_id}", headers=flow.student.h)).json()
+    assert task["reviewed"] is False
+    r = await flow.client.post(
+        f"/tasks/{flow.task_id}/review",
+        headers=flow.student.h,
+        json={"rating": 5, "comment": "Great"},
+    )
+    assert r.status_code == 201, r.text
+    task = (await flow.client.get(f"/tasks/{flow.task_id}", headers=flow.student.h)).json()
+    assert task["reviewed"] is True

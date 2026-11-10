@@ -138,13 +138,15 @@ async def test_ending_closes_the_room_and_blocks_new_credentials(flow: Flow) -> 
     provider = get_video_provider()
     assert isinstance(provider, FakeVideoProvider) and room in provider.closed
 
-    st = (await flow.client.get(f"/tasks/{flow.task_id}/video", headers=flow.student.h)).json()
-    assert st == {"status": "ended", "joinable": False}
-    r = await join(flow, "tutor")
-    assert r.status_code == 409
     r = await flow.client.post(f"/tasks/{flow.task_id}/video/end", headers=flow.student.h)
     assert r.status_code == 200  # idempotent
     assert provider.closed.count(room) == 1
+
+    # While the session is still funded, a new call can start, in a new room.
+    st = (await flow.client.get(f"/tasks/{flow.task_id}/video", headers=flow.student.h)).json()
+    assert st == {"status": "ended", "joinable": True}
+    r = await join(flow, "tutor")
+    assert r.status_code == 200 and r.json()["room"] != room
 
 
 async def test_outsiders_cannot_end_or_read_a_session(flow: Flow, make_user: UserFactory) -> None:

@@ -15,6 +15,7 @@ from app.schemas.api import (
     PaymentOut,
     QuoteOut,
     RedirectOut,
+    ReleaseOut,
     TaskPaymentState,
     TipIn,
     TransferOut,
@@ -45,13 +46,14 @@ async def task_quote(task_id: uuid.UUID, student: StudentDep, session: SessionDe
     )
 
 
-@router.post("/tasks/{task_id}/release", response_model=TransferOut)
+@router.post("/tasks/{task_id}/release", response_model=ReleaseOut)
 async def release(
     task_id: uuid.UUID, student: StudentDep, session: SessionDep, gateway: GatewayDep
-) -> TransferOut:
-    return TransferOut.model_validate(
-        await payments.release_payment(session, gateway, student, task_id)
-    )
+) -> ReleaseOut:
+    transfer = await payments.release_payment(session, gateway, student, task_id)
+    if transfer is None:
+        return ReleaseOut(queued=True)
+    return ReleaseOut(queued=False, transfer=TransferOut.model_validate(transfer))
 
 
 @router.post("/tasks/{task_id}/tips", response_model=RedirectOut)
@@ -169,7 +171,7 @@ async def simulated_checkout_complete(
             "payment_intent": f"pi_fake_{tip_row.id.hex[:16]}",
             "metadata": {"kind": "tip", "tip_id": str(tip_row.id)},
         }
-    elif user.role == "student" and session_id.startswith("cs_fake_"):
+    elif user.role == "student" and session_id.startswith("cs_sub_fake_"):
         obj |= {
             "subscription": f"sub_fake_{user.id.hex[:16]}",
             "metadata": {"kind": "subscription", "user_id": str(user.id)},

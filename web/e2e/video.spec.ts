@@ -34,11 +34,14 @@ test("both parties can open the live session; outsiders cannot", async ({ browse
   await student.getByRole("button", { name: "Turn camera off" }).click();
   await expect(student.getByRole("button", { name: "Turn camera on" })).toBeVisible();
 
-  // Ending the session closes it for both sides.
+  // Ending asks first, then closes the call for both sides; a new call can start while the
+  // session is still funded.
   await student.getByRole("button", { name: "End session" }).click();
+  await student.getByRole("button", { name: "End for both of you" }).click();
   await expect(student.getByText("This video session has ended")).toBeVisible();
+  await expect(student.getByRole("button", { name: "Start a new call" })).toBeVisible();
   await tutor.goto(`/tasks/${taskId}`);
-  await expect(tutor.getByRole("link", { name: "Start video session" })).toHaveCount(0);
+  await expect(tutor.getByRole("link", { name: "Start video session" })).toBeVisible();
 
   // A tutor who is not on this session gets nothing.
   const outsider = await login(browser, "tutor2@demo.gsht", viewport);

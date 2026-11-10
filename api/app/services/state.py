@@ -4,11 +4,12 @@ from app.core.errors import InvalidState
 
 TRANSITIONS: dict[str, set[str]] = {
     "open": {"hired", "cancelled"},
-    # No hired -> cancelled: a checkout may be in flight and its webhook must always land.
-    "hired": {"paid"},
+    # hired -> cancelled only when no checkout is in flight (marketplace.cancel checks).
+    "hired": {"paid", "cancelled"},
     "paid": {"delivered", "disputed", "refunded"},
     "delivered": {"completed", "disputed", "refunded"},
-    "disputed": {"completed", "refunded", "paid", "delivered"},
+    # Only an admin's decision ends a dispute (release -> completed, refund -> refunded).
+    "disputed": {"completed", "refunded"},
     "completed": set(),
     "refunded": set(),
     "cancelled": set(),

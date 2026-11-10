@@ -46,16 +46,17 @@ async def list_messages(
     session: AsyncSession, user: CurrentUser, conversation_id: uuid.UUID
 ) -> list[tuple[Message, list[MessageTranslation]]]:
     conv = await get_conversation(session, user, conversation_id)
+    # The latest 500, oldest first.
     msgs = list(
         (
             await session.execute(
                 select(Message)
                 .where(Message.conversation_id == conv.id)
-                .order_by(Message.created_at, Message.id)
+                .order_by(Message.created_at.desc(), Message.id.desc())
                 .limit(500)
             )
         ).scalars()
-    )
+    )[::-1]
     translations = list(
         (
             await session.execute(

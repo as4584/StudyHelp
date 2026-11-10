@@ -116,3 +116,17 @@ async def test_profiles_self_only(make_user: UserFactory, db) -> None:  # type: 
     a, b = await make_user("student"), await make_user("student")
     assert await count(db, a.id, "select count(*) from profiles") == 1
     assert await count(db, a.id, "select count(*) from profiles where id=$1", b.id) == 0
+
+
+async def test_suspended_users_read_nothing_directly(flow: Flow, db) -> None:  # type: ignore[no-untyped-def]
+    await flow.to("paid")
+    assert await count(db, flow.student.id, "select count(*) from tasks") == 1
+    await db.execute("update profiles set is_active = false where id = $1", flow.student.id)
+    for table in ("tasks", "payments", "conversations", "messages", "profiles", "bids"):
+        assert await count(db, flow.student.id, f"select count(*) from {table}") == 0, table
+
+
+async def test_tutor_payout_details_are_not_readable(flow: Flow, db) -> None:  # type: ignore[no-untyped-def]
+    assert await count(db, flow.student.id, "select count(user_id) from tutor_profiles") >= 1
+    with pytest.raises(Exception, match="permission denied"):
+        await count(db, flow.student.id, "select count(stripe_account_id) from tutor_profiles")

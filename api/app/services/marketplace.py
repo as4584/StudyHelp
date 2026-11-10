@@ -107,6 +107,9 @@ async def place_bid(
     task = await get_visible_task(session, tutor, task_id)
     if task.status != "open":
         raise InvalidState("task is not open for bids")
+    tp = await session.get(TutorProfile, tutor.id)
+    if tp is None or task.level not in tp.levels:
+        raise NotFound("task not found")  # same as the feed: only levels the tutor teaches
     bid = Bid(task_id=task.id, tutor_id=tutor.id, amount_cents=amount_cents, message=message)
     session.add(bid)
     try:
@@ -168,6 +171,8 @@ async def deliver(session: AsyncSession, tutor: CurrentUser, task_id: uuid.UUID,
     task = await get_visible_task(session, tutor, task_id, for_update=True)
     if task.hired_tutor_id != tutor.id:
         raise Forbidden("only the hired tutor can deliver")
+    if task.status != "paid":
+        raise InvalidState("work can be delivered once the session is paid and not disputed")
     ensure_transition(task.status, "delivered")
     task.status = "delivered"
     task.delivery_note = note
@@ -180,6 +185,18 @@ async def cancel(session: AsyncSession, student: CurrentUser, task_id: uuid.UUID
     if task.student_id != student.id:
         raise NotFound("task not found")
     ensure_transition(task.status, "cancelled")
+    if task.status == "hired":
+        # Hired but never paid: the student may walk away once no checkout can still complete.
+        from app.services.payments import close_unpaid_checkouts
+
+        await close_unpaid_checkouts(session, task)
+        audit(
+            session,
+            actor=student.id,
+            action="task.cancelled_unpaid",
+            entity_type="task",
+            entity_id=task.id,
+        )
     task.status = "cancelled"
     await session.commit()
     return task
@@ -233,7 +250,11 @@ async def open_dispute(
     task.status = "disputed"
     session.add(dispute)
     audit(session, actor=user.id, action="dispute.opened", entity_type="task", entity_id=task.id)
-    await session.commit()
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise Conflict("this task already has an open dispute") from exc
     return dispute
 
 

@@ -15,10 +15,10 @@ Safety properties (each backed by a DB constraint AND a test):
 
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,6 +27,7 @@ from app.api.dependencies import CurrentUser
 from app.core.config import get_settings
 from app.core.errors import Conflict, Forbidden, InvalidState, NotFound
 from app.models.entities import (
+    Dispute,
     Payment,
     PaymentEvent,
     ProviderEvent,
@@ -156,10 +157,11 @@ async def start_task_checkout(
     return checkout.url
 
 
-async def _tutor_payout_account(session: AsyncSession, tutor_id: uuid.UUID) -> str:
+async def _tutor_payout_account(session: AsyncSession, tutor_id: uuid.UUID) -> str | None:
+    """The tutor's connected account, or None while payout onboarding is unfinished."""
     tp = await session.get(TutorProfile, tutor_id)
     if tp is None or not tp.stripe_account_id or not tp.payouts_enabled:
-        raise InvalidState("the tutor has not finished payout onboarding yet")
+        return None
     return tp.stripe_account_id
 
 
@@ -177,10 +179,24 @@ async def _held_payment(session: AsyncSession, task: Task) -> Payment:
 
 
 async def _transfer_payment(
-    session: AsyncSession, gateway: PaymentGateway, task: Task, actor: uuid.UUID
-) -> Transfer:
+    session: AsyncSession, gateway: PaymentGateway, task: Task, actor: uuid.UUID | None
+) -> Transfer | None:
+    """Pay the tutor their net share. If their payout account isn't ready yet the payment stays
+    held and is transferred automatically when it is (see _on_account_updated); returns None."""
     payment = await _held_payment(session, task)
     destination = await _tutor_payout_account(session, payment.tutor_id)
+    if destination is None:
+        _ledger(
+            session, "payment.release_queued", payment=payment, amount_cents=payment.tutor_net_cents
+        )
+        audit(
+            session,
+            actor=actor,
+            action="payment.release_queued",
+            entity_type="payment",
+            entity_id=payment.id,
+        )
+        return None
     transfer = Transfer(
         payment_id=payment.id,
         tutor_id=payment.tutor_id,
@@ -223,7 +239,7 @@ async def _transfer_payment(
 
 async def release_payment(
     session: AsyncSession, gateway: PaymentGateway, student: CurrentUser, task_id: uuid.UUID
-) -> Transfer:
+) -> Transfer | None:
     task = await get_visible_task(session, student, task_id, for_update=True)
     if task.student_id != student.id:
         raise NotFound("task not found")
@@ -239,9 +255,10 @@ async def release_payment(
 
 async def admin_release(
     session: AsyncSession, gateway: PaymentGateway, admin: CurrentUser, task: Task
-) -> Transfer:
+) -> Transfer | None:
     """Called by dispute resolution (task row already locked by caller)."""
     transfer = await _transfer_payment(session, gateway, task, admin.id)
+    ensure_transition(task.status, "completed")
     task.status = "completed"
     return transfer
 
@@ -256,6 +273,7 @@ async def admin_refund(
         charge_id=payment.charge_id, idempotency_key=f"refund:{payment.id}"
     )
     payment.status = "refunded"
+    ensure_transition(task.status, "refunded")
     task.status = "refunded"
     _ledger(
         session,
@@ -272,6 +290,31 @@ async def admin_refund(
         entity_id=payment.id,
     )
     return payment
+
+
+# Stripe Checkout sessions live at most 24 hours; after that one can no longer complete.
+CHECKOUT_MAX_AGE = timedelta(hours=24)
+
+
+async def close_unpaid_checkouts(session: AsyncSession, task: Task) -> None:
+    """Before a hired-but-unpaid task is cancelled: refuse if money is held or a real checkout
+    could still complete, otherwise expire the task's pending payments."""
+    rows = (
+        await session.execute(select(Payment).where(Payment.task_id == task.id).with_for_update())
+    ).scalars()
+    fake = get_settings().payments_provider == "fake"
+    now = datetime.now(UTC)
+    for payment in rows:
+        if payment.status in ("held", "released"):
+            raise InvalidState("this session is already paid")
+        if payment.status != "pending":
+            continue
+        if not fake and now - payment.created_at < CHECKOUT_MAX_AGE:
+            raise InvalidState(
+                "a checkout for this session is still open; you can cancel once it expires"
+            )
+        payment.status = "expired"
+        _ledger(session, "payment.expired", payment=payment, reason="task cancelled")
 
 
 # --------------------------------------------------------------------------- tips
@@ -501,6 +544,26 @@ async def _on_charge_refunded(
     if payment is not None and payment.status == "held":
         payment.status = "refunded"
         _ledger(session, "payment.refunded", payment=payment, provider_event_id=event_id)
+        task = await session.get(Task, payment.task_id, with_for_update=True)
+        if task is not None and task.status in ("paid", "delivered", "disputed", "completed"):
+            if task.status != "completed":
+                task.status = "refunded"
+            await session.execute(
+                update(Dispute)
+                .where(Dispute.task_id == task.id, Dispute.status == "open")
+                .values(
+                    status="resolved_refund",
+                    resolution_note="Refunded outside the app",
+                    resolved_at=func.now(),
+                )
+            )
+            audit(
+                session,
+                actor=None,
+                action="payment.refunded_externally",
+                entity_type="task",
+                entity_id=task.id,
+            )
 
 
 async def _on_account_updated(
@@ -514,7 +577,37 @@ async def _on_account_updated(
     if tp is None:
         return
     caps = obj.get("capabilities") or {}
+    was_enabled = tp.payouts_enabled
     tp.payouts_enabled = caps.get("transfers") == "active"
+    if tp.payouts_enabled and not was_enabled:
+        await _pay_out_queued(session, gateway, tp.user_id)
+
+
+async def _pay_out_queued(
+    session: AsyncSession, gateway: PaymentGateway, tutor_id: uuid.UUID
+) -> None:
+    """Releases and tips that arrived before the tutor's payout account was ready."""
+    tasks = (
+        await session.execute(
+            select(Task)
+            .join(Payment, Payment.task_id == Task.id)
+            .where(
+                Payment.tutor_id == tutor_id,
+                Payment.status == "held",
+                Task.status == "completed",
+            )
+            .with_for_update(of=Task)
+        )
+    ).scalars()
+    for task in list(tasks):
+        await _transfer_payment(session, gateway, task, None)
+    tips = (
+        await session.execute(
+            select(Tip).where(Tip.tutor_id == tutor_id, Tip.status == "paid").with_for_update()
+        )
+    ).scalars()
+    for tip in list(tips):
+        await _transfer_tip(session, gateway, tip)
 
 
 _HANDLERS = {

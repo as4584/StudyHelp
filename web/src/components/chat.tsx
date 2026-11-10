@@ -21,7 +21,11 @@ export function Chat({ conversationId, meId, myLang }: { conversationId: string;
   const log = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
-    setMessages(await api<Message[]>(`/conversations/${conversationId}/messages`));
+    try {
+      setMessages(await api<Message[]>(`/conversations/${conversationId}/messages`));
+    } catch {
+      // Offline or a blip: keep what's on screen; the 5-second poll tries again.
+    }
   }, [conversationId]);
 
   useEffect(() => {

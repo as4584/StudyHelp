@@ -106,11 +106,17 @@ async def submit_application(
         )
         session.add(tp)
     else:
+        # Adding a subject or level (not dropping one) needs vetting.
+        teaches_new = not (
+            set(body.subjects) <= set(tp.subjects) and set(body.levels) <= set(tp.levels)
+        )
         tp.bio, tp.subjects, tp.hourly_rate_cents = body.bio, body.subjects, body.hourly_rate_cents
         tp.years_experience = body.years_experience
         tp.levels = list(body.levels)
-        if tp.status == "rejected":
-            tp.status = "pending"  # editing a rejected application resubmits it
+        if tp.status == "rejected" or (tp.status == "approved" and teaches_new):
+            # Editing a rejected application resubmits it; an approved tutor who changes their
+            # subjects or levels (e.g. adds high school) is vetted again before teaching them.
+            tp.status = "pending"
     audit(
         session,
         actor=tutor.id,
