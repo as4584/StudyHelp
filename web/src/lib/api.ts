@@ -54,18 +54,17 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   let res: Response;
-  try {
-    res = await send();
-    // Reads are safe to repeat once (cold start or a dropped connection); writes are not.
-    if (method === "GET" && RETRYABLE.has(res.status)) res = await send();
-  } catch {
-    const slow = new ApiError(0, "The server took too long to respond. Please try again.");
-    if (method !== "GET") throw slow;
+  for (let attempt = 0; ; attempt++) {
+    const canRetry = method === "GET" && attempt === 0;
     try {
       res = await send();
     } catch {
-      throw slow;
+      if (canRetry) continue;
+      throw new ApiError(0, "The server took too long to respond. Please try again.");
     }
+    // HTTP and transport failures share the same single retry. Writes never retry.
+    if (canRetry && RETRYABLE.has(res.status)) continue;
+    break;
   }
   if (!res.ok) {
     let detail = res.statusText;
