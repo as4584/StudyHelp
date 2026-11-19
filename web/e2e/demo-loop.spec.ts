@@ -118,6 +118,7 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
   await student.waitForURL(/\/checkout\/simulated\//);
   await student.getByRole("button", { name: "Pay now" }).click();
   await student.waitForURL(/\/payments\/return/);
+  await expect(student.getByRole("heading", { name: "Your payment is held." })).toBeVisible();
   await student.goto(taskUrl);
   await expect(student.getByTestId("status").first()).toHaveText("paid");
   await expect(student.getByTestId("payment-card")).toContainText("$15.00");
@@ -171,6 +172,7 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
     await upgrade.click();
     await student.getByRole("button", { name: "Pay now" }).click();
     await student.waitForURL(/\/payments\/return/);
+    await expect(student.getByRole("heading", { name: "Premium is on." })).toBeVisible();
   }
   // Premium shows its plan and price; on the demo a tester can switch back to free.
   await student.goto("/student");
