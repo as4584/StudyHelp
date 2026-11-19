@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import InstrumentedAttribute
 
 from app.core.errors import TooMany
 from app.models.entities import Message, Task
@@ -16,8 +17,12 @@ TASKS_PER_DAY = 30
 
 
 async def _count(
-    session: AsyncSession, col, owner_col, user_id: uuid.UUID, since: timedelta
-) -> int:  # type: ignore[no-untyped-def]
+    session: AsyncSession,
+    col: InstrumentedAttribute[datetime],
+    owner_col: InstrumentedAttribute[uuid.UUID],
+    user_id: uuid.UUID,
+    since: timedelta,
+) -> int:
     start = datetime.now(UTC) - since
     return int(
         await session.scalar(select(func.count()).where(owner_col == user_id, col >= start)) or 0
