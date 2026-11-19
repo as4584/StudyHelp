@@ -7,8 +7,11 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
 from app.core.config import get_settings
+from app.providers.translation.languages import enabled_codes
 
-Lang = Field(pattern=r"^[a-z]{2}$")
+# Only languages that passed the translation eval can be chosen.
+LANG_PATTERN = "^(" + "|".join(enabled_codes()) + ")$"
+Lang = Field(pattern=LANG_PATTERN)
 Level = Literal["high_school", "college"]
 # A client-resized profile photo as a data URL; "" clears it.
 AVATAR_PATTERN = r"^(|data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+)$"
@@ -87,7 +90,7 @@ class OnboardIn(BaseModel):
 
 class ProfilePatch(BaseModel):
     display_name: str | None = Field(default=None, min_length=1, max_length=80)
-    preferred_language: str | None = Field(default=None, pattern=r"^[a-z]{2}$")
+    preferred_language: str | None = Field(default=None, pattern=LANG_PATTERN)
     avatar_url: str | None = Field(default=None, max_length=200000, pattern=AVATAR_PATTERN)
 
 
@@ -158,7 +161,7 @@ class TaskIn(BaseModel):
     title: str = Field(min_length=3, max_length=140)
     description: str = Field(min_length=1, max_length=5000)
     budget_cents: int
-    language: str = Field(default="en", pattern=r"^[a-z]{2}$")
+    language: str = Field(default="en", pattern=LANG_PATTERN)
     level: Level = "college"
     honor_code_ack: bool
 

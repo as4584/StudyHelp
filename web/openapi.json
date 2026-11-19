@@ -721,7 +721,7 @@
             "$ref": "#/components/schemas/PolicyAcceptIn"
           },
           "preferred_language": {
-            "pattern": "^[a-z]{2}$",
+            "pattern": "^(en|es|fr|pt|hi|ar|zh|de|it|nl|pl|ro|sv|cs|hu|el|ru|uk|tr|he|fa|ur|bn|pa|gu|mr|ta|te|kn|ml|ne|ko|vi|th|id|ms|tl|sw|ht|ka|hy|km|si)$",
             "title": "Preferred Language",
             "type": "string"
           },
@@ -1109,7 +1109,7 @@
           "preferred_language": {
             "anyOf": [
               {
-                "pattern": "^[a-z]{2}$",
+                "pattern": "^(en|es|fr|pt|hi|ar|zh|de|it|nl|pl|ro|sv|cs|hu|el|ru|uk|tr|he|fa|ur|bn|pa|gu|mr|ta|te|kn|ml|ne|ko|vi|th|id|ms|tl|sw|ht|ka|hy|km|si)$",
                 "type": "string"
               },
               {
@@ -1468,7 +1468,7 @@
           },
           "language": {
             "default": "en",
-            "pattern": "^[a-z]{2}$",
+            "pattern": "^(en|es|fr|pt|hi|ar|zh|de|it|nl|pl|ro|sv|cs|hu|el|ru|uk|tr|he|fa|ur|bn|pa|gu|mr|ta|te|kn|ml|ne|ko|vi|th|id|ms|tl|sw|ht|ka|hy|km|si)$",
             "title": "Language",
             "type": "string"
           },

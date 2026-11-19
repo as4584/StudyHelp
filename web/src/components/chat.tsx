@@ -85,7 +85,10 @@ export function Chat({ conversationId, meId, myLang }: { conversationId: string;
           if (mine) {
             return (
               <div key={m.id} className="enter flex flex-col items-end" data-testid="chat-message">
-                <div className="max-w-[85%] rounded-[10px] bg-sunken px-3.5 py-2.5 text-[15px] whitespace-pre-wrap text-ink">
+                <div
+                  dir="auto"
+                  className="max-w-[85%] rounded-[10px] bg-sunken px-3.5 py-2.5 text-[15px] whitespace-pre-wrap text-ink"
+                >
                   {text}
                 </div>
                 <span className="mt-1 text-[12px] text-muted">{time}</span>
@@ -94,7 +97,7 @@ export function Chat({ conversationId, meId, myLang }: { conversationId: string;
           }
           return (
             <div key={m.id} className="enter max-w-[94%]" data-testid="chat-message">
-              <p className="font-serif text-[16.5px] leading-[1.6] whitespace-pre-wrap text-ink">
+              <p dir="auto" className="font-serif text-[16.5px] leading-[1.6] whitespace-pre-wrap text-ink">
                 <DemoTagged text={text} />
               </p>
               <div className="mt-1 flex flex-wrap items-center gap-x-2 text-[12px] text-muted">
@@ -107,9 +110,7 @@ export function Chat({ conversationId, meId, myLang }: { conversationId: string;
                       onClick={() => setShowOriginal((s) => ({ ...s, [m.id]: !s[m.id] }))}
                     >
                       <Languages size={12} strokeWidth={1.75} aria-hidden />
-                      {showOriginal[m.id]
-                        ? "Show translation"
-                        : `Translated from ${LANGUAGES[m.source_language] ?? m.source_language.toUpperCase()} · show original`}
+                      {showOriginal[m.id] ? "Show translation" : "Translated · show original"}
                     </button>
                   </>
                 )}
@@ -153,6 +154,7 @@ export function Chat({ conversationId, meId, myLang }: { conversationId: string;
         }}
       >
         <input
+          dir="auto"
           aria-label="Message"
           className={inputCls}
           value={body}

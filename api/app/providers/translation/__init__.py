@@ -83,4 +83,8 @@ def get_translation_provider() -> TranslationProvider:
         return DeepLProvider(s)
     if s.translation_provider == "google":
         return GoogleProvider(s)
+    if s.translation_provider == "ollama":
+        from app.providers.translation.ollama import OllamaTranslationProvider
+
+        return OllamaTranslationProvider(s)
     return FakeTranslationProvider()

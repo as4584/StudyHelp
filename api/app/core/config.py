@@ -60,7 +60,9 @@ class Settings(BaseSettings):
     ollama_timeout_s: float = 120.0
     llm_max_tokens: int = 800
 
-    translation_provider: Literal["deepl", "google", "fake"] = "fake"
+    translation_provider: Literal["deepl", "google", "ollama", "fake"] = "fake"
+    # Self-hosted translation model (no per-message cost); defaults to the LLM's Ollama server.
+    translation_ollama_model: str = ""
     deepl_api_key: str = ""
     deepl_api_url: str = "https://api-free.deepl.com/v2/translate"
     google_translate_api_key: str = ""
@@ -116,6 +118,10 @@ class Settings(BaseSettings):
             raise ValueError("OLLAMA_MODEL is required")
         if self.translation_provider == "deepl" and not self.deepl_api_key:
             raise ValueError("DEEPL_API_KEY is required")
+        if self.translation_provider == "ollama" and not self.translation_ollama_model:
+            raise ValueError(
+                "TRANSLATION_OLLAMA_MODEL is required when TRANSLATION_PROVIDER=ollama"
+            )
         if self.translation_provider == "google" and not self.google_translate_api_key:
             raise ValueError("GOOGLE_TRANSLATE_API_KEY is required")
         if self.video_provider == "livekit":
