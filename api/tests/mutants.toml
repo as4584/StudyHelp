@@ -256,3 +256,9 @@ file = "app/core/limits.py"
 old = "and int(length) > MAX_BODY_BYTES:"
 new = "and int(length) > 100 * MAX_BODY_BYTES:"
 why = "oversized bodies are refused"
+
+[[mutant]]
+file = "app/services/rate_limits.py"
+old = "    if today >= TASKS_PER_DAY:"
+new = "    if today >= 10 * TASKS_PER_DAY:"
+why = "students can't flood the request feed"

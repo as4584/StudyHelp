@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.dependencies import CurrentUser
 from app.core.errors import Conflict, Forbidden, InvalidState, NotFound
 from app.models.entities import Bid, Conversation, Dispute, Profile, Review, Task, TutorProfile
-from app.services import policies
+from app.services import policies, rate_limits
 from app.services.audit import audit
 from app.services.state import ensure_transition
 
@@ -62,6 +62,7 @@ async def create_task(
 ) -> Task:
     if not honor_code_ack:
         raise InvalidState("the honor-code acknowledgement is required")
+    await rate_limits.check_task(session, student.id)
     task = Task(
         student_id=student.id,
         subject=subject,
