@@ -400,3 +400,27 @@ async def test_task_says_whether_it_was_reviewed(flow: Flow) -> None:
     assert r.status_code == 201, r.text
     task = (await flow.client.get(f"/tasks/{flow.task_id}", headers=flow.student.h)).json()
     assert task["reviewed"] is True
+
+
+async def test_suspension_takes_effect_on_open_work(flow: Flow, db) -> None:  # type: ignore[no-untyped-def]
+    await flow.to("bid")
+    await db.execute("update profiles set is_active = false where id = $1", flow.tutor.id)
+    bids = (await flow.client.get(f"/tasks/{flow.task_id}/bids", headers=flow.student.h)).json()
+    assert bids == []  # a suspended tutor's offers are hidden
+    await db.execute("update profiles set is_active = true where id = $1", flow.tutor.id)
+    await db.execute("update profiles set is_active = false where id = $1", flow.student.id)
+    feed = (await flow.client.get("/tasks?scope=open", headers=flow.tutor.h)).json()
+    assert all(t["id"] != flow.task_id for t in feed)  # and a suspended student's requests
+
+
+async def test_no_release_to_a_suspended_tutor(flow: Flow, db) -> None:  # type: ignore[no-untyped-def]
+    await flow.to("delivered")
+    await db.execute("update profiles set is_active = false where id = $1", flow.tutor.id)
+    r = await flow.client.post(f"/tasks/{flow.task_id}/release", headers=flow.student.h)
+    assert r.status_code == 409 and "on hold" in r.json()["detail"]
+
+
+async def test_admins_cannot_suspend_other_admins(client, make_user: UserFactory) -> None:  # type: ignore[no-untyped-def]
+    a, b = await make_user("admin"), await make_user("admin")
+    r = await client.post(f"/admin/users/{b.id}/suspend", headers=a.h)
+    assert r.status_code == 403

@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { AuthFrame } from "@/components/auth-frame";
 import { Button, ErrorText, Field, inputCls, useAction } from "@/components/ui";
+import { api } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
@@ -42,7 +43,15 @@ export default function LoginPage() {
         onSubmit={(e) => {
           e.preventDefault();
           void run(async () => {
-            const { error } = await supabase().auth.signInWithPassword({ email, password });
+            let { error } = await supabase().auth.signInWithPassword({ email, password });
+            // Public demo accounts: if a visitor changed the password, put it back and retry once.
+            if (error && email.trim().toLowerCase().endsWith("@demo.gsht")) {
+              const restored = await api("/demo/restore-login", { body: { email } }).then(
+                () => true,
+                () => false,
+              );
+              if (restored) ({ error } = await supabase().auth.signInWithPassword({ email, password }));
+            }
             if (error) throw error;
             router.push("/dashboard");
           });

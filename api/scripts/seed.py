@@ -47,6 +47,13 @@ async def ensure_auth_user(client: httpx.AsyncClient, email: str) -> str:
     page.raise_for_status()
     for u in page.json()["users"]:
         if u["email"] == email:
+            # A visitor may have changed a public demo password: put it back.
+            put = await client.put(
+                f"{base}/{u['id']}",
+                headers=headers,
+                json={"password": DEMO_PASSWORD, "email_confirm": True},
+            )
+            put.raise_for_status()
             return str(u["id"])
     raise RuntimeError(f"could not create or find {email}: {r.status_code} {r.text}")
 

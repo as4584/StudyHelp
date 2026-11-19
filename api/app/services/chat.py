@@ -60,7 +60,9 @@ async def list_messages(
     translations = list(
         (
             await session.execute(
-                select(MessageTranslation).where(MessageTranslation.conversation_id == conv.id)
+                select(MessageTranslation).where(
+                    MessageTranslation.message_id.in_([m.id for m in msgs])
+                )
             )
         ).scalars()
     )

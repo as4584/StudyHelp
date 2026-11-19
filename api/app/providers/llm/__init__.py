@@ -113,6 +113,7 @@ class OllamaProvider:
             base_url=settings.ollama_base_url.rstrip("/"),
             headers=headers,
             timeout=settings.ollama_timeout_s,
+            trust_env=False,  # a model endpoint never goes through host proxies
         )
         self._model = settings.ollama_model
         self._errors: tuple[type[Exception], ...] = (httpx.HTTPError, ValueError, KeyError)

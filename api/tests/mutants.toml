@@ -213,6 +213,30 @@ old = "            self.video_provider if self.video_enabled else None,"
 new = "            None,"
 why = "production refuses fake video"
 
+# ---------------------------------------------------------------- production hardening
+[[mutant]]
+file = "app/services/admin.py"
+old = '    if not active and profile.role == "admin":'
+new = '    if not active and profile.role == "nobody":'
+why = "admins cannot suspend other admins"
+
+[[mutant]]
+file = "app/services/admin.py"
+old = 'Transfer.status == "created", Transfer.payment_id.is_not(None)'
+new = 'Transfer.status == "created"'
+why = "tutor payouts don't count tips twice"
+
+[[mutant]]
+file = "app/services/payments.py"
+old = "    if tutor is None or not tutor.is_active:"
+new = "    if tutor is None:"
+why = "no release to a suspended tutor"
+
+[[mutant]]
+file = "app/services/marketplace.py"
+old = "            stmt = stmt.where(Task.student_id.in_(active))"
+new = "            pass"
+why = "suspended students' requests leave the feed"
 # ---------------------------------------------------------------- Current teaching levels
 [[mutant]]
 file = "app/services/marketplace.py"

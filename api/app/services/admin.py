@@ -8,6 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import CurrentUser
+from app.core.config import get_settings
 from app.core.errors import Forbidden, InvalidState, NotFound
 from app.models.entities import Dispute, Payment, Profile, Task, Tip, Transfer, TutorProfile
 from app.providers.payments.base import PaymentGateway
@@ -43,6 +44,10 @@ async def set_user_active(
     profile = await session.get(Profile, user_id, with_for_update=True)
     if profile is None:
         raise NotFound("user not found")
+    if not active and profile.role == "admin":
+        raise Forbidden("admins cannot suspend other admins")
+    if not active and get_settings().environment == "demo":
+        raise Forbidden("suspending is turned off in the demo so it stays usable for everyone")
     profile.is_active = active
     audit(
         session,
@@ -127,7 +132,7 @@ async def revenue_summary(session: AsyncSession, fee_bps: int) -> RevenueSummary
     payouts = (
         await session.execute(
             select(func.coalesce(func.sum(Transfer.amount_cents), 0)).where(
-                Transfer.status == "created"
+                Transfer.status == "created", Transfer.payment_id.is_not(None)
             )
         )
     ).scalar_one()
