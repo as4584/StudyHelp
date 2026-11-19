@@ -1,8 +1,66 @@
+import asyncio
 import uuid
 
 import httpx
+import pytest
 
 from tests.conftest import Flow, UserFactory
+
+
+@pytest.mark.parametrize("closed_status", ["cancelled", "hired"])
+async def test_bid_waits_for_task_closure(
+    flow: Flow, make_user: UserFactory, db, closed_status: str
+) -> None:  # type: ignore[no-untyped-def]
+    await flow.to("bid")
+    rival = await make_user("tutor")
+    task_id = uuid.UUID(flow.task_id)
+    request = None
+    try:
+        async with db.transaction():
+            # Hold the same row lock as hire/cancel, with the closure not yet committed.
+            await db.fetchrow("select id from tasks where id = $1 for update", task_id)
+            if closed_status == "hired":
+                await db.execute(
+                    "update tasks set status = 'hired', hired_tutor_id = $2, accepted_bid_id = $3 "
+                    "where id = $1",
+                    task_id,
+                    flow.tutor.id,
+                    uuid.UUID(flow.bid_id),
+                )
+                await db.execute(
+                    "update bids set status = 'accepted' where id = $1", uuid.UUID(flow.bid_id)
+                )
+            else:
+                await db.execute("update tasks set status = 'cancelled' where id = $1", task_id)
+            request = asyncio.create_task(
+                flow.client.post(
+                    f"/tasks/{flow.task_id}/bids",
+                    headers=rival.h,
+                    json={"amount_cents": 2000},
+                )
+            )
+            # Wait for PostgreSQL to confirm the request is blocked on our transaction.
+            # A missing task lock instead waits at the FK insert with a stale 'open' task.
+            async with asyncio.timeout(5):
+                while not await db.fetchval(
+                    "select exists(select 1 from pg_stat_activity "
+                    "where pg_backend_pid() = any(pg_blocking_pids(pid)))"
+                ):
+                    if request.done():
+                        pytest.fail(f"bid finished before task closure: {(await request).text}")
+                    await asyncio.sleep(0.01)
+        response = await asyncio.wait_for(request, timeout=5)
+        assert response.status_code == 404, response.text
+        assert (
+            await db.fetchval(
+                "select count(*) from bids where task_id = $1 and tutor_id = $2", task_id, rival.id
+            )
+            == 0
+        )
+    finally:
+        if request is not None and not request.done():
+            request.cancel()
+            await asyncio.gather(request, return_exceptions=True)
 
 
 async def test_full_marketplace_loop_with_review_updates_rating(flow: Flow, db) -> None:  # type: ignore[no-untyped-def]
