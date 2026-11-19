@@ -249,3 +249,10 @@ file = "app/services/marketplace.py"
 old = "    if tp is None or task.level not in tp.levels:\n        raise InvalidState(\"this tutor no longer teaches the requested level\")\n"
 new = ""
 why = "hiring rechecks the tutor's current teaching levels"
+
+# ---------------------------------------------------------------- abuse protection
+[[mutant]]
+file = "app/core/limits.py"
+old = "and int(length) > MAX_BODY_BYTES:"
+new = "and int(length) > 100 * MAX_BODY_BYTES:"
+why = "oversized bodies are refused"

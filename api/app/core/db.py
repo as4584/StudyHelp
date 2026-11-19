@@ -20,10 +20,16 @@ def get_engine() -> AsyncEngine:
     global _engine, _sessionmaker
     if _engine is None:
         settings = get_settings()
+        # A slow or paused database fails fast instead of holding a function open.
+        args = {"timeout": 5, "command_timeout": 15}
         if settings.database_pool == "none":
-            _engine = create_async_engine(settings.database_url, poolclass=NullPool)
+            _engine = create_async_engine(
+                settings.database_url, poolclass=NullPool, connect_args=args
+            )
         else:
-            _engine = create_async_engine(settings.database_url, pool_pre_ping=True)
+            _engine = create_async_engine(
+                settings.database_url, pool_pre_ping=True, connect_args=args
+            )
         _sessionmaker = async_sessionmaker(_engine, expire_on_commit=False)
     return _engine
 

@@ -10,6 +10,7 @@ from sqlalchemy import text
 from app.core.config import get_settings
 from app.core.db import get_sessionmaker
 from app.core.errors import DomainError
+from app.core.limits import BodyLimitMiddleware
 from app.observability.logging import RequestContextMiddleware, configure_logging, event
 from app.routers import admin, ai, chat, demo, me, payments, tasks, video
 from app.schemas.api import HealthOut
@@ -20,7 +21,15 @@ log = logging.getLogger("app")
 def create_app() -> FastAPI:
     settings = get_settings()
     configure_logging()
-    app = FastAPI(title="Global Study Help Tutor API", version=settings.version)
+    # The API map stays private outside local development (the web client has its own copy).
+    dev = settings.environment in ("development", "test")
+    app = FastAPI(
+        title="Global Study Help Tutor API",
+        version=settings.version,
+        docs_url="/docs" if dev else None,
+        redoc_url="/redoc" if dev else None,
+        openapi_url="/openapi.json" if dev else None,
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -29,6 +38,7 @@ def create_app() -> FastAPI:
         allow_headers=["authorization", "content-type", "x-request-id"],
     )
     app.add_middleware(RequestContextMiddleware)
+    app.add_middleware(BodyLimitMiddleware)
 
     @app.exception_handler(DomainError)
     async def domain_error(_: Request, exc: DomainError) -> JSONResponse:

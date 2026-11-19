@@ -1,0 +1,19 @@
+name: keep-alive
+# Free-tier databases pause after a week idle; a real query every two days keeps the demo up
+# and fails loudly (GitHub emails the owner) if the API or database is down.
+on:
+  schedule:
+    - cron: "17 9 */2 * *"
+  workflow_dispatch:
+permissions: {}
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: |
+          for i in 1 2 3; do
+            curl -fsS --max-time 30 https://studyhelp-api.vercel.app/ready && exit 0
+            sleep 20
+          done
+          exit 1

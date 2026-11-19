@@ -2,10 +2,10 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.api.dependencies import SessionDep, TutorDep, UserDep
-from app.core.errors import Forbidden, NotFound
+from app.core.errors import Forbidden, InvalidState, NotFound
 from app.models.entities import Task, TaskFile, TutorDocument
 from app.providers.storage import StorageProvider, get_storage
 from app.providers.translation import TranslationProvider, get_translation_provider
@@ -79,6 +79,9 @@ async def send_message(
 # ------------------------------------------------------------------ task files
 
 
+MAX_FILES_PER_TASK = 20
+
+
 def _can_access_task_files(user_id: uuid.UUID, role: str, task: Task) -> bool:
     return role == "admin" or user_id in (task.student_id, task.hired_tutor_id)
 
@@ -92,6 +95,16 @@ async def create_task_upload(
         raise Forbidden("only the student uploads rubrics")
     if body.kind == "deliverable" and user.id != task.hired_tutor_id:
         raise Forbidden("only the hired tutor uploads deliverables")
+    if task.status in ("completed", "cancelled", "refunded"):
+        raise InvalidState("this session is closed to new files")
+    # Storage is finite: each person gets a fixed number of files per task.
+    mine = await session.scalar(
+        select(func.count(TaskFile.id)).where(
+            TaskFile.task_id == task.id, TaskFile.uploader_id == user.id
+        )
+    )
+    if (mine or 0) >= MAX_FILES_PER_TASK:
+        raise InvalidState(f"you can add up to {MAX_FILES_PER_TASK} files to one task")
     file_id = uuid.uuid4()
     # Server-chosen path: clients can never pick or overwrite another object.
     path = f"{task.id}/{file_id}/{body.filename}"

@@ -264,3 +264,10 @@ async def test_failed_ai_answer_does_not_use_up_a_question(
     assert r.status_code == 502
     assert (await client.get("/ai/quota", headers=s.h)).json()["used"] == 0
     assert await db.fetchval("select status from ai_usage") == "error"
+
+
+async def test_big_bodies_are_refused_before_parsing(client) -> None:  # type: ignore[no-untyped-def]
+    r = await client.post(
+        "/tasks", content=b"x" * (300 * 1024), headers={"content-type": "application/json"}
+    )
+    assert r.status_code == 413
