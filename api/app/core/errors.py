@@ -48,3 +48,8 @@ class QuotaExceeded(DomainError):
 class ProviderError(DomainError):
     status_code = 502
     code = "provider_error"
+
+
+class TooMany(DomainError):
+    status_code = 429
+    code = "rate_limited"

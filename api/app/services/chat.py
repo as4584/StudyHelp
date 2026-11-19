@@ -17,6 +17,7 @@ from app.core.errors import NotFound
 from app.models.entities import Conversation, Message, MessageTranslation, Profile
 from app.observability.logging import event
 from app.providers.translation import TranslationError, TranslationProvider
+from app.services import rate_limits
 
 log = logging.getLogger("chat")
 
@@ -83,6 +84,7 @@ async def send_message(
     other_id = conv.tutor_id if user.id == conv.student_id else conv.student_id
     other = await session.get(Profile, other_id)
     assert other is not None
+    await rate_limits.check_message(session, user.id)
     source = user.profile.preferred_language
     msg = Message(conversation_id=conv.id, sender_id=user.id, body=body, source_language=source)
     session.add(msg)

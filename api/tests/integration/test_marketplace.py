@@ -424,3 +424,22 @@ async def test_admins_cannot_suspend_other_admins(client, make_user: UserFactory
     a, b = await make_user("admin"), await make_user("admin")
     r = await client.post(f"/admin/users/{b.id}/suspend", headers=a.h)
     assert r.status_code == 403
+
+
+async def test_posting_requests_is_rate_limited(flow: Flow, db) -> None:  # type: ignore[no-untyped-def]
+    from app.services import rate_limits
+
+    for _ in range(rate_limits.TASKS_PER_DAY):
+        await flow.post_task()
+    r = await flow.client.post(
+        "/tasks",
+        headers=flow.student.h,
+        json={
+            "subject": "Math",
+            "title": "One more",
+            "description": "x",
+            "budget_cents": 1500,
+            "honor_code_ack": True,
+        },
+    )
+    assert r.status_code == 429
