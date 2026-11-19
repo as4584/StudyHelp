@@ -37,21 +37,23 @@ function Workspace() {
   const ask = useCallback(
     (q: string) =>
       a.run(async () => {
-        let id = chatId;
-        if (!id) {
-          id = (await api<{ id: string }>("/ai/chats", { body: { subject } })).id;
-          setChatId(id);
-        }
-        const local = `local-${Date.now()}`;
-        setMsgs((m) => [...m, { id: local, role: "user", content: q }]);
+        let local: string | null = null;
         try {
+          let id = chatId;
+          if (!id) {
+            id = (await api<{ id: string }>("/ai/chats", { body: { subject } })).id;
+            setChatId(id);
+          }
+          local = `local-${Date.now()}`;
+          setMsgs((m) => [...m, { id: local!, role: "user", content: q }]);
           const reply = await api<Msg>(`/ai/chats/${id}/messages`, { body: { question: q } });
           setMsgs((m) => [...m, reply]);
         } catch (e) {
-          setMsgs((m) => m.filter((x) => x.id !== local));
+          if (local) setMsgs((m) => m.filter((x) => x.id !== local));
+          // Preserve both the failed question and any new text typed while it was pending.
+          setQuestion((draft) => (draft ? `${q}\n\n${draft}` : q));
           // Limits are a product moment, not an error: show the upgrade / fair-use dialog.
           if (e instanceof ApiError && (e.code === "ai_daily_limit" || e.code === "ai_fair_use")) {
-            setQuestion(q);
             setLimit(e.code === "ai_daily_limit" ? "daily" : "fair_use");
             return;
           }
