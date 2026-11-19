@@ -30,6 +30,7 @@ from app.models.entities import (
     Dispute,
     Payment,
     PaymentEvent,
+    Profile,
     ProviderEvent,
     Subscription,
     Task,
@@ -246,6 +247,11 @@ async def release_payment(
     if task.status != "delivered":
         # Disputed/paid/completed tasks cannot be released by the student.
         raise InvalidState("payment can be released once work is delivered and not disputed")
+    tutor = await session.get(Profile, task.hired_tutor_id) if task.hired_tutor_id else None
+    if tutor is None or not tutor.is_active:
+        raise InvalidState(
+            "this tutor's account is on hold, so the payment stays held until an admin reviews it"
+        )
     transfer = await _transfer_payment(session, gateway, task, student.id)
     ensure_transition(task.status, "completed")
     task.status = "completed"

@@ -177,7 +177,9 @@ async def test_admin_can_resolve_dispute_by_release(flow: Flow, make_user: UserF
     assert rev["platform_fees_earned_cents"] == 500 and rev["tutor_payouts_cents"] == 1500
 
 
-async def test_tips_go_fully_to_tutor_and_are_validated(flow: Flow, db) -> None:  # type: ignore[no-untyped-def]
+async def test_tips_go_fully_to_tutor_and_are_validated(
+    flow: Flow, make_user: UserFactory, db
+) -> None:  # type: ignore[no-untyped-def]
     await flow.to("delivered")
     c = flow.client
     r = await c.post(
@@ -202,6 +204,8 @@ async def test_tips_go_fully_to_tutor_and_are_validated(flow: Flow, db) -> None:
     assert t["amount_cents"] == 500
     state = (await c.get(f"/tasks/{flow.task_id}/payment", headers=flow.student.h)).json()
     assert state["tips_cents"] == 500
+    rev = (await c.get("/admin/revenue", headers=(await make_user("admin")).h)).json()
+    assert rev["tutor_payouts_cents"] == 1500  # the tip is counted once, under tips
 
 
 async def test_other_student_cannot_complete_someone_elses_checkout(

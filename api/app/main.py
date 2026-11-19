@@ -11,7 +11,7 @@ from app.core.config import get_settings
 from app.core.db import get_sessionmaker
 from app.core.errors import DomainError
 from app.observability.logging import RequestContextMiddleware, configure_logging, event
-from app.routers import admin, ai, chat, me, payments, tasks, video
+from app.routers import admin, ai, chat, demo, me, payments, tasks, video
 from app.schemas.api import HealthOut
 
 log = logging.getLogger("app")
@@ -81,6 +81,8 @@ def create_app() -> FastAPI:
         video.router,
     ):
         app.include_router(r)
+    if get_settings().environment == "demo":
+        app.include_router(demo.router)
     if payments.simulated_enabled():
         app.include_router(payments.simulated)
     return app

@@ -91,6 +91,9 @@ async def list_tasks(session: AsyncSession, user: CurrentUser, scope: str) -> li
             stmt = stmt.where(
                 Task.status == "open", Task.student_id != user.id, Task.level.in_(tp.levels)
             )
+            # Requests from suspended students drop out of the feed.
+            active = select(Profile.id).where(Profile.is_active.is_(True))
+            stmt = stmt.where(Task.student_id.in_(active))
         else:
             stmt = stmt.where(Task.hired_tutor_id == user.id)
     elif scope == "open":
@@ -128,6 +131,9 @@ async def list_bids(session: AsyncSession, user: CurrentUser, task_id: uuid.UUID
         stmt = stmt.where(Bid.tutor_id == user.id)
     elif user.role == "student" and task.student_id != user.id:
         raise NotFound("task not found")
+    elif user.role == "student":
+        # Offers from suspended tutors can't be accepted, so they aren't shown.
+        stmt = stmt.where(Bid.tutor_id.in_(select(Profile.id).where(Profile.is_active.is_(True))))
     return list((await session.execute(stmt)).scalars())
 
 

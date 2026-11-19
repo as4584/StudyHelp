@@ -23,6 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [me, setMe] = useState<Me | null>(null);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [meError, setMeError] = useState<string | null>(null);
 
   const load = useCallback(async (s: Session | null) => {
     setSession(s);
@@ -35,9 +36,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setMe(await api<Me>("/me"));
       setNeedsOnboarding(false);
+      setMeError(null);
     } catch (e) {
       setMe(null);
-      setNeedsOnboarding(e instanceof ApiError && e.status === 403 && e.message.includes("Onboarding"));
+      const onboarding = e instanceof ApiError && e.status === 403 && e.message.includes("Onboarding");
+      setNeedsOnboarding(onboarding);
+      // Anything else (a suspended account, the API unreachable) must say so, not spin forever.
+      setMeError(
+        onboarding
+          ? null
+          : e instanceof ApiError && e.status === 403
+            ? "This account is suspended. Contact support if you think this is a mistake."
+            : "We couldn't load your account. Check your connection and try again.",
+      );
     }
     setReady(true);
   }, []);
@@ -61,7 +72,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await supabase().auth.signOut();
     },
   };
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={value}>
+      {session && meError ? (
+        <div role="alert" className="mx-auto max-w-md space-y-4 py-16 text-center">
+          <p className="text-[16px] text-ink-2">{meError}</p>
+          <div className="flex justify-center gap-3">
+            <button
+              className="font-semibold text-tutor underline-offset-4 hover:underline"
+              onClick={() => void value.refresh()}
+            >
+              Try again
+            </button>
+            <button
+              className="font-semibold text-muted underline-offset-4 hover:underline"
+              onClick={() => void value.signOut()}
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+      ) : (
+        children
+      )}
+    </Ctx.Provider>
+  );
 }
 
 export function useAuth(): AuthState {

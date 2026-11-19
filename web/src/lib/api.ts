@@ -51,7 +51,8 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
       },
       body: init.body === undefined ? undefined : JSON.stringify(init.body),
       // Never leave a page on "Loading…" forever.
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      // AI answers can take up to two minutes; giving up early would bill the question twice.
+      signal: AbortSignal.timeout(path.startsWith("/ai/") && method === "POST" ? 150_000 : TIMEOUT_MS),
     });
   let res: Response;
   try {
