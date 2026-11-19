@@ -3,6 +3,12 @@
 
 # ---------------------------------------------------------------- AI freemium (sprint 09)
 [[mutant]]
+file = "app/services/marketplace.py"
+old = "    task = await get_visible_task(session, tutor, task_id, for_update=True)\n    if task.status != \"open\":"
+new = "    task = await get_visible_task(session, tutor, task_id)\n    if task.status != \"open\":"
+why = "bidding serializes with hire and cancellation"
+
+[[mutant]]
 file = "app/services/ai.py"
 old = "if q.remaining == 0:"
 new = "if q.remaining < 0:"

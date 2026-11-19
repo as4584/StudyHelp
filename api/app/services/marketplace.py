@@ -104,7 +104,8 @@ async def place_bid(
     if not await tutor_is_approved(session, tutor.id):
         raise Forbidden("tutor application is not approved")
     await policies.require_tutor_signed(session, tutor.id)
-    task = await get_visible_task(session, tutor, task_id)
+    # Serialize with hire/cancel so the status check stays valid until the bid commits.
+    task = await get_visible_task(session, tutor, task_id, for_update=True)
     if task.status != "open":
         raise InvalidState("task is not open for bids")
     tp = await session.get(TutorProfile, tutor.id)
