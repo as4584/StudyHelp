@@ -262,3 +262,22 @@ file = "app/services/rate_limits.py"
 old = "    if today >= TASKS_PER_DAY:"
 new = "    if today >= 10 * TASKS_PER_DAY:"
 why = "students can't flood the request feed"
+
+# ---------------------------------------------------------------- translation guards
+[[mutant]]
+file = "app/providers/translation/ollama.py"
+old = "    if missing:\n        raise TranslationError"
+new = "    if False:\n        raise TranslationError"
+why = "changed numbers never reach a user"
+
+[[mutant]]
+file = "app/providers/translation/ollama.py"
+old = "        if text.count(token) != 1:"
+new = "        if text.count(token) > 1:"
+why = "a dropped link or code span fails the translation"
+
+[[mutant]]
+file = "app/providers/translation/ollama.py"
+old = "    if script and LETTER.search(source_text) and not SCRIPT_RE[script].search(out):"
+new = "    if False:"
+why = "wrong-script output (e.g. pinyin) is refused"
