@@ -63,9 +63,13 @@ function Workspace() {
       }
       if (blob.size > MAX_UPLOAD) throw new ApiError(413, "That file is over 4 MB. Try a smaller PDF or a photo.");
       const out = await api<{ text: string; truncated: boolean }>("/ai/extract", { body: blob });
-      setQuestion((draft) => (draft ? `${draft}
+      setQuestion((draft) =>
+        draft
+          ? `${draft}
 
-${out.text}` : out.text));
+${out.text}`
+          : out.text,
+      );
       composer.current?.focus();
     });
 
