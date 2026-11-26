@@ -1,12 +1,21 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
 from app.api.dependencies import SessionDep, StudentDep
 from app.providers.llm import LLMProvider, get_llm_provider
-from app.schemas.api import AiAskIn, AiChatIn, AiChatOut, AiMessageOut, AiQuotaOut, TaskDraftOut
-from app.services import ai
+from app.schemas.api import (
+    AiAskIn,
+    AiChatIn,
+    AiChatOut,
+    AiExtractOut,
+    AiMessageOut,
+    AiQuotaOut,
+    TaskDraftOut,
+)
+from app.services import ai, extract
+from app.services.payments import is_premium
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 LLMDep = Annotated[LLMProvider, Depends(get_llm_provider)]
@@ -50,3 +59,12 @@ async def ask(
 async def escalate(chat_id: uuid.UUID, student: StudentDep, session: SessionDep) -> TaskDraftOut:
     draft = await ai.escalate(session, student, chat_id)
     return TaskDraftOut(subject=draft.subject, title=draft.title, description=draft.description)
+
+
+@router.post("/extract", response_model=AiExtractOut)
+async def read_file(request: Request, student: StudentDep, session: SessionDep) -> AiExtractOut:
+    """Raw photo or PDF bytes in the body -> its text, for the student to check and ask about."""
+    data = await request.body()
+    premium = await is_premium(session, student.id)
+    out = await extract.extract(session, student.id, premium, data)
+    return AiExtractOut(text=out.text, method=out.method, pages=out.pages, truncated=out.truncated)

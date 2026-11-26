@@ -396,6 +396,13 @@ class AiAskIn(BaseModel):
     question: str = Field(min_length=1, max_length=4000)
 
 
+class AiExtractOut(BaseModel):
+    text: str
+    method: Literal["pdf-text", "vision"]
+    pages: int
+    truncated: bool
+
+
 class AiMessageOut(ORM):
     id: uuid.UUID
     role: str

@@ -229,6 +229,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/extract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read File
+         * @description Raw photo or PDF bytes in the body -> its text, for the student to check and ask about.
+         */
+        post: operations["read_file_ai_extract_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/ai/quota": {
         parameters: {
             query?: never;
@@ -943,6 +963,20 @@ export interface components {
             id: string;
             /** Subject */
             subject: string;
+        };
+        /** AiExtractOut */
+        AiExtractOut: {
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "pdf-text" | "vision";
+            /** Pages */
+            pages: number;
+            /** Text */
+            text: string;
+            /** Truncated */
+            truncated: boolean;
         };
         /** AiMessageOut */
         AiMessageOut: {
@@ -2163,6 +2197,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_file_ai_extract_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiExtractOut"];
                 };
             };
         };

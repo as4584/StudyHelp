@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, BookOpenText, CircleHelp, LifeBuoy, Lightbulb, PencilRuler, Sparkles } from "lucide-react";
+import { ArrowUp, BookOpenText, CircleHelp, LifeBuoy, Lightbulb, Paperclip, PencilRuler, Sparkles } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 
@@ -18,6 +18,22 @@ type Msg = { id: string; role: string; content: string };
  * Moment 2 — the AI tutor as a study environment: a reading column where answers arrive as
  * annotated sections, and a context rail (subject, what the annotations mean, escalation).
  */
+const MAX_UPLOAD = 4 * 1024 * 1024;
+
+/** Phone photos are often 5-10 MB: shrink to 2000px JPEG (also drops location metadata). */
+async function shrink(file: File): Promise<Blob> {
+  if (file.type === "application/pdf") return file;
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, 2000 / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("couldn't read that photo"))), "image/jpeg", 0.85),
+  );
+}
+
 function Workspace() {
   const { me } = useRequireRole("student");
   const router = useRouter();
@@ -33,6 +49,25 @@ function Workspace() {
   const started = useRef(false);
   const bottom = useRef<HTMLDivElement>(null);
   const composer = useRef<HTMLTextAreaElement>(null);
+  const picker = useRef<HTMLInputElement>(null);
+  const reader = useAction();
+
+  // A photo or PDF becomes text in the box, so the student checks it before asking.
+  const readFile = (file: File) =>
+    reader.run(async () => {
+      let blob: Blob;
+      try {
+        blob = await shrink(file);
+      } catch {
+        throw new ApiError(422, "Couldn't open that photo. Try a JPG or PNG.");
+      }
+      if (blob.size > MAX_UPLOAD) throw new ApiError(413, "That file is over 4 MB. Try a smaller PDF or a photo.");
+      const out = await api<{ text: string; truncated: boolean }>("/ai/extract", { body: blob });
+      setQuestion((draft) => (draft ? `${draft}
+
+${out.text}` : out.text));
+      composer.current?.focus();
+    });
 
   const ask = useCallback(
     (q: string) =>
@@ -206,6 +241,29 @@ function Workspace() {
               />
             )}
             <div className="flex items-end gap-2">
+              <input
+                ref={picker}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = "";
+                  if (f) void readFile(f);
+                }}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                loading={reader.pending}
+                disabled={locked}
+                aria-label="Read a photo or PDF"
+                title="Read a photo or PDF of your homework"
+                className="size-11 shrink-0 px-0"
+                onClick={() => picker.current?.click()}
+              >
+                <Paperclip size={18} strokeWidth={2} aria-hidden />
+              </Button>
               <textarea
                 ref={composer}
                 aria-label="Question"
@@ -232,7 +290,7 @@ function Workspace() {
                 <ArrowUp size={18} strokeWidth={2.25} aria-hidden />
               </Button>
             </div>
-            <ErrorText error={a.error} />
+            <ErrorText error={a.error ?? reader.error} />
             <div className="flex items-center justify-between gap-3 px-2.5 pt-1">
               <QuotaNote quota={quota} />
               {locked && !quota.premium && (

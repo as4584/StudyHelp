@@ -68,6 +68,12 @@ class Settings(BaseSettings):
     google_translate_api_key: str = ""
     translation_timeout_s: float = 5.0
 
+    # Reading photos and scanned PDFs for the study assistant (a vision model on Ollama).
+    # Text PDFs are read without any model; "off" turns photo reading off.
+    ocr_provider: Literal["ollama", "off"] = "off"
+    ocr_ollama_model: str = ""
+    ocr_timeout_s: float = 90.0
+
     # Live video + screen share (self-hosted LiveKit SFU). Media never passes through this API;
     # it only authorizes a party and signs a short-lived, single-room credential.
     video_enabled: bool = False
@@ -122,6 +128,8 @@ class Settings(BaseSettings):
             raise ValueError(
                 "TRANSLATION_OLLAMA_MODEL is required when TRANSLATION_PROVIDER=ollama"
             )
+        if self.ocr_provider == "ollama" and not self.ocr_ollama_model:
+            raise ValueError("OCR_OLLAMA_MODEL is required when OCR_PROVIDER=ollama")
         if self.translation_provider == "google" and not self.google_translate_api_key:
             raise ValueError("GOOGLE_TRANSLATE_API_KEY is required")
         if self.video_provider == "livekit":

@@ -47,9 +47,14 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
       method,
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...(init.body instanceof Blob
+          ? { "Content-Type": init.body.type || "application/octet-stream" }
+          : init.body !== undefined
+            ? { "Content-Type": "application/json" }
+            : {}),
       },
-      body: init.body === undefined ? undefined : JSON.stringify(init.body),
+      // A Blob (a photo or PDF) goes up as raw bytes; everything else is JSON.
+      body: init.body === undefined ? undefined : init.body instanceof Blob ? init.body : JSON.stringify(init.body),
       // Never leave a page on "Loading…" forever.
       // AI answers can take up to two minutes; giving up early would bill the question twice.
       signal: AbortSignal.timeout(path.startsWith("/ai/") && method === "POST" ? 150_000 : TIMEOUT_MS),

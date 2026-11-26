@@ -98,6 +98,38 @@
         "title": "AiChatOut",
         "type": "object"
       },
+      "AiExtractOut": {
+        "properties": {
+          "method": {
+            "enum": [
+              "pdf-text",
+              "vision"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "pages": {
+            "title": "Pages",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "text",
+          "method",
+          "pages",
+          "truncated"
+        ],
+        "title": "AiExtractOut",
+        "type": "object"
+      },
       "AiMessageOut": {
         "properties": {
           "content": {
@@ -2709,6 +2741,33 @@
           }
         ],
         "summary": "Ask",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/ai/extract": {
+      "post": {
+        "description": "Raw photo or PDF bytes in the body -> its text, for the student to check and ask about.",
+        "operationId": "read_file_ai_extract_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiExtractOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read File",
         "tags": [
           "ai"
         ]

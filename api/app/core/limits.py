@@ -1,10 +1,13 @@
 """Request size guard: every JSON body we accept is small, so refuse big ones before parsing.
 
-Avatars are the largest legitimate payload (a resized data URL, under 200 KB)."""
+Avatars are the largest JSON payload (a resized data URL, under 200 KB). The one upload route,
+photo/PDF reading for the study assistant, gets a larger cap that still fits the host's limit."""
 
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 MAX_BODY_BYTES = 256 * 1024
+MAX_UPLOAD_BYTES = 4 * 1024 * 1024
+UPLOAD_PATHS = frozenset({"/ai/extract"})
 
 
 class BodyLimitMiddleware:
@@ -15,8 +18,9 @@ class BodyLimitMiddleware:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
+        cap = MAX_UPLOAD_BYTES if scope.get("path") in UPLOAD_PATHS else MAX_BODY_BYTES
         length = dict(scope["headers"]).get(b"content-length")
-        if length is not None and length.isdigit() and int(length) > MAX_BODY_BYTES:
+        if length is not None and length.isdigit() and int(length) > cap:
             await _too_large(send)
             return
         seen = 0
@@ -26,7 +30,7 @@ class BodyLimitMiddleware:
             msg = await receive()
             if msg["type"] == "http.request":
                 seen += len(msg.get("body", b""))
-                if seen > MAX_BODY_BYTES:
+                if seen > cap:
                     raise _TooLarge
             return msg
 
