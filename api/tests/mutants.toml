@@ -253,8 +253,8 @@ why = "hiring rechecks the tutor's current teaching levels"
 # ---------------------------------------------------------------- abuse protection
 [[mutant]]
 file = "app/core/limits.py"
-old = "and int(length) > MAX_BODY_BYTES:"
-new = "and int(length) > 100 * MAX_BODY_BYTES:"
+old = "and int(length) > cap:"
+new = "and int(length) > 100 * cap:"
 why = "oversized bodies are refused"
 
 [[mutant]]
@@ -281,3 +281,28 @@ file = "app/providers/translation/ollama.py"
 old = "    if script and LETTER.search(source_text) and not SCRIPT_RE[script].search(out):"
 new = "    if False:"
 why = "wrong-script output (e.g. pinyin) is refused"
+
+# ---------------------------------------------------------------- deterministic layer
+[[mutant]]
+file = "app/core/limits.py"
+old = 'cap = MAX_UPLOAD_BYTES if scope.get("path") in UPLOAD_PATHS else MAX_BODY_BYTES'
+new = "cap = MAX_UPLOAD_BYTES"
+why = "only the upload route gets the large body cap"
+
+[[mutant]]
+file = "app/services/solver.py"
+old = "if any(w not in NAMES for w in words) or"
+new = "if False or"
+why = "math parser refuses names off the whitelist"
+
+[[mutant]]
+file = "app/services/extract.py"
+old = "if (used or 0) >= PER_DAY:"
+new = "if (used or 0) > PER_DAY:"
+why = "file reading has a daily limit"
+
+[[mutant]]
+file = "app/services/extract.py"
+old = 'if data.startswith(b"%PDF-"):'
+new = 'if data.startswith(b"%"):'
+why = "file type comes from the real PDF signature"

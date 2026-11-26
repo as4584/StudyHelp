@@ -15,6 +15,7 @@ from app.core.errors import NotFound, ProviderError, QuotaExceeded
 from app.models.entities import AiChat, AiMessage, AiUsage
 from app.observability.logging import event, request_id_var
 from app.providers.llm import ChatTurn, LLMError, LLMProvider
+from app.services import solver
 from app.services.payments import is_premium
 
 log = logging.getLogger("ai")
@@ -148,10 +149,14 @@ async def ask(
     turns = [ChatTurn(role=m.role, content=m.content) for m in history[-MAX_CONTEXT_TURNS:]]  # type: ignore[arg-type]
     turns.append(ChatTurn(role="user", content=question))
 
+    # Exact results SymPy can compute go to the model as facts and to the student as "Checked:".
+    facts = await solver.solve(question)
     start = time.perf_counter()
     try:
         result = await llm.generate(
-            system=SYSTEM_PROMPT, turns=turns, max_tokens=get_settings().llm_max_tokens
+            system=SYSTEM_PROMPT + solver.prompt_block(facts),
+            turns=turns,
+            max_tokens=get_settings().llm_max_tokens,
         )
     except LLMError as exc:
         latency = round((time.perf_counter() - start) * 1000)
@@ -173,7 +178,9 @@ async def ask(
         event(log, "llm.failed", logging.WARNING, provider=llm.name, error=str(exc))
         raise ProviderError("the AI assistant is temporarily unavailable") from exc
     latency = round((time.perf_counter() - start) * 1000)
-    reply = AiMessage(chat_id=chat.id, role="assistant", content=result.text)
+    reply = AiMessage(
+        chat_id=chat.id, role="assistant", content=result.text + solver.checked_lines(facts)
+    )
     session.add(reply)
     session.add(
         AiUsage(

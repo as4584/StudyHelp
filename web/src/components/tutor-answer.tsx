@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, BookOpenText, CircleHelp, Lightbulb, PencilLine, PencilRuler } from "lucide-react";
+import { AlertTriangle, BadgeCheck, BookOpenText, CircleHelp, Lightbulb, PencilLine, PencilRuler } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 /*
@@ -8,10 +8,11 @@ import type { LucideIcon } from "lucide-react";
  * each part (Key idea / Explanation / Example / Try this / Hint / Check yourself / Common mistake).
  * Composition: the key idea is set as a large statement; teaching blocks carry margin annotations;
  * "Try this" is an invitation that loads the student's attempt into the composer. Unlabelled text
- * falls back to reading text, so any provider output still renders well.
+ * falls back to reading text, so any provider output still renders well. "Checked:" lines are
+ * added by the server from an exact math engine, never by the model.
  */
 
-type Kind = "key" | "explanation" | "example" | "try" | "hint" | "check" | "mistake" | "note";
+type Kind = "key" | "explanation" | "example" | "try" | "hint" | "check" | "mistake" | "verified" | "note";
 
 const KINDS: Record<Exclude<Kind, "note" | "key">, { label: string; icon: LucideIcon; color: string; rule: string }> = {
   explanation: { label: "Explanation", icon: BookOpenText, color: "text-tutor", rule: "bg-tutor" },
@@ -20,9 +21,11 @@ const KINDS: Record<Exclude<Kind, "note" | "key">, { label: string; icon: Lucide
   hint: { label: "Hint", icon: Lightbulb, color: "text-attention", rule: "bg-attention-mark" },
   check: { label: "Check yourself", icon: CircleHelp, color: "text-mastery", rule: "bg-mastery-mark" },
   mistake: { label: "Common mistake", icon: AlertTriangle, color: "text-attention", rule: "bg-attention-mark" },
+  verified: { label: "Checked answer", icon: BadgeCheck, color: "text-mastery", rule: "bg-mastery-mark" },
 };
 
 const LABELS: [RegExp, Kind][] = [
+  [/^checked\s*:\s*/i, "verified"],
   [/^key\s+idea\s*:\s*/i, "key"],
   [/^explanation\s*:\s*/i, "explanation"],
   [/^(worked\s+)?example\s*:\s*/i, "example"],

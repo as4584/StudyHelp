@@ -41,15 +41,21 @@ const RETRYABLE = new Set([502, 503, 504]);
 export async function api<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
   const { data } = await supabase().auth.getSession();
   const token = data.session?.access_token;
+  // A Blob (a photo or PDF) goes up as raw bytes; everything else is JSON.
+  const raw = typeof Blob !== "undefined" && init.body instanceof Blob ? init.body : null;
   const method = init.method ?? (init.body === undefined ? "GET" : "POST");
   const send = () =>
     fetch(`${API_URL}${path}`, {
       method,
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...(raw
+          ? { "Content-Type": raw.type || "application/octet-stream" }
+          : init.body !== undefined
+            ? { "Content-Type": "application/json" }
+            : {}),
       },
-      body: init.body === undefined ? undefined : JSON.stringify(init.body),
+      body: init.body === undefined ? undefined : raw ? raw : JSON.stringify(init.body),
       // Never leave a page on "Loading…" forever.
       // AI answers can take up to two minutes; giving up early would bill the question twice.
       signal: AbortSignal.timeout(path.startsWith("/ai/") && method === "POST" ? 150_000 : TIMEOUT_MS),
