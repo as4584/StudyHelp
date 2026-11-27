@@ -53,3 +53,8 @@ class ProviderError(DomainError):
 class TooMany(DomainError):
     status_code = 429
     code = "rate_limited"
+
+
+class BotCheckFailed(DomainError):
+    status_code = 400
+    code = "bot_check_failed"

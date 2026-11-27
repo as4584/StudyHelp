@@ -6,6 +6,11 @@ from typing import Literal
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Cloudflare's published Turnstile test secrets: one always passes, one always fails.
+TURNSTILE_TEST_SECRET_PASS = "1x0000000000000000000000000000000AA"  # noqa: S105 (public)
+TURNSTILE_TEST_SECRET_FAIL = "2x0000000000000000000000000000000AA"  # noqa: S105 (public)
+TURNSTILE_TEST_SECRETS = (TURNSTILE_TEST_SECRET_PASS, TURNSTILE_TEST_SECRET_FAIL)
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -87,6 +92,16 @@ class Settings(BaseSettings):
     livekit_public_url: str = ""  # wss:// address browsers connect to
     video_token_ttl_s: int = Field(default=600, ge=60, le=3600)
 
+    # Bot check (Cloudflare Turnstile) on sign-up. When unset outside production, Cloudflare's
+    # published always-pass test secret is used, so local runs and CI need no real keys.
+    turnstile_secret_key: str = ""
+    turnstile_verify_url: str = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+    turnstile_timeout_s: float = 5.0
+
+    @property
+    def turnstile_secret(self) -> str:
+        return self.turnstile_secret_key or TURNSTILE_TEST_SECRET_PASS
+
     @property
     def jwt_issuer(self) -> str:
         return f"{self.supabase_url.rstrip('/')}/auth/v1"
@@ -134,6 +149,10 @@ class Settings(BaseSettings):
             self.video_provider if self.video_enabled else None,
         ):
             raise ValueError("Fake adapters are not allowed in production")
+        if self.environment == "production" and (
+            not self.turnstile_secret_key or self.turnstile_secret_key in TURNSTILE_TEST_SECRETS
+        ):
+            raise ValueError("A real TURNSTILE_SECRET_KEY is required in production")
         if self.llm_provider == "anthropic" and not (
             self.anthropic_api_key and self.anthropic_model
         ):

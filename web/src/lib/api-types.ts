@@ -348,7 +348,7 @@ export interface paths {
         /**
          * Onboard
          * @description Create the caller's profile, together with their policy acceptance. The id always comes
-         *     from the verified token.
+         *     from the verified token. A bot check token is required: no profile, no use of the app.
          */
         post: operations["onboard_me_onboard_post"];
         delete?: never;
@@ -1275,6 +1275,8 @@ export interface components {
         };
         /** OnboardIn */
         OnboardIn: {
+            /** Bot Token */
+            bot_token?: string | null;
             /** Display Name */
             display_name: string;
             policy: components["schemas"]["PolicyAcceptIn"];

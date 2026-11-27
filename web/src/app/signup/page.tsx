@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { AuthFrame } from "@/components/auth-frame";
+import { BotCheck, useBotCheck } from "@/components/bot-check";
 import { POLICIES, policyHref } from "@/content/policies";
 import { Button, ErrorText, Field, inputCls, useAction } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
@@ -16,6 +17,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [sentTo, setSentTo] = useState<string | null>(null);
   const { pending, error, run } = useAction();
+  const bot = useBotCheck();
 
   return (
     <AuthFrame
@@ -59,7 +61,12 @@ export default function SignupPage() {
         onSubmit={(e) => {
           e.preventDefault();
           void run(async () => {
-            const { data, error } = await supabase().auth.signUp({ email, password });
+            // Supabase Auth verifies this token itself once its captcha setting is turned on.
+            const { data, error } = await supabase().auth.signUp({
+              email,
+              password,
+              options: { captchaToken: await bot.take() },
+            });
             if (error) throw error;
             if (!data.session) return setSentTo(email);
             router.push("/onboard");
@@ -87,6 +94,7 @@ export default function SignupPage() {
             onChange={(e) => setPassword(e.target.value)}
           />
         </Field>
+        <BotCheck key={bot.key} action="signup" onToken={bot.onToken} />
         <ErrorText error={error} />
         {sentTo && (
           <p

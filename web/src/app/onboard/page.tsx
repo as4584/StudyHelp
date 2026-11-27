@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { AuthFrame } from "@/components/auth-frame";
 import { useAuth } from "@/components/auth";
+import { BotCheck, useBotCheck } from "@/components/bot-check";
 import { EMPTY_POLICY, PolicyFields, policyBody, policyComplete } from "@/components/policy-fields";
 import { Button, ErrorText, Field, inputCls, useAction } from "@/components/ui";
 import { api, LANGUAGES } from "@/lib/api";
@@ -24,6 +25,7 @@ export default function OnboardPage() {
   const [policy, setPolicy] = useState(EMPTY_POLICY);
   const { pending, error, run } = useAction();
   const nameOk = name.trim().length > 0;
+  const bot = useBotCheck();
 
   // Already set up (e.g. the back button, or a bookmarked link): go to your desk, not a second sign-up.
   const role0 = me?.profile.role;
@@ -39,7 +41,13 @@ export default function OnboardPage() {
           e.preventDefault();
           void run(async () => {
             await api("/me/onboard", {
-              body: { role, display_name: name.trim(), preferred_language: lang, policy: policyBody(role, policy) },
+              body: {
+                role,
+                display_name: name.trim(),
+                preferred_language: lang,
+                policy: policyBody(role, policy),
+                bot_token: await bot.take(),
+              },
             });
             await refresh();
             router.push(role === "tutor" ? "/tutor" : "/student");
@@ -87,6 +95,7 @@ export default function OnboardPage() {
           </select>
         </Field>
         <PolicyFields role={role} value={policy} onChange={setPolicy} />
+        <BotCheck key={bot.key} action="onboard" onToken={bot.onToken} />
         <ErrorText error={error} />
         <Button
           type="submit"

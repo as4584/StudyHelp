@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from sqlalchemy import exists, func, select
 from sqlalchemy.exc import IntegrityError
 
@@ -15,7 +15,7 @@ from app.schemas.api import (
     TutorApplicationIn,
     TutorOut,
 )
-from app.services import policies
+from app.services import bot_check, policies
 from app.services.audit import audit
 from app.services.payments import is_premium
 
@@ -38,10 +38,17 @@ async def get_me(user: UserDep, session: SessionDep) -> MeOut:
 
 
 @router.post("/me/onboard", response_model=MeOut, status_code=201)
-async def onboard(body: OnboardIn, claims: ClaimsDep, session: SessionDep) -> MeOut:
+async def onboard(
+    body: OnboardIn, claims: ClaimsDep, session: SessionDep, request: Request
+) -> MeOut:
     """Create the caller's profile, together with their policy acceptance. The id always comes
-    from the verified token."""
+    from the verified token. A bot check token is required: no profile, no use of the app."""
     import uuid
+
+    forwarded = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+    await bot_check.verify(
+        body.bot_token, forwarded or (request.client.host if request.client else None)
+    )
 
     profile = Profile(
         id=uuid.UUID(claims.sub),

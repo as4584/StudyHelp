@@ -91,6 +91,7 @@ def test_production_refuses_fake_video_only_when_video_is_on() -> None:
         "translation_provider": "deepl",
         "deepl_api_key": "k",
         "storage_provider": "supabase",
+        "turnstile_secret_key": "0x4AAAAAAA-not-a-real-secret",
     }
     Settings(**prod, video_enabled=False, video_provider="fake")  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="Fake"):

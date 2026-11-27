@@ -117,6 +117,8 @@ class OnboardIn(BaseModel):
     display_name: DisplayName
     preferred_language: str = Lang
     policy: PolicyAcceptIn  # no account without accepting the role's policy
+    # Single-use Cloudflare Turnstile token from the sign-up bot check; verified server-side.
+    bot_token: str | None = Field(default=None, max_length=2048)
 
 
 class ProfilePatch(BaseModel):
