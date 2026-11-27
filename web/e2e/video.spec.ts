@@ -35,9 +35,13 @@ test("both parties can open the live session; outsiders cannot", async ({ browse
   const camOff = student.getByRole("button", { name: "Turn camera off" });
   const camOn = student.getByRole("button", { name: "Turn camera on" });
   await expect(camOff.or(camOn)).toBeVisible();
-  const startedOn = await camOff.isVisible();
-  await (startedOn ? camOff : camOn).click();
-  await expect(startedOn ? camOn : camOff.or(student.getByText(/camera/i).first())).toBeVisible();
+  if (await camOff.isVisible()) {
+    await camOff.click();
+    await expect(camOn).toBeVisible();
+  } else {
+    // No camera in this browser: the button is shown but greyed out rather than failing.
+    await expect(camOn).toBeDisabled();
+  }
 
   // Ending asks first, then closes the call for both sides; a new call can start while the
   // session is still funded.
