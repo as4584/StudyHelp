@@ -1,6 +1,9 @@
 import { Check, Languages, ShieldCheck, Sparkles } from "lucide-react";
 import Link from "next/link";
 
+import { PaymentsModeNote } from "@/components/payments-mode-note";
+import { BUSINESS } from "@/content/site";
+
 /*
  * Landing. The idea: the page is set like a study desk — a reading-voice headline beside the
  * actual working surface of the product (a translated tutoring exchange and a held-payment
@@ -89,7 +92,27 @@ export default function Home() {
         </p>
       </section>
 
-      <p className="mt-24 text-[13px] text-muted">Demo build — payments run in test mode</p>
+      <section
+        aria-labelledby="contact-heading"
+        className="mt-24 grid gap-4 border-t border-rule pt-10 sm:mt-28 lg:grid-cols-[1fr_1.4fr]"
+      >
+        <h2 id="contact-heading" className="font-serif text-[1.75rem] leading-tight font-medium tracking-[-0.015em]">
+          Questions? Talk to us.
+        </h2>
+        <div className="flex flex-col gap-2 text-[17px] sm:flex-row sm:flex-wrap sm:gap-x-8" data-testid="home-contact">
+          <a
+            href={`mailto:${BUSINESS.email}`}
+            className="font-semibold break-all text-ink underline-offset-4 hover:underline"
+          >
+            {BUSINESS.email}
+          </a>
+          <a href={`tel:${BUSINESS.tel}`} className="font-semibold text-ink underline-offset-4 hover:underline">
+            {BUSINESS.phone}
+          </a>
+        </div>
+      </section>
+
+      <PaymentsModeNote className="mt-16" />
     </div>
   );
 }

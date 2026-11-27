@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request, status
-from sqlalchemy import select
+from sqlalchemy import exists, func, select
 from sqlalchemy.exc import IntegrityError
 
 from app.api.dependencies import ClaimsDep, SessionDep, TutorDep, UserDep
@@ -145,8 +145,16 @@ async def list_tutors(
         .where(TutorProfile.status == "approved", Profile.is_active)
         .order_by(TutorProfile.rating_avg.desc(), TutorProfile.rating_count.desc())
     )
-    if subject:
-        stmt = stmt.where(TutorProfile.subjects.any(subject))  # type: ignore[arg-type]
+    if subject and subject.strip():
+        # Case-insensitive: "math" finds a tutor who listed "Math".
+        listed = func.unnest(TutorProfile.subjects).table_valued("s").render_derived()
+        stmt = stmt.where(
+            exists(
+                select(1)
+                .select_from(listed)
+                .where(func.lower(listed.c.s) == subject.strip().lower())
+            )
+        )
     rows = (await session.execute(stmt)).all()
     return [
         PublicTutorOut.model_validate(

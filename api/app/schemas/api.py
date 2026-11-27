@@ -171,8 +171,12 @@ class TutorOut(ORM):
 
 
 class PublicTutorOut(TutorOut):
+    """What students see. Vetting status and payout setup are the tutor's business."""
+
     display_name: str
     avatar_url: str | None = None
+    status: str = Field(default="approved", exclude=True)
+    payouts_enabled: bool = Field(default=False, exclude=True)
 
 
 class ProfileOut(ORM):

@@ -50,6 +50,9 @@ class Settings(BaseSettings):
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_premium_price_id: str = ""
+    # Live keys need this explicit switch (set by a human at go-live, production only), so a
+    # live key can never be picked up by accident in a preview, demo or local build.
+    stripe_live_mode: bool = False
 
     storage_provider: Literal["supabase", "fake"] = "supabase"
 
@@ -107,6 +110,12 @@ class Settings(BaseSettings):
     def jwks_url(self) -> str:
         return f"{self.jwt_issuer}/.well-known/jwks.json"
 
+    @property
+    def payments_mode(self) -> Literal["demo", "test", "live"]:
+        if self.payments_provider != "stripe":
+            return "demo"
+        return "live" if self.stripe_secret_key.startswith(("sk_live_", "rk_live_")) else "test"
+
     @model_validator(mode="after")
     def _validate(self) -> "Settings":
         if self.git_sha in ("", "unknown"):
@@ -116,9 +125,20 @@ class Settings(BaseSettings):
         if self.price_min_cents > self.price_max_cents:
             raise ValueError("PRICE_MIN_CENTS must not exceed PRICE_MAX_CENTS")
         if self.payments_provider == "stripe":
-            if not self.stripe_secret_key.startswith(("sk_test_", "rk_test_")):
+            test_key = self.stripe_secret_key.startswith(("sk_test_", "rk_test_"))
+            live_key = self.stripe_secret_key.startswith(("sk_live_", "rk_live_"))
+            if self.stripe_live_mode:
                 # Live keys are an explicit human approval boundary (AGENTS.md).
-                raise ValueError("Only Stripe TEST keys are permitted in this build")
+                if self.environment != "production":
+                    raise ValueError("STRIPE_LIVE_MODE is only allowed in production")
+                if not live_key:
+                    raise ValueError("STRIPE_LIVE_MODE needs a live Stripe key (sk_live_/rk_live_)")
+                if not self.stripe_premium_price_id:
+                    raise ValueError("STRIPE_PREMIUM_PRICE_ID is required in live mode")
+            elif not test_key:
+                raise ValueError(
+                    "Only Stripe TEST keys are permitted unless STRIPE_LIVE_MODE is turned on"
+                )
             if not self.stripe_webhook_secret:
                 raise ValueError("STRIPE_WEBHOOK_SECRET is required with the stripe provider")
         if self.environment == "production" and "fake" in (

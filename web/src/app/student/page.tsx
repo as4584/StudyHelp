@@ -79,9 +79,14 @@ export default function StudyDesk() {
           <div className="micro text-muted">{today}</div>
           <h1 className="mt-1 font-serif text-[1.375rem] font-medium tracking-[-0.01em] text-ink-2">Study desk</h1>
         </div>
-        <LinkButton href="/student/tasks/new" variant="secondary">
-          Request a tutor
-        </LinkButton>
+        <div className="flex flex-wrap gap-2">
+          <LinkButton href="/tutors" variant="secondary">
+            Browse tutors
+          </LinkButton>
+          <LinkButton href="/student/tasks/new" variant="secondary">
+            Request a tutor
+          </LinkButton>
+        </div>
       </header>
 
       <PolicyGate />

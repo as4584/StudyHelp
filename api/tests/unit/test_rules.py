@@ -45,6 +45,36 @@ def test_config_rejects_live_stripe_keys(monkeypatch: pytest.MonkeyPatch) -> Non
         Settings()
 
 
+def _live(monkeypatch: pytest.MonkeyPatch, env: str, key: str) -> None:
+    monkeypatch.setenv("ENVIRONMENT", env)
+    monkeypatch.setenv("PAYMENTS_PROVIDER", "stripe")
+    monkeypatch.setenv("STRIPE_SECRET_KEY", key)
+    monkeypatch.setenv("STRIPE_WEBHOOK_SECRET", "whsec_x")
+    monkeypatch.setenv("STRIPE_PREMIUM_PRICE_ID", "price_x")
+    monkeypatch.setenv("STRIPE_LIVE_MODE", "true")
+
+
+@pytest.mark.parametrize("env", ["development", "demo", "test"])
+def test_live_mode_is_production_only(monkeypatch: pytest.MonkeyPatch, env: str) -> None:
+    _live(monkeypatch, env, "sk_live_abc")
+    with pytest.raises(ValidationError, match="only allowed in production"):
+        Settings()
+
+
+def test_live_mode_needs_a_live_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    _live(monkeypatch, "production", "sk_test_abc")
+    with pytest.raises(ValidationError, match="needs a live Stripe key"):
+        Settings()
+
+
+def test_live_mode_accepts_a_live_key_in_production(monkeypatch: pytest.MonkeyPatch) -> None:
+    _live(monkeypatch, "production", "sk_live_abc")
+    # Stripe passes; the remaining complaint (if any) is about other fake adapters.
+    with pytest.raises(ValidationError) as err:
+        Settings()
+    assert "Stripe" not in str(err.value) and "STRIPE" not in str(err.value)
+
+
 def test_config_rejects_fakes_in_production(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ENVIRONMENT", "production")
     with pytest.raises(ValidationError, match="Fake adapters"):

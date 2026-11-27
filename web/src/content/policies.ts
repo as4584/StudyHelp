@@ -13,12 +13,18 @@ export type Policy = {
   title: string;
   shortTitle: string;
   version: string;
+  /** false while the text is a draft: the page then says DRAFT · PENDING ATTORNEY REVIEW. */
+  final: boolean;
   updated: string;
   rules: { label: string; text: string }[];
   body: string;
 };
 
 const DRAFT_NOTE = "Draft of November 8, 2026 · pending attorney review · effective November 30, 2026";
+const FINAL_NOTE = "Effective November 30, 2026";
+
+/* Going final: paste the attorney's text into `body`, set `final: true` and bump `version`
+ * (here and in VERSIONS in api/app/services/policies.py). See docs/go-live-stripe.md. */
 
 export const POLICIES: Record<PolicySlug, Policy> = {
   tutor: {
@@ -26,6 +32,7 @@ export const POLICIES: Record<PolicySlug, Policy> = {
     title: "Tutor Policy and Independent Contractor Agreement",
     shortTitle: "Tutor Policy and Contractor Agreement",
     version: "draft-2026-11-08",
+    final: false,
     updated: DRAFT_NOTE,
     rules: [
       {
@@ -226,6 +233,7 @@ Global Study Help Tutor LLC · ed@globalstudyhelptutor.com · (551) 239-3476
     title: "Student and Parent Policy and Terms of Use",
     shortTitle: "Student and Parent Policy",
     version: "draft-2026-11-08",
+    final: false,
     updated: DRAFT_NOTE,
     rules: [
       {
@@ -373,6 +381,11 @@ Global Study Help Tutor LLC · ed@globalstudyhelptutor.com · (551) 239-3476
 `,
   },
 };
+
+/** The date line above a policy: the draft notice until the policy is final. */
+export function policyNote(p: { final: boolean; updated: string }) {
+  return p.final ? FINAL_NOTE : p.updated;
+}
 
 export function policyHref(slug: PolicySlug) {
   return `/policies/${slug}`;
