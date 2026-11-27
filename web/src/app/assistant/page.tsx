@@ -43,6 +43,7 @@ function Workspace() {
   const [question, setQuestion] = useState("");
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [limit, setLimit] = useState<"daily" | "fair_use" | null>(null);
+  const [cutOff, setCutOff] = useState(false);
   const { quota, reload: reloadQuota } = useAiQuota();
   const locked = !!quota && quota.remaining === 0;
   const a = useAction();
@@ -62,7 +63,9 @@ function Workspace() {
         throw new ApiError(422, "Couldn't open that photo. Try a JPG or PNG.");
       }
       if (blob.size > MAX_UPLOAD) throw new ApiError(413, "That file is over 4 MB. Try a smaller PDF or a photo.");
+      setCutOff(false);
       const out = await api<{ text: string; truncated: boolean }>("/ai/extract", { body: blob });
+      setCutOff(out.truncated);
       setQuestion((draft) =>
         draft
           ? `${draft}
@@ -295,6 +298,12 @@ ${out.text}`
               </Button>
             </div>
             <ErrorText error={a.error ?? reader.error} />
+            {cutOff && (
+              <p role="status" className="mt-2 text-sm text-muted">
+                That file had more text than fits in one question, so only the first part was added. Ask about one
+                question at a time.
+              </p>
+            )}
             <div className="flex items-center justify-between gap-3 px-2.5 pt-1">
               <QuotaNote quota={quota} />
               {locked && !quota.premium && (
