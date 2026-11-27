@@ -1155,6 +1155,7 @@
         "type": "object"
       },
       "PublicTutorOut": {
+        "description": "What students see. Vetting status and payout setup are the tutor's business.",
         "properties": {
           "avatar_url": {
             "anyOf": [
@@ -1199,10 +1200,6 @@
             "readOnly": true,
             "title": "Main Subject"
           },
-          "payouts_enabled": {
-            "title": "Payouts Enabled",
-            "type": "boolean"
-          },
           "rating_avg": {
             "title": "Rating Avg",
             "type": "number"
@@ -1210,10 +1207,6 @@
           "rating_count": {
             "title": "Rating Count",
             "type": "integer"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
           },
           "subjects": {
             "items": {
@@ -1245,8 +1238,6 @@
           "subjects",
           "levels",
           "hourly_rate_cents",
-          "status",
-          "payouts_enabled",
           "rating_avg",
           "rating_count",
           "display_name",

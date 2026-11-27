@@ -1436,7 +1436,10 @@ export interface components {
             /** Preferred Language */
             preferred_language?: string | null;
         };
-        /** PublicTutorOut */
+        /**
+         * PublicTutorOut
+         * @description What students see. Vetting status and payout setup are the tutor's business.
+         */
         PublicTutorOut: {
             /** Avatar Url */
             avatar_url?: string | null;
@@ -1453,14 +1456,10 @@ export interface components {
              * @description Stored as the first subject, so subject search needs no extra column.
              */
             readonly main_subject: string | null;
-            /** Payouts Enabled */
-            payouts_enabled: boolean;
             /** Rating Avg */
             rating_avg: number;
             /** Rating Count */
             rating_count: number;
-            /** Status */
-            status: string;
             /** Subjects */
             subjects: string[];
             /**

@@ -23,3 +23,10 @@ async def test_directory_lists_approved_tutors_and_matches_subjects_in_any_case(
     none = await client.get("/tutors", params={"subject": "Chemistry"}, headers=student.h)
     assert ids(none) == set()
     assert (await client.get("/tutors")).status_code == 401
+
+
+async def test_directory_hides_vetting_and_payout_details(flow) -> None:  # type: ignore[no-untyped-def]
+    tutors = (await flow.client.get("/tutors", headers=flow.student.h)).json()
+    assert tutors
+    for t in tutors:
+        assert "payouts_enabled" not in t and "status" not in t
