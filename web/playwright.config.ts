@@ -26,14 +26,15 @@ export default defineConfig({
     screenshot: "only-on-failure",
     video: "retain-on-failure",
   },
-  // desktop + mobile run everywhere (CI included). E2E_DEVICES=all adds the browsers real
+  // desktop, mobile and iphone run everywhere (CI included). E2E_DEVICES=all adds the browsers real
   // students use that Chromium can't stand in for: Safari on iPhone/iPad, Firefox, a small phone.
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"], launchOptions: { args: CHROMIUM_MEDIA } } },
     { name: "mobile", use: { ...devices["Pixel 7"], launchOptions: { args: CHROMIUM_MEDIA } } },
+    // Most students are on iPhones, and Safari is not Chromium: always run it.
+    { name: "iphone", use: { ...devices["iPhone 15"] } },
     ...(process.env.E2E_DEVICES === "all"
       ? [
-          { name: "iphone", use: { ...devices["iPhone 15"] } },
           { name: "iphone-se", use: { ...devices["iPhone SE (3rd gen)"] } },
           { name: "ipad", use: { ...devices["iPad Pro 11"] } },
           { name: "iphone-landscape", use: { ...devices["iPhone 15 landscape"] } },

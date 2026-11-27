@@ -108,8 +108,8 @@ test("homework a student attaches reaches the tutor and opens", async ({ browser
   const opened = tutor.context().waitForEvent("page");
   await tutor.getByRole("button", { name: "Open" }).first().click();
   const tab = await opened;
-  await tab.waitForLoadState();
-  expect(tab.url(), "the file tab should land on the signed link").not.toBe("about:blank");
+  // The tab opens blank during the tap (so Safari allows it), then goes to the signed link.
+  await tab.waitForURL((u) => u.href !== "about:blank", { timeout: 15_000 });
   for (const p of [student, tutor]) await p.context().close();
 });
 

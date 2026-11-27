@@ -43,6 +43,10 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const direction = WEBSITE_LANGUAGES.find(({ code }) => code === locale)!.direction;
   return (
     <html lang={locale} dir={direction} className={`${ui.variable} ${read.variable}`}>
+      <head>
+        {/* Every page talks to the API; open that connection while the page is still loading. */}
+        <link rel="preconnect" href={process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000"} crossOrigin="" />
+      </head>
       <body>
         <WebsiteLanguageProvider locale={locale} saved={saved}>
           <AuthProvider>

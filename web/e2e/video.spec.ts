@@ -30,9 +30,14 @@ test("both parties can open the live session; outsiders cannot", async ({ browse
     await expect(party.getByRole("button", { name: /microphone/i })).toBeVisible();
   }
 
-  // Camera toggle works and does not end the session.
-  await student.getByRole("button", { name: "Turn camera off" }).click();
-  await expect(student.getByRole("button", { name: "Turn camera on" })).toBeVisible();
+  // Camera toggle works both ways and does not end the session. Browsers without a camera
+  // (Playwright's Safari/Firefox have no synthetic one) start with it off; either way it flips.
+  const camOff = student.getByRole("button", { name: "Turn camera off" });
+  const camOn = student.getByRole("button", { name: "Turn camera on" });
+  await expect(camOff.or(camOn)).toBeVisible();
+  const startedOn = await camOff.isVisible();
+  await (startedOn ? camOff : camOn).click();
+  await expect(startedOn ? camOn : camOff.or(student.getByText(/camera/i).first())).toBeVisible();
 
   // Ending asks first, then closes the call for both sides; a new call can start while the
   // session is still funded.

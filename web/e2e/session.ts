@@ -16,6 +16,9 @@ export async function login(browser: Browser, email: string, viewport: { width: 
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL(/\/(student|tutor|admin)$/);
+  // Let the desk finish its first loads, so a test's next navigation doesn't cut them off
+  // (Safari reports cut-off requests as errors).
+  await page.waitForLoadState("networkidle");
   return page;
 }
 
