@@ -208,9 +208,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 function Progress({ view }: { view: View }) {
-  // The four most recent sessions: every stop is a column, and beyond ~5 columns a phone
-  // squeezes each title to a letter per line. Every session is still listed below the path.
-  const stops = [...view.all.slice(0, 4)].reverse().map((t) => ({
+  const stops = [...view.all].reverse().map((t) => ({
     id: t.id,
     title: t.title,
     subject: t.subject,
