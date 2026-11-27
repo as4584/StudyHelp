@@ -105,18 +105,23 @@ export function SessionPath({ status, accent }: { status: string; accent: string
   );
 }
 
+// Six fixed-size circles (five sessions + "next stop") is what fits the narrowest phone; more
+// columns pushed the desk wider than the screen once a student had many sessions.
+const MAX_STOPS = 5;
+
 /**
- * Every session as a stop on one continuous path (oldest → newest), coloured by subject; each
+ * The latest sessions as stops on one continuous path (oldest → newest), coloured by subject; each
  * ring fills with how far that session got. The path ends in a dashed "next stop".
  */
 export function PathHistory({
-  stops,
+  stops: allStops,
   nextHref,
 }: {
   stops: { id: string; title: string; subject: string; accent: string; progress: number; done: boolean }[];
   nextHref: string;
 }) {
-  if (!stops.length) return null;
+  if (!allStops.length) return null;
+  const stops = allStops.slice(-MAX_STOPS);
   // Teal runs along the unbroken streak of finished sessions from the start of the path.
   const firstOpen = stops.findIndex((s) => !s.done);
   const lead = firstOpen === -1 ? stops.length : firstOpen;
