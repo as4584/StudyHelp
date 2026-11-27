@@ -2,8 +2,9 @@
 
 import { ArrowRight, CircleX, Clock3, ShieldCheck } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 
+import { useAuth } from "@/components/auth";
 import { PathLine } from "@/components/path-line";
 import { Button, LinkButton } from "@/components/ui";
 import { api, money, type Me, type PaymentState } from "@/lib/api";
@@ -44,6 +45,13 @@ function PaymentResult({
   const canCheck = ok && (taskPayment || subscription);
   const [confirmation, setConfirmation] = useState<Confirmation>({ status: "checking" });
   const [retry, setRetry] = useState(0);
+  // The signed-in profile is cached app-wide. Once Premium is confirmed, reload it so the
+  // desk (Upgrade button, AI counter) shows Premium without a page reload.
+  const { refresh } = useAuth();
+  const refreshRef = useRef(refresh);
+  useEffect(() => {
+    refreshRef.current = refresh;
+  });
 
   useEffect(() => {
     if (!canCheck) return;
@@ -63,6 +71,8 @@ function PaymentResult({
           const me = await api<Me>("/me");
           if (cancelled) return;
           if (me.premium) {
+            await refreshRef.current();
+            if (cancelled) return;
             setConfirmation({ status: "premium" });
             return;
           }
