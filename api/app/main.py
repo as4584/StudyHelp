@@ -56,6 +56,9 @@ def create_app() -> FastAPI:
             environment=settings.environment,
             providers={
                 "payments": settings.payments_provider,
+                # What the website shows: "demo" (no Stripe), "test" (Stripe test keys) or
+                # "live" (real money). Derived from the key itself, never from a separate flag.
+                "payments_mode": settings.payments_mode,
                 "llm": settings.llm_provider,
                 "translation": settings.translation_provider,
                 "storage": settings.storage_provider,

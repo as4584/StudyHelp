@@ -56,7 +56,8 @@ function TrackView({
 }
 
 export default function CallPage() {
-  const { id } = useParams<{ id: string }>();
+  // Encoded once here: the id goes into API paths, so a crafted link cannot reach other routes.
+  const id = encodeURIComponent(useParams<{ id: string }>().id);
   const { me } = useRequireRole();
   const [phase, setPhase] = useState<Phase>("loading");
   const [notice, setNotice] = useState<string | null>(null);

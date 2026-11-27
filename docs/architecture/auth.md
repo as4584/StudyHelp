@@ -34,6 +34,21 @@ on still-valid tokens.
 The access token is sent to FastAPI as a bearer token; CORS allows only configured origins
 and no credentials.
 
+## Bot check on sign-up (Cloudflare Turnstile)
+
+Sign-up itself goes from the browser straight to Supabase Auth, so the gate we control is
+`POST /me/onboard`: no profile means no use of the app, and it requires a single-use Turnstile
+token that `app/services/bot_check.py` verifies with Cloudflare (fail closed). The sign-up form
+also passes its own token to `supabase.auth.signUp` as `captchaToken`, so turning on Supabase
+Auth's captcha (provider Turnstile, same secret) also stops scripted account creation itself.
+
+- `TURNSTILE_SECRET_KEY` (API, server-only) and `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (web).
+- Unset, both fall back to Cloudflare's published always-pass test keys (local runs, CI and
+  the demo). `ENVIRONMENT=production` refuses to start without a real secret.
+- Supabase captcha also gates sign-in and password reset. Add the widget to `/login` (whose
+  demo password-restore retry signs in twice, so it needs two tokens) **before** turning that
+  setting on.
+
 ## Tests
 
 `api/tests/integration/test_auth.py` (no token, malformed, tampered payload, foreign key with

@@ -6,6 +6,11 @@ from typing import Literal
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Cloudflare's published Turnstile test secrets: one always passes, one always fails.
+TURNSTILE_TEST_SECRET_PASS = "1x0000000000000000000000000000000AA"  # noqa: S105 (public)
+TURNSTILE_TEST_SECRET_FAIL = "2x0000000000000000000000000000000AA"  # noqa: S105 (public)
+TURNSTILE_TEST_SECRETS = (TURNSTILE_TEST_SECRET_PASS, TURNSTILE_TEST_SECRET_FAIL)
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -45,6 +50,9 @@ class Settings(BaseSettings):
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_premium_price_id: str = ""
+    # Live keys need this explicit switch (set by a human at go-live, production only), so a
+    # live key can never be picked up by accident in a preview, demo or local build.
+    stripe_live_mode: bool = False
 
     storage_provider: Literal["supabase", "fake"] = "supabase"
 
@@ -84,6 +92,16 @@ class Settings(BaseSettings):
     livekit_public_url: str = ""  # wss:// address browsers connect to
     video_token_ttl_s: int = Field(default=600, ge=60, le=3600)
 
+    # Bot check (Cloudflare Turnstile) on sign-up. When unset outside production, Cloudflare's
+    # published always-pass test secret is used, so local runs and CI need no real keys.
+    turnstile_secret_key: str = ""
+    turnstile_verify_url: str = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+    turnstile_timeout_s: float = 5.0
+
+    @property
+    def turnstile_secret(self) -> str:
+        return self.turnstile_secret_key or TURNSTILE_TEST_SECRET_PASS
+
     @property
     def jwt_issuer(self) -> str:
         return f"{self.supabase_url.rstrip('/')}/auth/v1"
@@ -91,6 +109,12 @@ class Settings(BaseSettings):
     @property
     def jwks_url(self) -> str:
         return f"{self.jwt_issuer}/.well-known/jwks.json"
+
+    @property
+    def payments_mode(self) -> Literal["demo", "test", "live"]:
+        if self.payments_provider != "stripe":
+            return "demo"
+        return "live" if self.stripe_secret_key.startswith(("sk_live_", "rk_live_")) else "test"
 
     @model_validator(mode="after")
     def _validate(self) -> "Settings":
@@ -101,9 +125,20 @@ class Settings(BaseSettings):
         if self.price_min_cents > self.price_max_cents:
             raise ValueError("PRICE_MIN_CENTS must not exceed PRICE_MAX_CENTS")
         if self.payments_provider == "stripe":
-            if not self.stripe_secret_key.startswith(("sk_test_", "rk_test_")):
+            test_key = self.stripe_secret_key.startswith(("sk_test_", "rk_test_"))
+            live_key = self.stripe_secret_key.startswith(("sk_live_", "rk_live_"))
+            if self.stripe_live_mode:
                 # Live keys are an explicit human approval boundary (AGENTS.md).
-                raise ValueError("Only Stripe TEST keys are permitted in this build")
+                if self.environment != "production":
+                    raise ValueError("STRIPE_LIVE_MODE is only allowed in production")
+                if not live_key:
+                    raise ValueError("STRIPE_LIVE_MODE needs a live Stripe key (sk_live_/rk_live_)")
+                if not self.stripe_premium_price_id:
+                    raise ValueError("STRIPE_PREMIUM_PRICE_ID is required in live mode")
+            elif not test_key:
+                raise ValueError(
+                    "Only Stripe TEST keys are permitted unless STRIPE_LIVE_MODE is turned on"
+                )
             if not self.stripe_webhook_secret:
                 raise ValueError("STRIPE_WEBHOOK_SECRET is required with the stripe provider")
         if self.environment == "production" and "fake" in (
@@ -114,6 +149,10 @@ class Settings(BaseSettings):
             self.video_provider if self.video_enabled else None,
         ):
             raise ValueError("Fake adapters are not allowed in production")
+        if self.environment == "production" and (
+            not self.turnstile_secret_key or self.turnstile_secret_key in TURNSTILE_TEST_SECRETS
+        ):
+            raise ValueError("A real TURNSTILE_SECRET_KEY is required in production")
         if self.llm_provider == "anthropic" and not (
             self.anthropic_api_key and self.anthropic_model
         ):

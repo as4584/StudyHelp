@@ -33,6 +33,18 @@ MessageBody = Annotated[
 ]
 # What each upload can be: the same types the pickers offer. Nothing executable or renderable
 # as a page (.exe, .html, .svg) can be stored and handed out behind a signed link.
+
+
+def Text(min_length: int = 1, max_length: int = 5000) -> object:
+    """Free text that must say something: surrounding spaces are trimmed before the length
+    checks, so a field of only spaces is refused."""
+    return Annotated[
+        str,
+        StringConstraints(strip_whitespace=True, min_length=min_length, max_length=max_length),
+    ]
+
+
+Subject = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=60)]
 TASK_FILE_TYPES = r"(pdf|png|jpe?g|webp|gif|heic|mp4|mov|webm)"
 TUTOR_DOC_TYPES = r"(pdf|png|jpe?g|webp|heic|doc|docx)"
 TASK_FILENAME = rf"(?i)^{SAFE_STEM}\.{TASK_FILE_TYPES}$"
@@ -105,6 +117,8 @@ class OnboardIn(BaseModel):
     display_name: DisplayName
     preferred_language: str = Lang
     policy: PolicyAcceptIn  # no account without accepting the role's policy
+    # Single-use Cloudflare Turnstile token from the sign-up bot check; verified server-side.
+    bot_token: str | None = Field(default=None, max_length=2048)
 
 
 class ProfilePatch(BaseModel):
@@ -115,7 +129,7 @@ class ProfilePatch(BaseModel):
 
 class TutorApplicationIn(BaseModel):
     bio: str = Field(max_length=2000)
-    subjects: list[str] = Field(min_length=1, max_length=10)
+    subjects: list[Subject] = Field(min_length=1, max_length=10)
     # The subject shown first on the tutor's profile; must be one of `subjects`.
     main_subject: str | None = Field(default=None, max_length=80)
     years_experience: int | None = Field(default=None, ge=0, le=60)
@@ -129,6 +143,11 @@ class TutorApplicationIn(BaseModel):
                 raise ValueError("main_subject must be one of subjects")
             rest = [s for s in self.subjects if s != self.main_subject]
             self.subjects = [self.main_subject, *rest]
+        # The same subject twice (in any letter case) is listed once.
+        unique: dict[str, str] = {}
+        for subject in self.subjects:
+            unique.setdefault(subject.casefold(), subject)
+        self.subjects = list(unique.values())
         return self
 
 
@@ -152,8 +171,12 @@ class TutorOut(ORM):
 
 
 class PublicTutorOut(TutorOut):
+    """What students see. Vetting status and payout setup are the tutor's business."""
+
     display_name: str
     avatar_url: str | None = None
+    status: str = Field(default="approved", exclude=True)
+    payouts_enabled: bool = Field(default=False, exclude=True)
 
 
 class ProfileOut(ORM):
@@ -176,9 +199,9 @@ class MeOut(BaseModel):
 
 
 class TaskIn(BaseModel):
-    subject: str = Field(min_length=1, max_length=60)
-    title: str = Field(min_length=3, max_length=140)
-    description: str = Field(min_length=1, max_length=5000)
+    subject: Subject
+    title: Text(3, 140)  # type: ignore[valid-type]
+    description: Text(1, 5000)  # type: ignore[valid-type]
     budget_cents: int
     language: str = Field(default="en", pattern=LANG_PATTERN)
     level: Level = "college"
@@ -235,7 +258,7 @@ class HireIn(BaseModel):
 
 
 class DeliverIn(BaseModel):
-    note: str = Field(min_length=1, max_length=5000)
+    note: Text(1, 5000)  # type: ignore[valid-type]
 
 
 class ReviewIn(BaseModel):
@@ -252,7 +275,7 @@ class ReviewOut(ORM):
 
 
 class DisputeIn(BaseModel):
-    reason: str = Field(min_length=3, max_length=2000)
+    reason: Text(3, 2000)  # type: ignore[valid-type]
 
 
 class DisputeOut(ORM):

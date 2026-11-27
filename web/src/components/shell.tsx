@@ -1,12 +1,13 @@
 "use client";
 
 import { ProfilePhoto } from "@/components/profile-photo";
-import { BookOpen, Inbox, LayoutDashboard, LogOut, Scale, Sparkles } from "lucide-react";
+import { BookOpen, Inbox, LayoutDashboard, LogOut, Scale, Sparkles, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import { POLICIES, policyHref } from "@/content/policies";
+import { BUSINESS } from "@/content/site";
 
 import { useAuth } from "./auth";
 import { WebsiteLanguagePicker } from "./website-language";
@@ -18,6 +19,7 @@ const NAV: Record<string, NavItem[]> = {
     { href: "/student", label: "Study desk", icon: LayoutDashboard, match: /^\/(student$|tasks\/)/ },
     { href: "/assistant", label: "AI tutor", icon: Sparkles },
     { href: "/student/tasks/new", label: "Ask a tutor", icon: BookOpen },
+    { href: "/tutors", label: "Tutors", icon: Users },
   ],
   tutor: [{ href: "/tutor", label: "Tutor desk", icon: Inbox, match: /^\/(tutor|tasks\/)/ }],
   admin: [{ href: "/admin", label: "Operations", icon: Scale, match: /^\/(admin|tasks\/)/ }],
@@ -46,7 +48,7 @@ function useNav() {
 }
 
 /** Public pages (landing, auth) render without the workspace chrome. */
-const BARE = /^\/($|login|signup|onboard|policies\/)/;
+const BARE = /^\/($|login|signup|onboard|policies\/|terms$|privacy$)/;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
@@ -64,20 +66,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** On every page: the sign-up policies, always one click away. */
+const footerLink = "font-semibold text-ink-2 hover:text-ink hover:underline";
+
+/** On every page: how to reach the business, plus the terms and policies one click away. */
 function SiteFooter({ className = "" }: { className?: string }) {
   return (
     <footer className={`mx-auto w-full max-w-[1120px] pb-10 ${className}`}>
-      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-rule pt-6 text-[13px] text-muted">
-        <span>StudyHelp · Global Study Help Tutor</span>
-        <WebsiteLanguagePicker />
+      <div className="grid gap-y-4 border-t border-rule pt-6 text-[13px] text-muted">
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+          <span>StudyHelp · Global Study Help Tutor</span>
+          <WebsiteLanguagePicker />
+        </div>
+        <address aria-label="Contact" className="flex flex-wrap gap-x-5 gap-y-2 not-italic" data-testid="site-contact">
+          <a href={`mailto:${BUSINESS.email}`} className={`${footerLink} break-all`}>
+            {BUSINESS.email}
+          </a>
+          <a href={`tel:${BUSINESS.tel}`} className={footerLink}>
+            {BUSINESS.phone}
+          </a>
+        </address>
         <nav aria-label="Policies" className="flex flex-wrap gap-x-5 gap-y-2">
+          <Link href="/terms" className={footerLink}>
+            Terms
+          </Link>
+          <Link href="/privacy" className={footerLink}>
+            Privacy
+          </Link>
           {Object.values(POLICIES).map((p) => (
-            <Link
-              key={p.slug}
-              href={policyHref(p.slug)}
-              className="font-semibold text-ink-2 hover:text-ink hover:underline"
-            >
+            <Link key={p.slug} href={policyHref(p.slug)} className={footerLink}>
               {p.shortTitle}
             </Link>
           ))}

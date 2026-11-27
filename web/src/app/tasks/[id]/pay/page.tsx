@@ -19,7 +19,8 @@ type Quote = Schemas["QuoteOut"];
  * labelled demo checkout when no Stripe keys are configured).
  */
 export default function ReviewPayment() {
-  const { id } = useParams<{ id: string }>();
+  // Encoded once here: the id goes into API paths, so a crafted link cannot reach other routes.
+  const id = encodeURIComponent(useParams<{ id: string }>().id);
   const { me } = useRequireRole("student");
   const [task, setTask] = useState<Task | null>(null);
   const [bid, setBid] = useState<Bid | null>(null);
