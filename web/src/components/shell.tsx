@@ -210,7 +210,9 @@ function MobileBar() {
         <MobileAccount />
       </div>
       {items.length > 1 && (
-        <nav className="flex gap-1 overflow-x-auto px-4 pb-2 sm:px-7" aria-label="Main">
+        // Every tab stays on screen: a 2-column grid on phones (a sideways scroller hid
+        // "Tutors" past the edge), one row from sm up.
+        <nav className="grid grid-cols-2 gap-1 px-4 pb-2 sm:flex sm:flex-wrap sm:px-7" aria-label="Main">
           {items.map((i) => {
             const active = isActive(i);
             return (
@@ -218,7 +220,7 @@ function MobileBar() {
                 key={i.href}
                 href={i.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex h-9 shrink-0 items-center gap-2 rounded-[6px] px-3 text-[14px] font-semibold ${
+                className={`flex h-9 min-w-0 items-center gap-2 rounded-[6px] px-3 text-[14px] font-semibold ${
                   active ? "bg-tutor-soft text-tutor" : "text-ink-2"
                 }`}
               >
