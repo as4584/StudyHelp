@@ -92,6 +92,12 @@ class Settings(BaseSettings):
     def jwks_url(self) -> str:
         return f"{self.jwt_issuer}/.well-known/jwks.json"
 
+    @property
+    def payments_mode(self) -> Literal["demo", "test", "live"]:
+        if self.payments_provider != "stripe":
+            return "demo"
+        return "live" if self.stripe_secret_key.startswith(("sk_live_", "rk_live_")) else "test"
+
     @model_validator(mode="after")
     def _validate(self) -> "Settings":
         if self.git_sha in ("", "unknown"):
