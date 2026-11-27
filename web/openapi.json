@@ -743,6 +743,18 @@
       },
       "OnboardIn": {
         "properties": {
+          "bot_token": {
+            "anyOf": [
+              {
+                "maxLength": 2048,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bot Token"
+          },
           "display_name": {
             "maxLength": 80,
             "minLength": 1,
@@ -3053,7 +3065,7 @@
     },
     "/me/onboard": {
       "post": {
-        "description": "Create the caller's profile, together with their policy acceptance. The id always comes\nfrom the verified token.",
+        "description": "Create the caller's profile, together with their policy acceptance. The id always comes\nfrom the verified token. A bot check token is required: no profile, no use of the app.",
         "operationId": "onboard_me_onboard_post",
         "requestBody": {
           "content": {

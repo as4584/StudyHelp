@@ -19,7 +19,10 @@ import pytest
 ADMIN_URL = os.environ.get(
     "TEST_ADMIN_DATABASE_URL", "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
 )
-TEST_DB = "gsht_test"
+# Overridable so parallel worktrees on one machine don't drop each other's test database.
+TEST_DB = os.environ.get("TEST_DB_NAME", "gsht_test")
+# What Cloudflare's test site key hands the browser; accepted by the always-pass test secret.
+BOT_TOKEN = "XXXX.DUMMY.TOKEN.XXXX"
 TEST_URL = ADMIN_URL.rsplit("/", 1)[0] + f"/{TEST_DB}"
 
 os.environ.update(
@@ -34,6 +37,8 @@ os.environ.update(
         "PLATFORM_FEE_BPS": "2500",
         "VIDEO_ENABLED": "true",
         "VIDEO_PROVIDER": "fake",
+        # Empty = Cloudflare's always-pass test secret: the bot check runs, offline.
+        "TURNSTILE_SECRET_KEY": "",
     }
 )
 

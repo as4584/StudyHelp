@@ -25,7 +25,8 @@ function SimulatedCheckout() {
   const [quote, setQuote] = useState<Schemas["QuoteOut"] | null>(null);
 
   useEffect(() => {
-    if (taskId && kind === "task_payment") api<Schemas["QuoteOut"]>(`/tasks/${encodeURIComponent(taskId)}/quote`).then(setQuote, () => {});
+    if (taskId && kind === "task_payment")
+      api<Schemas["QuoteOut"]>(`/tasks/${encodeURIComponent(taskId)}/quote`).then(setQuote, () => {});
   }, [taskId, kind]);
 
   const what =
