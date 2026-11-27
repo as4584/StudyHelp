@@ -47,7 +47,8 @@ function watch(page: Page) {
 async function check(page: Page, problems: string[], visit: Visit) {
   problems.length = 0;
   await page.goto(visit.path);
-  await page.waitForLoadState("networkidle");
+  // Best effort: the sign-up bot check keeps polling Cloudflare, so the network may never idle.
+  await page.waitForLoadState("networkidle", { timeout: 8_000 }).catch(() => {});
   const main = page.getByRole("main");
   await expect(main, `${visit.path}: no main content`).toBeVisible();
   await expect(main, `${visit.path}: blank page`).not.toHaveText(/^\s*$/);
