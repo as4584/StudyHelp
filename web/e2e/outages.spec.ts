@@ -25,6 +25,17 @@ test("the AI gateway down: the question stays, the message is honest, nothing is
   page: initial,
 }) => {
   const page = await login(browser, "student@demo.gsht", initial.viewportSize());
+  // Independent of how many free questions other tests already used on the shared student.
+  await page.route(/\/ai\/quota$/, (route) =>
+    route.fulfill({
+      json: { premium: false, period: "day", used: 0, limit: 5, remaining: 5, resets_at: "2099-01-01T00:00:00Z" },
+    }),
+  );
+  await page.route(/\/ai\/chats$/, (route) =>
+    route.request().method() === "POST"
+      ? route.fulfill({ status: 201, json: { id: "c-outage", subject: "" } })
+      : route.continue(),
+  );
   await page.route(/\/ai\/chats\/[^/]+\/messages$/, (route) =>
     route.request().method() === "POST"
       ? route.fulfill({
