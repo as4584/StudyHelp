@@ -329,3 +329,16 @@ def test_api_and_web_agree_on_policy_versions_and_rules() -> None:
     for policy, version in VERSIONS.items():
         assert f'"{version}"' in src, policy
     assert src.count('label: "') == sum(RULE_COUNTS.values())
+
+
+async def test_a_name_of_only_spaces_is_not_a_name(
+    client: httpx.AsyncClient, db: asyncpg.Connection, make_user: UserFactory
+) -> None:
+    h = await _new_login(db)
+    policy = {"agree": True, "full_name": "Ana Lopez", "rules": TUTOR_RULES}
+    body = {"role": "tutor", "display_name": "   ", "preferred_language": "en", "policy": policy}
+    assert (await client.post("/me/onboard", headers=h, json=body)).status_code == 422
+    r = await client.post("/me/onboard", headers=h, json={**body, "display_name": "  Ana  "})
+    assert r.status_code == 201 and r.json()["profile"]["display_name"] == "Ana"
+    s = await make_user("student")
+    assert (await client.patch("/me", headers=s.h, json={"display_name": "\t "})).status_code == 422

@@ -102,7 +102,8 @@ async def test_task_files_are_private(flow: Flow, make_user: UserFactory) -> Non
         json={"filename": "../../etc/passwd", "kind": "rubric"},
     )
     assert r.status_code == 422
-    for bad in ("..", ".", ".env"):
+    # Only the types the picker offers: nothing executable or renderable as a web page.
+    for bad in ("..", ".", ".env", "x.exe", "page.html", "logo.svg", "notes", "a.pdf.exe"):
         r = await c.post(
             f"/tasks/{flow.task_id}/files",
             headers=flow.student.h,
@@ -271,3 +272,24 @@ async def test_big_bodies_are_refused_before_parsing(client) -> None:  # type: i
         "/tasks", content=b"x" * (300 * 1024), headers={"content-type": "application/json"}
     )
     assert r.status_code == 413
+
+
+async def test_chat_messages_of_only_spaces_are_refused(flow: Flow) -> None:
+    await flow.to("hired")
+    url = f"/conversations/{flow.conversation_id}/messages"
+    r = await flow.client.post(url, headers=flow.student.h, json={"body": " \n\t "})
+    assert r.status_code == 422
+    r = await flow.client.post(url, headers=flow.student.h, json={"body": "  hi  "})
+    assert r.status_code == 201 and r.json()["body"] == "hi"
+
+
+async def test_tutor_documents_must_be_a_document_or_photo(
+    client: httpx.AsyncClient, make_user: UserFactory
+) -> None:
+    tutor = await make_user("tutor")
+    for bad in ("setup.exe", "cv.html", "id.svg", "degree"):
+        r = await client.post("/tutors/me/documents", headers=tutor.h, json={"filename": bad})
+        assert r.status_code == 422, bad
+    for ok in ("Degree Scan.JPG", "cv.docx"):
+        r = await client.post("/tutors/me/documents", headers=tutor.h, json={"filename": ok})
+        assert r.status_code == 201, ok

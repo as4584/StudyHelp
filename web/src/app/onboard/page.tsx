@@ -2,7 +2,7 @@
 
 import { BookOpen, GraduationCap } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { AuthFrame } from "@/components/auth-frame";
 import { useAuth } from "@/components/auth";
@@ -17,12 +17,19 @@ const ROLES = [
 
 export default function OnboardPage() {
   const router = useRouter();
-  const { refresh } = useAuth();
+  const { refresh, me } = useAuth();
   const [role, setRole] = useState<"student" | "tutor">("student");
   const [name, setName] = useState("");
   const [lang, setLang] = useState("en");
   const [policy, setPolicy] = useState(EMPTY_POLICY);
   const { pending, error, run } = useAction();
+  const nameOk = name.trim().length > 0;
+
+  // Already set up (e.g. the back button, or a bookmarked link): go to your desk, not a second sign-up.
+  const role0 = me?.profile.role;
+  useEffect(() => {
+    if (role0) router.replace(role0 === "tutor" ? "/tutor" : role0 === "admin" ? "/admin" : "/student");
+  }, [role0, router]);
 
   return (
     <AuthFrame title="Set up your desk" lede="A few quick details and you're in.">
@@ -32,7 +39,7 @@ export default function OnboardPage() {
           e.preventDefault();
           void run(async () => {
             await api("/me/onboard", {
-              body: { role, display_name: name, preferred_language: lang, policy: policyBody(role, policy) },
+              body: { role, display_name: name.trim(), preferred_language: lang, policy: policyBody(role, policy) },
             });
             await refresh();
             router.push(role === "tutor" ? "/tutor" : "/student");
@@ -81,7 +88,12 @@ export default function OnboardPage() {
         </Field>
         <PolicyFields role={role} value={policy} onChange={setPolicy} />
         <ErrorText error={error} />
-        <Button type="submit" disabled={pending || !policyComplete(role, policy)} loading={pending} className="w-full">
+        <Button
+          type="submit"
+          disabled={pending || !nameOk || !policyComplete(role, policy)}
+          loading={pending}
+          className="w-full"
+        >
           Finish
         </Button>
       </form>

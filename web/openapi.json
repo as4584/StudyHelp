@@ -1842,7 +1842,7 @@
           "filename": {
             "maxLength": 200,
             "minLength": 1,
-            "pattern": "^[\\w\\- ()][\\w.\\- ()]*$",
+            "pattern": "(?i)^[\\w\\- ()][\\w.\\- ()]*\\.(pdf|png|jpe?g|webp|heic|doc|docx)$",
             "title": "Filename",
             "type": "string"
           },
@@ -1952,7 +1952,7 @@
           "filename": {
             "maxLength": 200,
             "minLength": 1,
-            "pattern": "^[\\w\\- ()][\\w.\\- ()]*$",
+            "pattern": "(?i)^[\\w\\- ()][\\w.\\- ()]*\\.(pdf|png|jpe?g|webp|gif|heic|mp4|mov|webm)$",
             "title": "Filename",
             "type": "string"
           },

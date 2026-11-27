@@ -2,9 +2,17 @@
 
 import uuid
 from datetime import date, datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 
 from app.core.config import get_settings
 from app.providers.translation.languages import enabled_codes
@@ -16,8 +24,19 @@ Level = Literal["high_school", "college"]
 # A client-resized profile photo as a data URL; "" clears it.
 AVATAR_PATTERN = r"^(|data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+)$"
 # No leading dot: rules out "." / ".." path segments and hidden files.
-SAFE_FILENAME = r"^[\w\- ()][\w.\- ()]*$"
+SAFE_STEM = r"[\w\- ()][\w.\- ()]*"
 EMAIL = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+# Trimmed before the length check, so a name or message of only spaces is a 422.
+DisplayName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
+MessageBody = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=4000)
+]
+# What each upload can be: the same types the pickers offer. Nothing executable or renderable
+# as a page (.exe, .html, .svg) can be stored and handed out behind a signed link.
+TASK_FILE_TYPES = r"(pdf|png|jpe?g|webp|gif|heic|mp4|mov|webm)"
+TUTOR_DOC_TYPES = r"(pdf|png|jpe?g|webp|heic|doc|docx)"
+TASK_FILENAME = rf"(?i)^{SAFE_STEM}\.{TASK_FILE_TYPES}$"
+TUTOR_DOC_FILENAME = rf"(?i)^{SAFE_STEM}\.{TUTOR_DOC_TYPES}$"
 
 
 def _session_price(cents: int) -> int:
@@ -83,13 +102,13 @@ class PolicyStatusOut(BaseModel):
 
 class OnboardIn(BaseModel):
     role: Literal["student", "tutor"]  # admin is never self-assignable
-    display_name: str = Field(min_length=1, max_length=80)
+    display_name: DisplayName
     preferred_language: str = Lang
     policy: PolicyAcceptIn  # no account without accepting the role's policy
 
 
 class ProfilePatch(BaseModel):
-    display_name: str | None = Field(default=None, min_length=1, max_length=80)
+    display_name: DisplayName | None = None
     preferred_language: str | None = Field(default=None, pattern=LANG_PATTERN)
     avatar_url: str | None = Field(default=None, max_length=200000, pattern=AVATAR_PATTERN)
 
@@ -308,7 +327,7 @@ class WebhookAck(BaseModel):
 
 
 class MessageIn(BaseModel):
-    body: str = Field(min_length=1, max_length=4000)
+    body: MessageBody
 
 
 class TranslationOut(ORM):
@@ -335,12 +354,12 @@ class ConversationOut(ORM):
 
 
 class UploadIn(BaseModel):
-    filename: str = Field(min_length=1, max_length=200, pattern=SAFE_FILENAME)
+    filename: str = Field(min_length=1, max_length=200, pattern=TASK_FILENAME)
     kind: Literal["rubric", "deliverable"] = "rubric"
 
 
 class TutorDocumentIn(BaseModel):
-    filename: str = Field(min_length=1, max_length=200, pattern=SAFE_FILENAME)
+    filename: str = Field(min_length=1, max_length=200, pattern=TUTOR_DOC_FILENAME)
     kind: Literal["qualification", "resume"] = "qualification"
 
 
