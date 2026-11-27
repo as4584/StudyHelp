@@ -12,7 +12,7 @@ from app.core.db import get_sessionmaker
 from app.core.errors import DomainError
 from app.core.limits import BodyLimitMiddleware
 from app.observability.logging import RequestContextMiddleware, configure_logging, event
-from app.routers import admin, ai, chat, demo, me, payments, tasks, video
+from app.routers import admin, ai, avatars, chat, demo, me, payments, tasks, video
 from app.schemas.api import HealthOut
 
 log = logging.getLogger("app")
@@ -92,6 +92,7 @@ def create_app() -> FastAPI:
         ai.router,
         admin.router,
         video.router,
+        avatars.router,
     ):
         app.include_router(r)
     if get_settings().environment == "demo":
