@@ -36,7 +36,7 @@ entry point for any agent. The repository — not chat history — is the memory
 - expose the Supabase secret/service key, Stripe secrets or provider keys to the browser
 - bypass FastAPI for payment/admin state changes, or treat frontend state as proof of payment
 - store long-lived credentials in `localStorage` (Supabase session lives in cookies)
-- commit secrets (`scripts/security` must pass), or use live Stripe keys (config refuses them)
+- commit secrets (`scripts/security` must pass), or use live Stripe keys (config refuses them unless a human sets STRIPE_LIVE_MODE=true in production)
 - weaken or delete authorization/RLS/payment tests to get a green build
 
 ## Product guardrails
