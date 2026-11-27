@@ -372,8 +372,19 @@ export function Avatar({
 }) {
   const size = large ? "size-14 text-[20px]" : "size-7 text-[12px]";
   if (src) {
-    // eslint-disable-next-line @next/next/no-img-element -- inline data URL, nothing to optimize
-    return <img src={src} alt="" aria-hidden className={cx(size, "shrink-0 rounded-full object-cover")} />;
+    // Own photo: a data URL; others: a signed, forever-cached API link. Lazy so a long
+    // tutor list only fetches the photos on screen.
+    // eslint-disable-next-line @next/next/no-img-element -- tiny avatar, nothing to optimize
+    return (
+      <img
+        src={src}
+        alt=""
+        aria-hidden
+        loading="lazy"
+        decoding="async"
+        className={cx(size, "shrink-0 rounded-full object-cover")}
+      />
+    );
   }
   // Initial of the given name, skipping honorifics ("Prof. Diego" -> "D").
   const word = name.replace(/^(prof|dr|mr|mrs|ms)\.?\s+/i, "").trim();

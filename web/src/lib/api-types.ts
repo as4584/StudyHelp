@@ -920,8 +920,6 @@ export interface components {
     schemas: {
         /** AdminUserOut */
         AdminUserOut: {
-            /** Avatar Url */
-            avatar_url?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -3338,6 +3336,8 @@ export interface operations {
         parameters: {
             query?: {
                 subject?: string | null;
+                limit?: number;
+                offset?: number;
             };
             header?: never;
             path?: never;

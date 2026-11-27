@@ -1,12 +1,13 @@
 import uuid
 from typing import Literal
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from sqlalchemy import exists, select
 
 from app.api.dependencies import SessionDep, StudentDep, TutorDep, UserDep
 from app.core.errors import Forbidden
 from app.models.entities import Profile, Review, TutorProfile
+from app.routers.avatars import avatar_link, avatar_version
 from app.schemas.api import (
     BidIn,
     BidOut,
@@ -52,30 +53,36 @@ async def cancel_task(task_id: uuid.UUID, student: StudentDep, session: SessionD
 
 @router.get("/{task_id}/bids", response_model=list[BidWithTutorOut])
 async def list_bids(
-    task_id: uuid.UUID, user: UserDep, session: SessionDep
+    task_id: uuid.UUID, user: UserDep, session: SessionDep, request: Request
 ) -> list[BidWithTutorOut]:
     bids = await marketplace.list_bids(session, user, task_id)
-    out = []
-    for b in bids:
-        row = (
+    # One query for every bidder's card (was one query per bid).
+    rows = {
+        r[0]: r[1:]
+        for r in (
             await session.execute(
                 select(
+                    Profile.id,
                     Profile.display_name,
                     TutorProfile.rating_avg,
                     TutorProfile.rating_count,
-                    Profile.avatar_url,
+                    avatar_version,
                     TutorProfile.subjects,
                     TutorProfile.years_experience,
                 )
                 .join(TutorProfile, TutorProfile.user_id == Profile.id)
-                .where(Profile.id == b.tutor_id)
+                .where(Profile.id.in_({b.tutor_id for b in bids}))
             )
-        ).one()
+        ).all()
+    }
+    out = []
+    for b in bids:
+        row = rows[b.tutor_id]
         out.append(
             BidWithTutorOut(
                 **BidOut.model_validate(b).model_dump(),
                 tutor_name=row[0],
-                tutor_avatar_url=row[3],
+                tutor_avatar_url=avatar_link(request, b.tutor_id, row[3]),
                 tutor_rating_avg=float(row[1]),
                 tutor_rating_count=row[2],
                 tutor_main_subject=row[4][0] if row[4] else None,
