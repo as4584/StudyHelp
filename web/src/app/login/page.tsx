@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 
 import { AuthFrame } from "@/components/auth-frame";
 import { Button, ErrorText, Field, inputCls, useAction } from "@/components/ui";
@@ -11,8 +10,6 @@ import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const { pending, error, run } = useAction();
 
   return (
@@ -42,6 +39,11 @@ export default function LoginPage() {
         className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
+          // Read the boxes themselves: text typed before the page finished loading, or filled
+          // in by a password manager, is in the form even if React never saw a keystroke.
+          const form = new FormData(e.currentTarget);
+          const email = String(form.get("email") ?? "").trim();
+          const password = String(form.get("password") ?? "");
           void run(async () => {
             let { error } = await supabase().auth.signInWithPassword({ email, password });
             // Public demo accounts: if a visitor changed the password, put it back and retry once.
@@ -58,24 +60,10 @@ export default function LoginPage() {
         }}
       >
         <Field label="Email">
-          <input
-            className={inputCls}
-            type="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
+          <input className={inputCls} type="email" autoComplete="email" name="email" required />
         </Field>
         <Field label="Password">
-          <input
-            className={inputCls}
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          <input className={inputCls} type="password" autoComplete="current-password" name="password" required />
         </Field>
         <ErrorText error={error} />
         <Button type="submit" disabled={pending} loading={pending} className="w-full">
