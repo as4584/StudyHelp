@@ -325,6 +325,9 @@ async def close_unpaid_checkouts(session: AsyncSession, task: Task) -> None:
 
 # --------------------------------------------------------------------------- tips
 
+# Inside Stripe's 24-hour idempotency window, so a reused key returns the same checkout.
+TIP_CHECKOUT_REUSE = timedelta(hours=23)
+
 
 async def start_tip_checkout(
     session: AsyncSession,
@@ -339,15 +342,32 @@ async def start_tip_checkout(
         raise NotFound("task not found")
     if task.status != "completed" or task.hired_tutor_id is None:
         raise InvalidState("tips are available after the session is completed")
-    tip = Tip(
-        task_id=task.id,
-        student_id=student.id,
-        tutor_id=task.hired_tutor_id,
-        amount_cents=amount_cents,
-    )
-    session.add(tip)
-    await session.flush()
-    _ledger(session, "tip.created", tip=tip, amount_cents=amount_cents)
+    # Tapping the same tip again reopens its checkout (same idempotency key -> same session)
+    # instead of creating a new row and a new provider checkout on every tap.
+    tip = (
+        await session.execute(
+            select(Tip)
+            .where(
+                Tip.task_id == task.id,
+                Tip.student_id == student.id,
+                Tip.amount_cents == amount_cents,
+                Tip.status == "pending",
+                Tip.created_at > datetime.now(UTC) - TIP_CHECKOUT_REUSE,
+            )
+            .order_by(Tip.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if tip is None:
+        tip = Tip(
+            task_id=task.id,
+            student_id=student.id,
+            tutor_id=task.hired_tutor_id,
+            amount_cents=amount_cents,
+        )
+        session.add(tip)
+        await session.flush()
+        _ledger(session, "tip.created", tip=tip, amount_cents=amount_cents)
     checkout = await gateway.create_payment_checkout(
         amount_cents=amount_cents,
         description=f"Tip for your tutor: {task.title}",
@@ -547,7 +567,33 @@ async def _on_charge_refunded(
     payment = (
         await session.execute(select(Payment).where(Payment.charge_id == obj["id"]))
     ).scalar_one_or_none()
-    if payment is not None and payment.status == "held":
+    if payment is None:
+        return
+    # Stripe sends charge.refunded for partial refunds too; only `refunded: true` means the
+    # whole charge went back. A partial refund, or one after the tutor was paid, is recorded
+    # for an admin to review instead of silently closing (or ignoring) the session.
+    full = obj.get("refunded", True) is not False
+    if not full or payment.status != "held":
+        if payment.status in ("held", "released"):
+            _ledger(
+                session,
+                "payment.refunded_externally_needs_review",
+                payment=payment,
+                amount_cents=obj.get("amount_refunded"),
+                provider_event_id=event_id,
+                full=full,
+                payment_status=payment.status,
+            )
+            audit(
+                session,
+                actor=None,
+                action="payment.refund_needs_review",
+                entity_type="payment",
+                entity_id=payment.id,
+                metadata={"full": full, "amount_refunded": obj.get("amount_refunded")},
+            )
+        return
+    if payment.status == "held":
         payment.status = "refunded"
         _ledger(session, "payment.refunded", payment=payment, provider_event_id=event_id)
         task = await session.get(Task, payment.task_id, with_for_update=True)
