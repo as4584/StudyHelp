@@ -20,6 +20,8 @@ from app.services.solver import Unsafe, parse
         ("balance C3H8 + O2 -> CO2 + H2O", "C3H8 + 5O2 -> 3CO2 + 4H2O"),
         ("balance Ca(OH)2 + HCl -> CaCl2 + H2O", "Ca(OH)2 + 2HCl -> CaCl2 + 2H2O"),
         ("d/dt of t^3", "d/dt of t^3 = 3t^2"),
+        ("solve x^2 = -1", "x = -i, x = i"),
+        ("solve x^2 + 2x + 5 = 0", "x = -1 - 2i, x = -1 + 2i"),
     ],
 )
 async def test_computes_exact_results(question: str, expected: str) -> None:
