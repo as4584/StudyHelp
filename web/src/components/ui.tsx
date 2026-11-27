@@ -154,11 +154,17 @@ export function Button({
         className,
       )}
     >
-      <span className={cx("inline-flex items-center gap-2", busy && "invisible")}>{children}</span>
+      <span className={cx("inline-flex items-center gap-2", busy && "invisible")} aria-hidden={busy || undefined}>
+        {children}
+      </span>
       {busy && (
-        <span className="absolute inset-0 flex items-center justify-center" aria-hidden>
-          <span className="size-4 animate-spin rounded-full border-2 border-current border-r-transparent" />
-        </span>
+        <>
+          {/* Hidden text drops out of the accessible name; keep the label for screen readers. */}
+          <span className="sr-only">{children}</span>
+          <span className="absolute inset-0 flex items-center justify-center" aria-hidden>
+            <span className="size-4 animate-spin rounded-full border-2 border-current border-r-transparent" />
+          </span>
+        </>
       )}
     </button>
   );

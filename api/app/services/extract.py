@@ -28,6 +28,7 @@ from app.core.config import Settings, get_settings
 from app.core.errors import DomainError, ProviderError, TooMany
 from app.models.entities import AiUsage
 from app.observability.logging import event, request_id_var
+from app.providers.llm import GATEWAY_CONNECT_S
 
 log = logging.getLogger("extract")
 
@@ -140,14 +141,17 @@ async def _vision(settings: Settings, image: bytes) -> str:
         async with httpx.AsyncClient(
             base_url=settings.ollama_base_url.rstrip("/"),
             headers=headers,
-            timeout=settings.ocr_timeout_s,
+            timeout=httpx.Timeout(settings.ocr_timeout_s, connect=GATEWAY_CONNECT_S),
             trust_env=False,
         ) as client:
             resp = await client.post("/api/chat", json=body)
             resp.raise_for_status()
             text = str(resp.json()["message"]["content"])
     except (httpx.HTTPError, KeyError, ValueError) as exc:
-        raise ProviderError("reading photos is temporarily unavailable") from exc
+        raise ProviderError(
+            "Reading photos is temporarily unavailable. Please type your question instead,"
+            " or try again in a few minutes."
+        ) from exc
     text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
     text = re.sub(r"^```\w*\n?|\n?```$", "", text).strip()
     return "" if text.strip().upper() == "NO_TEXT" else text

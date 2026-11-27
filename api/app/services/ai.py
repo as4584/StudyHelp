@@ -176,7 +176,10 @@ async def ask(
         await session.execute(delete(AiMessage).where(AiMessage.id == asked.id))
         await session.commit()
         event(log, "llm.failed", logging.WARNING, provider=llm.name, error=str(exc))
-        raise ProviderError("the AI assistant is temporarily unavailable") from exc
+        raise ProviderError(
+            "The AI assistant is temporarily unavailable. Your question was not counted;"
+            " please try again in a few minutes."
+        ) from exc
     latency = round((time.perf_counter() - start) * 1000)
     reply = AiMessage(
         chat_id=chat.id, role="assistant", content=result.text + solver.checked_lines(facts)

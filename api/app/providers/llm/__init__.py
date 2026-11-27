@@ -1,5 +1,6 @@
 """LLM providers behind one protocol. Model ids are configuration, never hard-coded."""
 
+import time
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any, Literal, Protocol, cast
@@ -23,6 +24,41 @@ class LLMResult:
 
 class LLMError(Exception):
     pass
+
+
+# The self-hosted gateway is a PC behind a tunnel: when it is off, connecting fails or hangs.
+# Connecting gets a few seconds; generating an answer keeps the long read timeout.
+GATEWAY_CONNECT_S = 5.0
+_PROBE_TTL_S = 30.0
+_probe_cache: dict[str, tuple[float, str]] = {}
+
+
+async def gateway_status(settings: Settings) -> str:
+    """'ok' / 'unreachable' for the self-hosted model gateway, 'n/a' for hosted or fake
+    providers. Cached for 30 s so /ready stays cheap; any HTTP answer below 500 counts as
+    reachable (the gateway may refuse the probe path itself), a 5xx or no answer does not
+    (the tunnel answers 502/530 when the PC is off)."""
+    uses_gateway = "ollama" in (settings.llm_provider, settings.ocr_provider)
+    if not uses_gateway:
+        return "n/a"
+    base = settings.ollama_base_url.rstrip("/")
+    now = time.monotonic()
+    hit = _probe_cache.get(base)
+    if hit and now - hit[0] < _PROBE_TTL_S:
+        return hit[1]
+    import httpx
+
+    headers = (
+        {"Authorization": f"Bearer {settings.ollama_api_key}"} if settings.ollama_api_key else {}
+    )
+    try:
+        async with httpx.AsyncClient(timeout=3.0, trust_env=False) as client:
+            resp = await client.get(f"{base}/api/tags", headers=headers)
+        status = "ok" if resp.status_code < 500 else "unreachable"
+    except httpx.HTTPError:
+        status = "unreachable"
+    _probe_cache[base] = (now, status)
+    return status
 
 
 class LLMProvider(Protocol):
@@ -112,7 +148,8 @@ class OllamaProvider:
         self._client = httpx.AsyncClient(
             base_url=settings.ollama_base_url.rstrip("/"),
             headers=headers,
-            timeout=settings.ollama_timeout_s,
+            # A gateway that is off fails in seconds; only a real answer may take long.
+            timeout=httpx.Timeout(settings.ollama_timeout_s, connect=GATEWAY_CONNECT_S),
             trust_env=False,  # a model endpoint never goes through host proxies
         )
         self._model = settings.ollama_model
