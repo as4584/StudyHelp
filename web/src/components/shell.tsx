@@ -1,7 +1,7 @@
 "use client";
 
 import { ProfilePhoto } from "@/components/profile-photo";
-import { BookOpen, Inbox, LayoutDashboard, LogOut, Scale, Sparkles } from "lucide-react";
+import { BookOpen, Inbox, LayoutDashboard, LogOut, Scale, Sparkles, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -18,6 +18,7 @@ const NAV: Record<string, NavItem[]> = {
     { href: "/student", label: "Study desk", icon: LayoutDashboard, match: /^\/(student$|tasks\/)/ },
     { href: "/assistant", label: "AI tutor", icon: Sparkles },
     { href: "/student/tasks/new", label: "Ask a tutor", icon: BookOpen },
+    { href: "/tutors", label: "Tutors", icon: Users },
   ],
   tutor: [{ href: "/tutor", label: "Tutor desk", icon: Inbox, match: /^\/(tutor|tasks\/)/ }],
   admin: [{ href: "/admin", label: "Operations", icon: Scale, match: /^\/(admin|tasks\/)/ }],

@@ -363,14 +363,17 @@ export function Avatar({
   name,
   tone = "muted",
   src,
+  large = false,
 }: {
   name: string;
   tone?: "tutor" | "muted" | "mastery";
   src?: string | null;
+  large?: boolean;
 }) {
+  const size = large ? "size-14 text-[20px]" : "size-7 text-[12px]";
   if (src) {
     // eslint-disable-next-line @next/next/no-img-element -- inline data URL, nothing to optimize
-    return <img src={src} alt="" aria-hidden className="size-7 shrink-0 rounded-full object-cover" />;
+    return <img src={src} alt="" aria-hidden className={cx(size, "shrink-0 rounded-full object-cover")} />;
   }
   // Initial of the given name, skipping honorifics ("Prof. Diego" -> "D").
   const word = name.replace(/^(prof|dr|mr|mrs|ms)\.?\s+/i, "").trim();
@@ -381,10 +384,7 @@ export function Avatar({
   return (
     <span
       aria-hidden
-      className={cx(
-        "inline-flex size-7 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold",
-        t,
-      )}
+      className={cx("inline-flex shrink-0 items-center justify-center rounded-full font-semibold", size, t)}
     >
       {initial}
     </span>
