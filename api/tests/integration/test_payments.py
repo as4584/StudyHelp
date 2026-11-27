@@ -386,3 +386,45 @@ async def test_simulated_webhooks_cannot_be_forged(client) -> None:  # type: ign
         headers={"stripe-signature": sig, "content-type": "application/json"},
     )
     assert r.status_code == 400
+
+
+async def test_a_partial_stripe_refund_does_not_close_the_session(flow: Flow, db) -> None:  # type: ignore[no-untyped-def]
+    await flow.to("delivered")
+    from app.core.db import get_sessionmaker
+    from app.providers.payments import get_gateway
+
+    pay = await _payment(db, flow.task_id)
+    evt = {
+        "id": "evt_refund_partial",
+        "type": "charge.refunded",
+        "data": {"object": {"id": pay["charge_id"], "refunded": False, "amount_refunded": 100}},
+    }
+    async with get_sessionmaker()() as session:
+        await payments.process_event(session, get_gateway(), evt)
+    task = (await flow.client.get(f"/tasks/{flow.task_id}", headers=flow.student.h)).json()
+    assert task["status"] == "delivered"
+    assert (await _payment(db, flow.task_id))["status"] == "held"
+    kinds = await db.fetch(
+        "SELECT kind FROM payment_events WHERE provider_event_id = 'evt_refund_partial'"
+    )
+    assert [k["kind"] for k in kinds] == ["payment.refunded_externally_needs_review"]
+
+
+async def test_tapping_a_tip_again_reopens_the_same_checkout(flow: Flow, db) -> None:  # type: ignore[no-untyped-def]
+    await flow.to("delivered")
+    r = await flow.client.post(f"/tasks/{flow.task_id}/release", headers=flow.student.h)
+    assert r.status_code == 200, r.text
+    urls = [
+        (
+            await flow.client.post(
+                f"/tasks/{flow.task_id}/tips", headers=flow.student.h, json={"amount_cents": 500}
+            )
+        ).json()["url"]
+        for _ in range(5)
+    ]
+    assert len(set(urls)) == 1
+    other = await flow.client.post(
+        f"/tasks/{flow.task_id}/tips", headers=flow.student.h, json={"amount_cents": 200}
+    )
+    assert other.json()["url"] != urls[0]
+    assert await db.fetchval("select count(*) from tips") == 2

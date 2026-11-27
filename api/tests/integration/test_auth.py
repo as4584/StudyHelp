@@ -7,7 +7,7 @@ import uuid
 import httpx
 import jwt
 
-from tests.conftest import ISSUER, TRUSTED, UNTRUSTED, UserFactory, make_token
+from tests.conftest import BOT_TOKEN, ISSUER, TRUSTED, UNTRUSTED, UserFactory, make_token
 
 
 async def test_health_is_public_and_identifies_release(client: httpx.AsyncClient) -> None:
@@ -15,6 +15,7 @@ async def test_health_is_public_and_identifies_release(client: httpx.AsyncClient
     assert r.status_code == 200
     body = r.json()
     assert {"status", "version", "git_sha", "environment"} <= body.keys()
+    assert body["providers"]["payments_mode"] == "demo"  # drives the site's demo labels
     r = await client.get("/ready")
     assert r.status_code == 200 and r.json()["providers"]["schema"] == "0009_rls_active_users"
 
@@ -143,6 +144,7 @@ async def test_onboard_cannot_self_assign_admin(client: httpx.AsyncClient, db) -
         headers=h,
         json={
             "role": "student",
+            "bot_token": BOT_TOKEN,
             "display_name": "x",
             "preferred_language": "en",
             "policy": {
@@ -159,12 +161,46 @@ async def test_onboard_cannot_self_assign_admin(client: httpx.AsyncClient, db) -
         headers=h,
         json={
             "role": "tutor",
+            "bot_token": BOT_TOKEN,
             "display_name": "x",
             "preferred_language": "en",
             "policy": {"agree": True, "full_name": "Sam Student", "rules": [True] * 5},
         },
     )
     assert r.status_code == 409  # cannot re-onboard into another role
+
+
+async def test_onboarding_needs_a_bot_check(client: httpx.AsyncClient, db, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    from app.core.config import get_settings
+
+    uid = uuid.uuid4()
+    await db.execute("insert into auth.users(id) values ($1)", uid)
+    h = {"Authorization": f"Bearer {make_token(str(uid))}"}
+    body = {
+        "role": "student",
+        "display_name": "Sam",
+        "preferred_language": "en",
+        "policy": {
+            "agree": True,
+            "full_name": "Sam Student",
+            "date_of_birth": "2000-01-01",
+            "rules": [True] * 4,
+        },
+    }
+    r = await client.post("/me/onboard", headers=h, json=body)
+    assert r.status_code == 400 and r.json()["code"] == "bot_check_failed", r.text
+    # A token Cloudflare rejects (always-fail test secret) creates no profile either.
+    monkeypatch.setenv("TURNSTILE_SECRET_KEY", "2x0000000000000000000000000000000AA")
+    get_settings.cache_clear()
+    try:
+        r = await client.post("/me/onboard", headers=h, json={**body, "bot_token": BOT_TOKEN})
+        assert r.status_code == 400
+    finally:
+        monkeypatch.delenv("TURNSTILE_SECRET_KEY")
+        get_settings.cache_clear()
+    assert await db.fetchval("select count(*) from profiles where id = $1", uid) == 0
+    r = await client.post("/me/onboard", headers=h, json={**body, "bot_token": BOT_TOKEN})
+    assert r.status_code == 201
 
 
 async def test_suspended_user_blocked_immediately(

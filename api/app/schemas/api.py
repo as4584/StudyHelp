@@ -2,9 +2,17 @@
 
 import uuid
 from datetime import date, datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 
 from app.core.config import get_settings
 from app.providers.translation.languages import enabled_codes
@@ -16,8 +24,31 @@ Level = Literal["high_school", "college"]
 # A client-resized profile photo as a data URL; "" clears it.
 AVATAR_PATTERN = r"^(|data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+)$"
 # No leading dot: rules out "." / ".." path segments and hidden files.
-SAFE_FILENAME = r"^[\w\- ()][\w.\- ()]*$"
+SAFE_STEM = r"[\w\- ()][\w.\- ()]*"
 EMAIL = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+# Trimmed before the length check, so a name or message of only spaces is a 422.
+DisplayName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
+MessageBody = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=4000)
+]
+# What each upload can be: the same types the pickers offer. Nothing executable or renderable
+# as a page (.exe, .html, .svg) can be stored and handed out behind a signed link.
+
+
+def Text(min_length: int = 1, max_length: int = 5000) -> object:
+    """Free text that must say something: surrounding spaces are trimmed before the length
+    checks, so a field of only spaces is refused."""
+    return Annotated[
+        str,
+        StringConstraints(strip_whitespace=True, min_length=min_length, max_length=max_length),
+    ]
+
+
+Subject = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=60)]
+TASK_FILE_TYPES = r"(pdf|png|jpe?g|webp|gif|heic|mp4|mov|webm)"
+TUTOR_DOC_TYPES = r"(pdf|png|jpe?g|webp|heic|doc|docx)"
+TASK_FILENAME = rf"(?i)^{SAFE_STEM}\.{TASK_FILE_TYPES}$"
+TUTOR_DOC_FILENAME = rf"(?i)^{SAFE_STEM}\.{TUTOR_DOC_TYPES}$"
 
 
 def _session_price(cents: int) -> int:
@@ -83,20 +114,22 @@ class PolicyStatusOut(BaseModel):
 
 class OnboardIn(BaseModel):
     role: Literal["student", "tutor"]  # admin is never self-assignable
-    display_name: str = Field(min_length=1, max_length=80)
+    display_name: DisplayName
     preferred_language: str = Lang
     policy: PolicyAcceptIn  # no account without accepting the role's policy
+    # Single-use Cloudflare Turnstile token from the sign-up bot check; verified server-side.
+    bot_token: str | None = Field(default=None, max_length=2048)
 
 
 class ProfilePatch(BaseModel):
-    display_name: str | None = Field(default=None, min_length=1, max_length=80)
+    display_name: DisplayName | None = None
     preferred_language: str | None = Field(default=None, pattern=LANG_PATTERN)
     avatar_url: str | None = Field(default=None, max_length=200000, pattern=AVATAR_PATTERN)
 
 
 class TutorApplicationIn(BaseModel):
     bio: str = Field(max_length=2000)
-    subjects: list[str] = Field(min_length=1, max_length=10)
+    subjects: list[Subject] = Field(min_length=1, max_length=10)
     # The subject shown first on the tutor's profile; must be one of `subjects`.
     main_subject: str | None = Field(default=None, max_length=80)
     years_experience: int | None = Field(default=None, ge=0, le=60)
@@ -110,6 +143,11 @@ class TutorApplicationIn(BaseModel):
                 raise ValueError("main_subject must be one of subjects")
             rest = [s for s in self.subjects if s != self.main_subject]
             self.subjects = [self.main_subject, *rest]
+        # The same subject twice (in any letter case) is listed once.
+        unique: dict[str, str] = {}
+        for subject in self.subjects:
+            unique.setdefault(subject.casefold(), subject)
+        self.subjects = list(unique.values())
         return self
 
 
@@ -133,8 +171,12 @@ class TutorOut(ORM):
 
 
 class PublicTutorOut(TutorOut):
+    """What students see. Vetting status and payout setup are the tutor's business."""
+
     display_name: str
     avatar_url: str | None = None
+    status: str = Field(default="approved", exclude=True)
+    payouts_enabled: bool = Field(default=False, exclude=True)
 
 
 class ProfileOut(ORM):
@@ -157,9 +199,9 @@ class MeOut(BaseModel):
 
 
 class TaskIn(BaseModel):
-    subject: str = Field(min_length=1, max_length=60)
-    title: str = Field(min_length=3, max_length=140)
-    description: str = Field(min_length=1, max_length=5000)
+    subject: Subject
+    title: Text(3, 140)  # type: ignore[valid-type]
+    description: Text(1, 5000)  # type: ignore[valid-type]
     budget_cents: int
     language: str = Field(default="en", pattern=LANG_PATTERN)
     level: Level = "college"
@@ -216,7 +258,7 @@ class HireIn(BaseModel):
 
 
 class DeliverIn(BaseModel):
-    note: str = Field(min_length=1, max_length=5000)
+    note: Text(1, 5000)  # type: ignore[valid-type]
 
 
 class ReviewIn(BaseModel):
@@ -233,7 +275,7 @@ class ReviewOut(ORM):
 
 
 class DisputeIn(BaseModel):
-    reason: str = Field(min_length=3, max_length=2000)
+    reason: Text(3, 2000)  # type: ignore[valid-type]
 
 
 class DisputeOut(ORM):
@@ -308,7 +350,7 @@ class WebhookAck(BaseModel):
 
 
 class MessageIn(BaseModel):
-    body: str = Field(min_length=1, max_length=4000)
+    body: MessageBody
 
 
 class TranslationOut(ORM):
@@ -335,12 +377,12 @@ class ConversationOut(ORM):
 
 
 class UploadIn(BaseModel):
-    filename: str = Field(min_length=1, max_length=200, pattern=SAFE_FILENAME)
+    filename: str = Field(min_length=1, max_length=200, pattern=TASK_FILENAME)
     kind: Literal["rubric", "deliverable"] = "rubric"
 
 
 class TutorDocumentIn(BaseModel):
-    filename: str = Field(min_length=1, max_length=200, pattern=SAFE_FILENAME)
+    filename: str = Field(min_length=1, max_length=200, pattern=TUTOR_DOC_FILENAME)
     kind: Literal["qualification", "resume"] = "qualification"
 
 

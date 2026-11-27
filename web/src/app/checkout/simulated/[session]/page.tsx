@@ -25,7 +25,8 @@ function SimulatedCheckout() {
   const [quote, setQuote] = useState<Schemas["QuoteOut"] | null>(null);
 
   useEffect(() => {
-    if (taskId && kind === "task_payment") api<Schemas["QuoteOut"]>(`/tasks/${taskId}/quote`).then(setQuote, () => {});
+    if (taskId && kind === "task_payment")
+      api<Schemas["QuoteOut"]>(`/tasks/${encodeURIComponent(taskId)}/quote`).then(setQuote, () => {});
   }, [taskId, kind]);
 
   const what =
@@ -71,7 +72,7 @@ function SimulatedCheckout() {
           disabled={a.pending}
           onClick={() =>
             a.run(async () => {
-              await api(`/simulated/checkout/${session}/complete`, { body: {} });
+              await api(`/simulated/checkout/${encodeURIComponent(session)}/complete`, { body: {} });
               const params = new URLSearchParams({
                 status: "success",
                 ...(kind ? { kind } : {}),

@@ -348,7 +348,7 @@ export interface paths {
         /**
          * Onboard
          * @description Create the caller's profile, together with their policy acceptance. The id always comes
-         *     from the verified token.
+         *     from the verified token. A bot check token is required: no profile, no use of the app.
          */
         post: operations["onboard_me_onboard_post"];
         delete?: never;
@@ -1275,6 +1275,8 @@ export interface components {
         };
         /** OnboardIn */
         OnboardIn: {
+            /** Bot Token */
+            bot_token?: string | null;
             /** Display Name */
             display_name: string;
             policy: components["schemas"]["PolicyAcceptIn"];
@@ -1436,7 +1438,10 @@ export interface components {
             /** Preferred Language */
             preferred_language?: string | null;
         };
-        /** PublicTutorOut */
+        /**
+         * PublicTutorOut
+         * @description What students see. Vetting status and payout setup are the tutor's business.
+         */
         PublicTutorOut: {
             /** Avatar Url */
             avatar_url?: string | null;
@@ -1453,14 +1458,10 @@ export interface components {
              * @description Stored as the first subject, so subject search needs no extra column.
              */
             readonly main_subject: string | null;
-            /** Payouts Enabled */
-            payouts_enabled: boolean;
             /** Rating Avg */
             rating_avg: number;
             /** Rating Count */
             rating_count: number;
-            /** Status */
-            status: string;
             /** Subjects */
             subjects: string[];
             /**

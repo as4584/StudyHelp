@@ -30,7 +30,8 @@ import { accentFor } from "@/lib/subjects";
 import { api, ApiError, LANGUAGES, LEVELS, money, type Bid, type PaymentState, type Task } from "@/lib/api";
 
 export default function TaskPage() {
-  const { id } = useParams<{ id: string }>();
+  // Encoded once here: the id goes into API paths, so a crafted link cannot reach other routes.
+  const id = encodeURIComponent(useParams<{ id: string }>().id);
   const { me } = useRequireRole();
   const [task, setTask] = useState<Task | null>(null);
   const [bids, setBids] = useState<Bid[]>([]);

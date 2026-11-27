@@ -8,7 +8,7 @@ from urllib.parse import quote
 import httpx
 
 from app.core.config import Settings, get_settings
-from app.core.errors import ProviderError
+from app.core.errors import NotFound, ProviderError
 
 
 @dataclass(frozen=True)
@@ -46,6 +46,9 @@ class SupabaseStorage:
         url = f"{self._base}/object/sign/{bucket}/{quote(path)}"
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.post(url, headers=self._headers, json={"expiresIn": expires_in})
+        # The upload slot exists but nothing was ever uploaded to it (closed tab, failed upload).
+        if resp.status_code in (400, 404) and "not_found" in resp.text:
+            raise NotFound("this file was never finished uploading")
         if resp.status_code >= 400:
             raise ProviderError(f"storage download sign failed ({resp.status_code})")
         return f"{self._base}{resp.json()['signedURL']}"

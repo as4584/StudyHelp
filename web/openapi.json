@@ -743,6 +743,18 @@
       },
       "OnboardIn": {
         "properties": {
+          "bot_token": {
+            "anyOf": [
+              {
+                "maxLength": 2048,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bot Token"
+          },
           "display_name": {
             "maxLength": 80,
             "minLength": 1,
@@ -1155,6 +1167,7 @@
         "type": "object"
       },
       "PublicTutorOut": {
+        "description": "What students see. Vetting status and payout setup are the tutor's business.",
         "properties": {
           "avatar_url": {
             "anyOf": [
@@ -1199,10 +1212,6 @@
             "readOnly": true,
             "title": "Main Subject"
           },
-          "payouts_enabled": {
-            "title": "Payouts Enabled",
-            "type": "boolean"
-          },
           "rating_avg": {
             "title": "Rating Avg",
             "type": "number"
@@ -1210,10 +1219,6 @@
           "rating_count": {
             "title": "Rating Count",
             "type": "integer"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
           },
           "subjects": {
             "items": {
@@ -1245,8 +1250,6 @@
           "subjects",
           "levels",
           "hourly_rate_cents",
-          "status",
-          "payouts_enabled",
           "rating_avg",
           "rating_count",
           "display_name",
@@ -1808,6 +1811,8 @@
           },
           "subjects": {
             "items": {
+              "maxLength": 60,
+              "minLength": 1,
               "type": "string"
             },
             "maxItems": 10,
@@ -1842,7 +1847,7 @@
           "filename": {
             "maxLength": 200,
             "minLength": 1,
-            "pattern": "^[\\w\\- ()][\\w.\\- ()]*$",
+            "pattern": "(?i)^[\\w\\- ()][\\w.\\- ()]*\\.(pdf|png|jpe?g|webp|heic|doc|docx)$",
             "title": "Filename",
             "type": "string"
           },
@@ -1952,7 +1957,7 @@
           "filename": {
             "maxLength": 200,
             "minLength": 1,
-            "pattern": "^[\\w\\- ()][\\w.\\- ()]*$",
+            "pattern": "(?i)^[\\w\\- ()][\\w.\\- ()]*\\.(pdf|png|jpe?g|webp|gif|heic|mp4|mov|webm)$",
             "title": "Filename",
             "type": "string"
           },
@@ -3051,7 +3056,7 @@
     },
     "/me/onboard": {
       "post": {
-        "description": "Create the caller's profile, together with their policy acceptance. The id always comes\nfrom the verified token.",
+        "description": "Create the caller's profile, together with their policy acceptance. The id always comes\nfrom the verified token. A bot check token is required: no profile, no use of the app.",
         "operationId": "onboard_me_onboard_post",
         "requestBody": {
           "content": {
