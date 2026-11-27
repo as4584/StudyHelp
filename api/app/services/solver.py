@@ -91,7 +91,8 @@ def show(expr: object) -> str:
     s = sp.sstr(expr).replace("**", "^")
     s = re.sub(r"(?<![\w.])(\d+)\*(?=[a-zA-Z(])", r"\1", s)
     s = s.replace("log(", "ln(").replace("E^", "e^").replace("exp(", "e^(")
-    return re.sub(r"(?<![A-Za-z_])I(?![A-Za-z_])", "i", s)  # SymPy writes the imaginary unit as I; textbooks write i
+    # SymPy writes the imaginary unit as I; textbooks write i.
+    return re.sub(r"(?<![A-Za-z_])I(?![A-Za-z_])", "i", s)
 
 
 def _var(expr: sp.Expr, hint: str | None = None) -> sp.Symbol | None:
