@@ -47,15 +47,37 @@ function watch(page: Page) {
 async function check(page: Page, problems: string[], visit: Visit) {
   problems.length = 0;
   await page.goto(visit.path);
-  await page.waitForLoadState("networkidle");
+  // Best effort: the sign-up bot check keeps polling Cloudflare, so the network may never idle.
+  await page.waitForLoadState("networkidle", { timeout: 8_000 }).catch(() => {});
   const main = page.getByRole("main");
   await expect(main, `${visit.path}: no main content`).toBeVisible();
   await expect(main, `${visit.path}: blank page`).not.toHaveText(/^\s*$/);
   if (visit.expectText) await expect(page.locator("body")).toContainText(visit.expectText);
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  );
-  expect(overflow, `${visit.path}: page is ${overflow}px wider than the screen`).toBeLessThanOrEqual(1);
+  // On failure, name the elements sticking out (outside any scroll box), so a CI-only font or
+  // engine difference can be fixed without reproducing it locally.
+  const { overflow, culprits } = await page.evaluate(() => {
+    const w = document.documentElement.clientWidth;
+    const clipped = (el: Element) => {
+      for (let p = el.parentElement; p; p = p.parentElement)
+        if (getComputedStyle(p).overflowX !== "visible") return true;
+      return false;
+    };
+    const culprits = [...document.querySelectorAll("body *")]
+      .filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.right > w + 1 && !clipped(el);
+      })
+      .slice(-4)
+      .map(
+        (el) =>
+          `<${el.tagName.toLowerCase()} class="${String(el.className).slice(0, 80)}"> "${(el.textContent ?? "").trim().slice(0, 40)}" right=${Math.round(el.getBoundingClientRect().right)}`,
+      );
+    return { overflow: document.documentElement.scrollWidth - w, culprits };
+  });
+  expect(
+    overflow,
+    `${visit.path}: page is ${overflow}px wider than the screen\n${culprits.join("\n")}`,
+  ).toBeLessThanOrEqual(1);
   expect(problems, `${visit.path}`).toEqual([]);
 }
 
