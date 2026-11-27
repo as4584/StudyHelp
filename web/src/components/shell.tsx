@@ -27,7 +27,7 @@ const NAV: Record<string, NavItem[]> = {
 
 export function Mark({ className = "" }: { className?: string }) {
   return (
-    <Link href="/" className={`group inline-flex items-center gap-2 ${className}`} aria-label="StudyHelp home">
+    <Link href="/" className={`tap group inline-flex items-center gap-2 ${className}`} aria-label="StudyHelp home">
       <svg viewBox="0 0 28 28" className="size-7" aria-hidden>
         <rect width="28" height="28" rx="7" className="fill-tutor" />
         {/* an open book whose spine is a rising line: study → understanding */}
@@ -59,7 +59,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Sidebar />
       <MobileBar />
       <div className="min-w-0">
-        <main className="mx-auto w-full max-w-[1120px] px-5 pt-6 pb-20 sm:px-8 lg:px-10 lg:pt-12">{children}</main>
+        <main
+          id="main"
+          tabIndex={-1}
+          className="mx-auto w-full max-w-[1120px] px-5 pt-6 pb-20 outline-none sm:px-8 lg:px-10 lg:pt-12"
+        >
+          {children}
+        </main>
         <SiteFooter className="px-5 sm:px-8 lg:px-10" />
       </div>
     </div>
@@ -125,7 +131,9 @@ function PublicFrame({ children, signedIn }: { children: React.ReactNode; signed
           )}
         </nav>
       </header>
-      <main className="mx-auto w-full max-w-[1120px] px-5 pb-20 sm:px-8">{children}</main>
+      <main id="main" tabIndex={-1} className="mx-auto w-full max-w-[1120px] px-5 pb-20 outline-none sm:px-8">
+        {children}
+      </main>
       <SiteFooter className="px-5 sm:px-8" />
     </div>
   );

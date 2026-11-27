@@ -35,7 +35,7 @@ export function PathLine({
   const pct =
     stages.length > 1 ? (Math.max(0, lastDone + (stages[lastDone + 1] ? 1 : 0)) / (stages.length - 1)) * 100 : 0;
   return (
-    <div className="relative" role="list" aria-label="Progress">
+    <div className="relative">
       <span
         aria-hidden
         className={`absolute top-[9px] right-[9px] left-[9px] h-px border-t-[1.5px] border-dashed ${dark ? "border-white/25" : "border-rule-strong"}`}
@@ -45,7 +45,7 @@ export function PathLine({
         className="path-grow absolute top-[8px] left-[9px] h-[2.5px] rounded-full bg-mastery-mark"
         style={{ width: `calc((100% - 18px) * ${Math.min(pct, 100) / 100})` }}
       />
-      <ol className="relative flex justify-between">
+      <ol className="relative flex justify-between" aria-label="Progress">
         {stages.map((s) => {
           const halo =
             s.state === "current"
@@ -56,7 +56,6 @@ export function PathLine({
           return (
             <li
               key={s.label}
-              role="listitem"
               className="flex min-w-0 flex-col items-center first:items-start last:items-end"
               aria-current={s.state === "current" || s.state === "attention" ? "step" : undefined}
             >

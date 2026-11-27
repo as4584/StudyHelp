@@ -173,7 +173,7 @@ export default function OperationsPage() {
           {payments.length === 0 ? (
             <EmptyState>Payments appear here once students pay for sessions.</EmptyState>
           ) : (
-            <div className="-mx-1 overflow-x-auto">
+            <div className="-mx-1 overflow-x-auto" tabIndex={0} role="region" aria-label="Payments table">
               <table className="tnum w-full min-w-[34rem] text-left text-[14px]">
                 <thead className="text-[13px] text-muted">
                   <tr>
@@ -315,6 +315,7 @@ function DisputeRow({
           <input
             className={inputCls}
             placeholder="Resolution note"
+            aria-label="Resolution note"
             value={note}
             onChange={(e) => setNote(e.target.value)}
           />
@@ -450,7 +451,7 @@ function PolicyAcceptances() {
             <Button variant="secondary" onClick={download}>
               Download CSV
             </Button>
-            <div className="mt-4 overflow-x-auto">
+            <div className="mt-4 overflow-x-auto" tabIndex={0} role="region" aria-label="Policy acceptances table">
               <table className="w-full min-w-[40rem] text-left text-[14px]">
                 <thead className="micro text-muted">
                   <tr>

@@ -165,7 +165,7 @@ function Metric({ label, value, strong, muted }: { label: string; value: string;
     <div className="min-w-0">
       <dd
         className={`tnum font-serif text-[2rem] leading-none font-medium tracking-[-0.03em] sm:text-[3.25rem] ${
-          strong ? "text-mastery" : muted ? "text-rule-strong" : "text-ink"
+          strong ? "text-mastery" : muted ? "text-muted" : "text-ink"
         }`}
       >
         {value}

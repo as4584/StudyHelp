@@ -47,7 +47,9 @@ function watch(page: Page) {
 async function check(page: Page, problems: string[], visit: Visit) {
   problems.length = 0;
   await page.goto(visit.path);
-  await page.waitForLoadState("networkidle");
+  // Not "networkidle": the sign-up bot check keeps a connection open, so it never goes idle.
+  await page.waitForLoadState("load");
+  await page.waitForTimeout(1000);
   const main = page.getByRole("main");
   await expect(main, `${visit.path}: no main content`).toBeVisible();
   await expect(main, `${visit.path}: blank page`).not.toHaveText(/^\s*$/);

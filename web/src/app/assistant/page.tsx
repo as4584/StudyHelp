@@ -242,6 +242,7 @@ ${out.text}`
               <input
                 className={`${inputCls} mb-2 min-h-10 border-transparent bg-paper`}
                 placeholder="Subject (e.g. Calculus)"
+                aria-label="Subject"
                 value={subject}
                 maxLength={60}
                 onChange={(e) => setSubject(e.target.value)}
