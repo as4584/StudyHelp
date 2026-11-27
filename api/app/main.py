@@ -11,6 +11,7 @@ from app.core.config import get_settings
 from app.core.db import get_sessionmaker
 from app.core.errors import DomainError
 from app.core.limits import BodyLimitMiddleware
+from app.core.security_headers import SecurityHeadersMiddleware
 from app.observability.logging import RequestContextMiddleware, configure_logging, event
 from app.routers import admin, ai, avatars, chat, demo, me, payments, tasks, video
 from app.schemas.api import HealthOut
@@ -37,6 +38,7 @@ def create_app() -> FastAPI:
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["authorization", "content-type", "x-request-id"],
     )
+    app.add_middleware(SecurityHeadersMiddleware, hsts=settings.environment == "production")
     app.add_middleware(RequestContextMiddleware)
     app.add_middleware(BodyLimitMiddleware)
 
