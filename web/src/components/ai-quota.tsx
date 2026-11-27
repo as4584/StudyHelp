@@ -3,24 +3,52 @@
 import { Sparkles, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { useAuth } from "@/components/auth";
 import { Button, DemoPaymentNote, ErrorText, useAction } from "@/components/ui";
 import { api, type Schemas } from "@/lib/api";
 
 export type AiQuota = Schemas["AiQuotaOut"];
 
+// One shared copy for every counter on screen, so a question asked (or Premium bought) in one
+// place updates them all at once instead of waiting for a page reload.
+const listeners = new Set<(q: AiQuota | null) => void>();
+
+/** Fetch the server's current allowance and push it to every mounted counter. */
+export async function reloadAiQuota() {
+  try {
+    const q = await api<AiQuota>("/ai/quota");
+    for (const l of listeners) l(q);
+  } catch {
+    /* the counter is a hint; the server still enforces the limit */
+  }
+}
+
 /** The server's view of this student's AI allowance; `reload` after each question. */
 export function useAiQuota() {
+  const { me } = useAuth();
+  const premium = me?.premium;
+  const uid = me?.profile.id;
   const [quota, setQuota] = useState<AiQuota | null>(null);
-  const reload = useCallback(async () => {
-    try {
-      setQuota(await api<AiQuota>("/ai/quota"));
-    } catch {
-      /* the counter is a hint; the server still enforces the limit */
-    }
-  }, []);
   useEffect(() => {
-    void reload();
-  }, [reload]);
+    listeners.add(setQuota);
+    return () => {
+      listeners.delete(setQuota);
+    };
+  }, []);
+  // Refetch on mount, whenever the plan or the signed-in account changes, and when the tab
+  // comes back into view.
+  useEffect(() => {
+    if (!uid) return;
+    void reloadAiQuota();
+  }, [premium, uid]);
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void reloadAiQuota();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
+  const reload = useCallback(() => reloadAiQuota(), []);
   return { quota, reload };
 }
 
