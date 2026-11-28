@@ -91,7 +91,7 @@ class LiveKitProvider:
         admin = _sign(
             self._s.livekit_api_key,
             self._s.livekit_api_secret,
-            {"video": {"room": room, "roomCreate": True}},
+            {"video": {"room": room, "roomAdmin": True, "roomCreate": True}},
             ttl_s=60,
             now=int(time.time()),
         )
