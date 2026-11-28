@@ -13,7 +13,7 @@ async def test_both_parties_share_one_board(flow: Flow) -> None:
     await flow.to("paid")
     r = await flow.client.get(path(flow), headers=flow.student.h)
     assert r.status_code == 200, r.text
-    assert r.json() == {"scene": None, "version": 0, "updated_at": None}
+    assert r.json() == {"scene": None, "version": 0, "updated_at": None, "read_only": False}
 
     r = await flow.client.put(
         path(flow), headers=flow.student.h, json={"scene": SCENE, "base_version": 0}
@@ -92,3 +92,25 @@ async def test_non_ascii_scene_is_measured_in_utf8_bytes(flow: Flow) -> None:
     assert r.status_code == 200, r.text[:200]
     r = await flow.client.get(path(flow), headers=flow.tutor.h)
     assert r.json()["scene"]["elements"][0]["text"] == text
+
+
+async def test_board_is_frozen_as_evidence_during_a_dispute(flow: Flow) -> None:
+    await flow.to("delivered")
+    r = await flow.client.put(
+        path(flow), headers=flow.tutor.h, json={"scene": SCENE, "base_version": 0}
+    )
+    assert r.status_code == 200, r.text
+    r = await flow.client.post(
+        f"/tasks/{flow.task_id}/disputes", headers=flow.student.h, json={"reason": "Not right"}
+    )
+    assert r.status_code == 201, r.text
+    for who in (flow.student, flow.tutor):
+        r = await flow.client.get(path(flow), headers=who.h)
+        assert r.status_code == 200 and r.json()["read_only"] is True
+        assert r.json()["scene"] == SCENE
+        r = await flow.client.put(
+            path(flow), headers=who.h, json={"scene": {"elements": []}, "base_version": 1}
+        )
+        assert r.status_code == 409 and r.json()["code"] == "invalid_state", r.text
+    r = await flow.client.get(path(flow), headers=flow.student.h)
+    assert r.json()["scene"] == SCENE and r.json()["version"] == 1

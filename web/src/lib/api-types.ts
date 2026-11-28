@@ -1840,6 +1840,11 @@ export interface components {
         };
         /** WhiteboardOut */
         WhiteboardOut: {
+            /**
+             * Read Only
+             * @default false
+             */
+            read_only: boolean;
             /** Scene */
             scene: {
                 [key: string]: unknown;

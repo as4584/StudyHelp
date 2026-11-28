@@ -25,6 +25,8 @@ router = APIRouter(prefix="/tasks", tags=["whiteboard"])
 
 # Inside a paid session; the board stays available after delivery and completion.
 OPEN = {"paid", "delivered", "completed", "disputed"}
+# While a dispute is reviewed the board is evidence: both people can see it, nobody edits it.
+FROZEN = {"disputed"}
 
 
 async def _task(session: SessionDep, user: CurrentUser, task_id: uuid.UUID, lock: bool) -> Task:
@@ -36,16 +38,18 @@ async def _task(session: SessionDep, user: CurrentUser, task_id: uuid.UUID, lock
     return task
 
 
-def _out(wb: TaskWhiteboard | None) -> WhiteboardOut:
+def _out(wb: TaskWhiteboard | None, read_only: bool = False) -> WhiteboardOut:
     if wb is None:
-        return WhiteboardOut(scene=None, version=0, updated_at=None)
-    return WhiteboardOut(scene=wb.scene, version=wb.version, updated_at=wb.updated_at)
+        return WhiteboardOut(scene=None, version=0, updated_at=None, read_only=read_only)
+    return WhiteboardOut(
+        scene=wb.scene, version=wb.version, updated_at=wb.updated_at, read_only=read_only
+    )
 
 
 @router.get("/{task_id}/whiteboard", response_model=WhiteboardOut)
 async def get_whiteboard(task_id: uuid.UUID, user: UserDep, session: SessionDep) -> WhiteboardOut:
     task = await _task(session, user, task_id, lock=False)
-    return _out(await session.get(TaskWhiteboard, task.id))
+    return _out(await session.get(TaskWhiteboard, task.id), task.status in FROZEN)
 
 
 @router.put(
@@ -65,6 +69,8 @@ async def put_whiteboard(
         )
     # The task row lock serializes concurrent saves, including the very first one.
     task = await _task(session, user, task_id, lock=True)
+    if task.status in FROZEN:
+        raise InvalidState("the whiteboard is frozen while the dispute is reviewed")
     stmt = select(TaskWhiteboard).where(TaskWhiteboard.task_id == task.id)
     wb = (await session.execute(stmt)).scalar_one_or_none()
     current = wb.version if wb else 0

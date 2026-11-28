@@ -2132,6 +2132,11 @@
       },
       "WhiteboardOut": {
         "properties": {
+          "read_only": {
+            "default": false,
+            "title": "Read Only",
+            "type": "boolean"
+          },
           "scene": {
             "anyOf": [
               {

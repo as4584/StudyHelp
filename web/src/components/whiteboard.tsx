@@ -57,6 +57,8 @@ export function WhiteboardDialog({
   const [initial, setInitial] = useState<Scene | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<"saved" | "saving" | "offline">("saved");
+  const [readOnly, setReadOnly] = useState(false);
+  const frozen = useRef(false);
   const excal = useRef<ExcalidrawImperativeAPI | null>(null);
   const version = useRef(0);
   const lastSig = useRef("");
@@ -81,7 +83,7 @@ export function WhiteboardDialog({
 
   const save = useCallback(async (): Promise<void> => {
     const ex = excal.current;
-    if (!ex) return;
+    if (!ex || frozen.current) return;
     dirty.current = false;
     setStatus("saving");
     const scene = { elements: ex.getSceneElementsIncludingDeleted(), files: ex.getFiles() };
@@ -95,6 +97,14 @@ export function WhiteboardDialog({
       setError(null);
       setStatus(dirty.current ? "saving" : "saved");
     } catch (e) {
+      if (e instanceof ApiError && e.status === 409 && e.code !== "version_conflict") {
+        // The session changed state (e.g. a dispute was opened): the board is now read-only.
+        frozen.current = true;
+        dirty.current = false;
+        setReadOnly(true);
+        setStatus("saved");
+        return;
+      }
       if (e instanceof ApiError && e.status === 409) {
         // The other person saved first: take their changes in, then save the union.
         const b = await api<Board>(`/tasks/${taskId}/whiteboard`).catch(() => null);
@@ -120,6 +130,8 @@ export function WhiteboardDialog({
       .then((b) => {
         if (!live) return;
         version.current = b.version;
+        frozen.current = !!b.read_only;
+        setReadOnly(!!b.read_only);
         const s = (b.scene ?? {}) as Scene;
         lastSig.current = signature(s.elements ?? []);
         for (const e of s.elements ?? []) sent.current.set(e.id, e.version);
@@ -155,6 +167,10 @@ export function WhiteboardDialog({
     const t = setInterval(async () => {
       if (dirty.current || document.hidden) return;
       const b = await api<Board>(`/tasks/${taskId}/whiteboard`).catch(() => null);
+      if (b) {
+        frozen.current = !!b.read_only;
+        setReadOnly(!!b.read_only);
+      }
       if (b && b.version > version.current && !dirty.current) {
         const s = (b.scene ?? {}) as Scene;
         apply(s.elements ?? [], s.files);
@@ -264,7 +280,13 @@ export function WhiteboardDialog({
         <div className="flex min-w-0 items-center gap-2">
           <span className="font-semibold text-ink">Whiteboard</span>
           <span className="text-[13px] text-muted" role="status" data-testid="whiteboard-status">
-            {status === "saved" ? "Saved" : status === "saving" ? "Saving…" : "Not saved yet"}
+            {readOnly
+              ? "View only while the dispute is reviewed"
+              : status === "saved"
+                ? "Saved"
+                : status === "saving"
+                  ? "Saving…"
+                  : "Not saved yet"}
           </span>
         </div>
         <div className="flex gap-2">
@@ -290,6 +312,7 @@ export function WhiteboardDialog({
               files: initial.files,
               appState: { viewBackgroundColor: "#ffffff" },
             }}
+            viewModeEnabled={readOnly}
             onChange={(els) => onChange(els)}
             UIOptions={{ canvasActions: { loadScene: false, saveToActiveFile: false, export: false } }}
           />

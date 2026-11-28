@@ -439,6 +439,7 @@ class WhiteboardOut(BaseModel):
     scene: dict[str, Any] | None
     version: int  # 0 until the first save
     updated_at: datetime | None
+    read_only: bool = False  # frozen while a dispute is reviewed, kept as evidence
 
 
 class WhiteboardIn(BaseModel):
