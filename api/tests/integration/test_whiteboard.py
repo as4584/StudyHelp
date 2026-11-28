@@ -79,3 +79,16 @@ async def test_closed_before_payment_and_to_others(flow: Flow, make_user: UserFa
         for method, kw in (("get", {}), ("put", {"json": {"scene": SCENE, "base_version": 0}})):
             r = await getattr(flow.client, method)(path(flow), headers=who.h, **kw)
             assert 400 <= r.status_code < 500, f"{who.role} {method}: {r.status_code}"
+
+
+async def test_non_ascii_scene_is_measured_in_utf8_bytes(flow: Flow) -> None:
+    """Hindi text well under 2 MB as UTF-8 was refused: it was measured with ASCII escapes."""
+    await flow.to("paid")
+    text = "नमस्ते " * 60_000  # ~1.1 MB as UTF-8, ~2.5 MB escaped
+    scene = {"elements": [{"id": "t", "type": "text", "version": 1, "text": text}], "files": {}}
+    r = await flow.client.put(
+        path(flow), headers=flow.student.h, json={"scene": scene, "base_version": 0}
+    )
+    assert r.status_code == 200, r.text[:200]
+    r = await flow.client.get(path(flow), headers=flow.tutor.h)
+    assert r.json()["scene"]["elements"][0]["text"] == text
