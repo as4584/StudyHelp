@@ -41,7 +41,7 @@ async def test_student_and_hired_tutor_join_the_same_private_room(flow: Flow) ->
         "screen_share",
         "screen_share_audio",
     }
-    assert v["canPublishData"] is False
+    assert v["canPublishData"] is True  # whiteboard sync; the room only holds the two parties
     assert not v.get("roomAdmin") and not v.get("roomCreate") and not v.get("roomList")
     assert claims(tj["token"])["metadata"] == '{"role":"tutor"}'
 

@@ -30,6 +30,8 @@ def _task_calls(f: Flow) -> list[tuple[str, str, dict | None]]:
         ("post", f"/tasks/{t}/disputes", {"reason": "not mine"}),
         ("post", f"/tasks/{t}/video/join", None),
         ("post", f"/tasks/{t}/video/end", None),
+        ("get", f"/tasks/{t}/whiteboard", None),
+        ("put", f"/tasks/{t}/whiteboard", {"scene": {"elements": []}, "base_version": 0}),
         (
             "post",
             f"/tasks/{t}/files",
@@ -40,7 +42,7 @@ def _task_calls(f: Flow) -> list[tuple[str, str, dict | None]]:
 
 async def _send(f: Flow, who: User, method: str, path: str, body: dict | None):  # type: ignore[no-untyped-def]
     kwargs: dict = {"headers": who.h}
-    if method == "post":
+    if method in ("post", "put"):
         kwargs["json"] = body or {}
     return await getattr(f.client, method)(path, **kwargs)
 

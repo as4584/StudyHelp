@@ -795,6 +795,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tasks/{task_id}/whiteboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Whiteboard */
+        get: operations["get_whiteboard_tasks__task_id__whiteboard_get"];
+        /** Put Whiteboard */
+        put: operations["put_whiteboard_tasks__task_id__whiteboard_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tutor-documents/{doc_id}/download": {
         parameters: {
             query?: never;
@@ -1810,6 +1828,31 @@ export interface components {
              * @enum {string}
              */
             result: "processed" | "duplicate";
+        };
+        /** WhiteboardIn */
+        WhiteboardIn: {
+            /** Base Version */
+            base_version: number;
+            /** Scene */
+            scene: {
+                [key: string]: unknown;
+            };
+        };
+        /** WhiteboardOut */
+        WhiteboardOut: {
+            /**
+             * Read Only
+             * @default false
+             */
+            read_only: boolean;
+            /** Scene */
+            scene: {
+                [key: string]: unknown;
+            } | null;
+            /** Updated At */
+            updated_at: string | null;
+            /** Version */
+            version: number;
         };
     };
     responses: never;
@@ -3289,6 +3332,88 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["VideoJoinOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_whiteboard_tasks__task_id__whiteboard_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhiteboardOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_whiteboard_tasks__task_id__whiteboard_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WhiteboardIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhiteboardOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhiteboardOut"];
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

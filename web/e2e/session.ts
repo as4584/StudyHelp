@@ -31,7 +31,7 @@ async function token(page: Page): Promise<string> {
   return JSON.parse(value).access_token as string;
 }
 
-async function call(page: Page, path: string, body?: unknown) {
+export async function call(page: Page, path: string, body?: unknown) {
   const res = await page.request.fetch(`${API}${path}`, {
     method: body === undefined ? "GET" : "POST",
     headers: { Authorization: `Bearer ${await token(page)}` },

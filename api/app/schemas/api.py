@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import date, datetime
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import (
     BaseModel,
@@ -433,6 +433,18 @@ class VideoJoinOut(BaseModel):
 class VideoStatusOut(BaseModel):
     status: Literal["none", "created", "active", "ended"]
     joinable: bool
+
+
+class WhiteboardOut(BaseModel):
+    scene: dict[str, Any] | None
+    version: int  # 0 until the first save
+    updated_at: datetime | None
+    read_only: bool = False  # frozen while a dispute is reviewed, kept as evidence
+
+
+class WhiteboardIn(BaseModel):
+    scene: dict[str, Any]
+    base_version: int = Field(ge=0)  # the version this edit was made on; 409 if it moved on
 
 
 class AiAskIn(BaseModel):
