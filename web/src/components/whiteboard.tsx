@@ -62,6 +62,7 @@ export function WhiteboardDialog({
   const sent = useRef(new Map<string, number>()); // element id -> version already broadcast
   const dirty = useRef(false);
   const applying = useRef(false);
+  const failed = useRef(false); // last save didn't reach the API (offline, server blip)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -89,6 +90,8 @@ export function WhiteboardDialog({
         body: { scene, base_version: version.current },
       });
       version.current = b.version;
+      failed.current = false;
+      setError(null);
       setStatus(dirty.current ? "saving" : "saved");
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) {
@@ -104,6 +107,8 @@ export function WhiteboardDialog({
       dirty.current = true;
       setStatus("offline");
       if (e instanceof ApiError && e.status === 413) setError("The board is too big to save. Remove some images.");
+      // Too big won't fix itself: wait for the next edit. Anything else is retried below.
+      else failed.current = true;
     }
   }, [taskId, apply]);
 
@@ -157,6 +162,20 @@ export function WhiteboardDialog({
     }, POLL_MS);
     return () => clearInterval(t);
   }, [initial, taskId, apply]);
+
+  // A save that failed (offline, blip) is retried when the connection returns and on each poll,
+  // so the board saves without the person having to draw again.
+  useEffect(() => {
+    const retry = () => {
+      if (failed.current && dirty.current && navigator.onLine) void save();
+    };
+    window.addEventListener("online", retry);
+    const t = setInterval(retry, POLL_MS);
+    return () => {
+      window.removeEventListener("online", retry);
+      clearInterval(t);
+    };
+  }, [save]);
 
   // Flush a pending save on close; lock page scroll while open.
   useEffect(() => {

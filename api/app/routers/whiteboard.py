@@ -57,7 +57,9 @@ async def put_whiteboard(
     task_id: uuid.UUID, body: WhiteboardIn, user: UserDep, session: SessionDep
 ) -> WhiteboardOut | JSONResponse:
     # The request body is already capped by BodyLimitMiddleware; this guards the stored scene.
-    if len(json.dumps(body.scene, separators=(",", ":"))) > WHITEBOARD_MAX_BYTES:
+    # Measure UTF-8 bytes: the default ASCII escaping would count Hindi or emoji text 2-6x.
+    size = len(json.dumps(body.scene, separators=(",", ":"), ensure_ascii=False).encode())
+    if size > WHITEBOARD_MAX_BYTES:
         return JSONResponse(
             {"detail": "whiteboard is too large", "code": "too_large"}, status_code=413
         )
