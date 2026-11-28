@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useRequireRole } from "@/components/auth";
 import { Button, Sheet, Skeleton } from "@/components/ui";
+import { WhiteboardButton } from "@/components/whiteboard";
 import { api, ApiError, type Schemas } from "@/lib/api";
 
 type Join = Schemas["VideoJoinOut"];
@@ -350,6 +351,7 @@ export default function CallPage() {
             {sharing ? "Stop sharing" : "Share screen"}
           </Button>
         )}
+        <WhiteboardButton taskId={id} room={phase === "connected" || phase === "reconnecting" ? room.current : null} />
         {phase === "preview" || phase === "connecting" ? (
           <Button onClick={join} loading={phase === "connecting"}>
             Join session

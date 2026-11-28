@@ -115,7 +115,7 @@ const VARIANTS: Record<Variant, string> = {
 const BTN =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-[7px] px-4 text-[15px] font-semibold whitespace-nowrap transition-[background-color,border-color,color,transform] duration-150 ease-[var(--ease-out)] active:scale-[0.985] disabled:pointer-events-none disabled:opacity-45 sm:min-h-10";
 
-type BtnProps = React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant };
+type BtnProps = React.ComponentProps<"button"> & { variant?: Variant };
 
 /**
  * A button that shows its own work. If onClick returns a promise (our `useAction().run`), only
