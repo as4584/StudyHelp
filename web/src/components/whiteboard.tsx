@@ -327,16 +327,26 @@ export function WhiteboardButton({
   taskId,
   room,
   variant = "secondary",
+  onOpen,
 }: {
   taskId: string;
   room?: Room | null;
   variant?: "primary" | "secondary";
+  /** Called as the board opens (the call page hides its chat sheet on phones). */
+  onOpen?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const btn = useRef<HTMLButtonElement>(null);
   return (
     <>
-      <Button ref={btn} variant={variant} onClick={() => setOpen(true)}>
+      <Button
+        ref={btn}
+        variant={variant}
+        onClick={() => {
+          onOpen?.();
+          setOpen(true);
+        }}
+      >
         <PenLine size={17} aria-hidden /> Whiteboard
       </Button>
       {open && (

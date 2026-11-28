@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useRequireRole } from "@/components/auth";
+import { ChatButton, ChatPanel, ChatToast, useCallChat } from "@/components/call-chat";
 import { Button, Sheet, Skeleton } from "@/components/ui";
 import { WhiteboardButton } from "@/components/whiteboard";
 import { api, ApiError, type Schemas } from "@/lib/api";
@@ -71,6 +72,7 @@ export default function CallPage() {
   const [canRestart, setCanRestart] = useState(false); // ended here, task still funded
   const [remotes, setRemotes] = useState<Remote[]>([]);
   const room = useRef<Room | null>(null);
+  const chat = useCallChat(id, me);
   const local = useRef<{ cam: LocalVideoTrack | null; mic: LocalAudioTrack | null }>({ cam: null, mic: null });
 
   // 1. Is there a session for me? Then a device preview (permission problems are not fatal).
@@ -239,6 +241,21 @@ export default function CallPage() {
   );
 
   if (!me || phase === "loading") return <Skeleton lines={4} />;
+
+  // Chat sits beside the call on wide screens and over it on phones, in every phase:
+  // before the other person joins, while reconnecting, and after the call ends.
+  const withChat = (main: React.ReactNode) => (
+    <div
+      className={
+        chat.open && chat.wide
+          ? "grid items-start gap-5 md:grid-cols-[minmax(0,1fr)_20rem] lg:grid-cols-[minmax(0,1fr)_23rem]"
+          : ""
+      }
+    >
+      <div className="min-w-0">{main}</div>
+      <ChatPanel chat={chat} me={me} />
+    </div>
+  );
   const message = {
     unavailable: "This video session isn't available to you.",
     "not-open": "Video opens once the session is paid.",
@@ -247,7 +264,7 @@ export default function CallPage() {
     error: "We couldn't connect the call. Check your connection and try again.",
   }[phase as string];
   if (message) {
-    return (
+    return withChat(
       <div>
         {back}
         <Sheet className="p-6">
@@ -261,8 +278,16 @@ export default function CallPage() {
               Start a new call
             </Button>
           ) : null}
+          {chat.conversationId && (
+            <div className="mt-4">
+              <ChatButton chat={chat} />
+            </div>
+          )}
         </Sheet>
-      </div>
+        <div className="relative">
+          <ChatToast chat={chat} />
+        </div>
+      </div>,
     );
   }
 
@@ -271,7 +296,7 @@ export default function CallPage() {
   const remoteCams = remotes.filter((t) => t.source === "camera");
   const remoteAudio = remotes.filter((t) => t.track.kind === "audio");
 
-  return (
+  return withChat(
     <div>
       {back}
       {phase === "demo" && (
@@ -288,7 +313,8 @@ export default function CallPage() {
       {notice && <p className="mb-4 text-[14px] text-muted">{notice}</p>}
 
       {/* Stage: a shared screen takes the room; cameras become secondary tiles. */}
-      <div className="grid gap-3">
+      <div id="call-stage" className="relative grid scroll-mt-2 gap-3">
+        <ChatToast chat={chat} />
         {share && (
           <div className="overflow-hidden rounded-[10px] bg-ink">
             <TrackView track={share.track} className="aspect-video w-full object-contain" testId="remote-screen" />
@@ -351,7 +377,12 @@ export default function CallPage() {
             {sharing ? "Stop sharing" : "Share screen"}
           </Button>
         )}
-        <WhiteboardButton taskId={id} room={phase === "connected" || phase === "reconnecting" ? room.current : null} />
+        <ChatButton chat={chat} />
+        <WhiteboardButton
+          taskId={id}
+          room={phase === "connected" || phase === "reconnecting" ? room.current : null}
+          onOpen={() => !chat.wide && chat.open && chat.setOpen(false)}
+        />
         {phase === "preview" || phase === "connecting" ? (
           <Button onClick={join} loading={phase === "connecting"}>
             Join session
@@ -385,6 +416,6 @@ export default function CallPage() {
           Screen sharing needs a computer browser. On this device you can still see a shared screen.
         </p>
       )}
-    </div>
+    </div>,
   );
 }

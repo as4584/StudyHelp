@@ -59,7 +59,15 @@ async def list_tasks(
 async def get_task(task_id: uuid.UUID, user: UserDep, session: SessionDep) -> TaskOut:
     task = await marketplace.get_visible_task(session, user, task_id)
     reviewed = await session.scalar(select(exists().where(Review.task_id == task.id)))
-    return TaskOut.model_validate(task).model_copy(update={"reviewed": bool(reviewed)})
+    update: dict[str, object] = {"reviewed": bool(reviewed)}
+    # The call page's Chat badge: only for a participant of this session's conversation.
+    if c := (await chat.summaries(session, user.id, [task.id])).get(task.id):
+        update |= {
+            "unread_count": c.unread,
+            "chat_opened": c.opened,
+            "counterpart_name": c.counterpart_name,
+        }
+    return TaskOut.model_validate(task).model_copy(update=update)
 
 
 @router.post("/{task_id}/cancel", response_model=TaskOut)

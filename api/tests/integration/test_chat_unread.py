@@ -63,3 +63,17 @@ async def test_mark_read_is_idempotent(flow: Flow) -> None:
             f"/conversations/{flow.conversation_id}/read", headers=flow.student.h
         )
         assert r.status_code == 204, r.text
+
+
+async def test_single_task_view_carries_the_callers_unread_count(flow: Flow) -> None:
+    # The call page reads its Chat badge from GET /tasks/{id}.
+    await flow.to("hired")
+    await _send(flow, flow.student, "ready when you are")
+    r = await flow.client.get(f"/tasks/{flow.task_id}", headers=flow.tutor.h)
+    assert r.status_code == 200, r.text
+    assert r.json()["unread_count"] == 1
+    r = await flow.client.get(f"/tasks/{flow.task_id}", headers=flow.student.h)
+    assert r.json()["unread_count"] == 0
+    await flow.client.post(f"/conversations/{flow.conversation_id}/read", headers=flow.tutor.h)
+    r = await flow.client.get(f"/tasks/{flow.task_id}", headers=flow.tutor.h)
+    assert r.json()["unread_count"] == 0
