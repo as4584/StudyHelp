@@ -3,15 +3,15 @@
 Internal table: FastAPI reads and writes it; browser roles get no grants (RLS forced), so
 one participant cannot see when the other last read the conversation.
 
-Revision ID: 0010_conversation_reads
-Revises: 0009_rls_active_users
+Revision ID: 0011_conversation_reads
+Revises: 0010_task_whiteboards
 Create Date: 2026-11-28
 """
 
 from alembic import op
 
-revision = "0010_conversation_reads"
-down_revision = "0009_rls_active_users"
+revision = "0011_conversation_reads"
+down_revision = "0010_task_whiteboards"
 branch_labels = None
 depends_on = None
 
