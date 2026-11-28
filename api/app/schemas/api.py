@@ -226,6 +226,14 @@ class TaskOut(ORM):
     delivery_note: str | None
     created_at: datetime
     reviewed: bool = False  # set on the single-task read: the student has left their review
+    # Set on the "mine" list, only for the caller's own conversations (participants only).
+    unread_count: int = 0  # messages from the other person since the caller last viewed the chat
+    chat_opened: bool = False  # the caller has viewed this chat at least once
+    counterpart_name: str | None = None  # the other participant's display name
+
+
+class UnreadOut(BaseModel):
+    count: int
 
 
 class BidIn(BaseModel):

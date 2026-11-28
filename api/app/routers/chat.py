@@ -17,6 +17,7 @@ from app.schemas.api import (
     RedirectOut,
     TranslationOut,
     TutorDocumentIn,
+    UnreadOut,
     UploadIn,
     UploadOut,
 )
@@ -55,6 +56,20 @@ async def list_messages(
     ]
 
 
+@router.post("/conversations/{conversation_id}/read", status_code=204)
+async def mark_conversation_read(
+    conversation_id: uuid.UUID, user: UserDep, session: SessionDep
+) -> None:
+    """The caller has the chat on screen: their unread count for it drops to zero."""
+    await chat.mark_read(session, user, conversation_id)
+
+
+@router.get("/me/unread", response_model=UnreadOut)
+async def my_unread(user: UserDep, session: SessionDep) -> UnreadOut:
+    """Unread chat messages across the caller's own conversations (for the nav dot)."""
+    return UnreadOut(count=await chat.unread_total(session, user.id))
+
+
 @router.post(
     "/conversations/{conversation_id}/messages", response_model=MessageOut, status_code=201
 )
@@ -66,6 +81,7 @@ async def send_message(
     translator: TranslatorDep,
 ) -> MessageOut:
     msg, ts = await chat.send_message(session, translator, user, conversation_id, body.body)
+    await chat.mark_read(session, user, conversation_id)  # replying means you've seen it
     return MessageOut(
         id=msg.id,
         sender_id=msg.sender_id,

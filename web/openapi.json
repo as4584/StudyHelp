@@ -1546,6 +1546,22 @@
             "title": "Budget Cents",
             "type": "integer"
           },
+          "chat_opened": {
+            "default": false,
+            "title": "Chat Opened",
+            "type": "boolean"
+          },
+          "counterpart_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterpart Name"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -1612,6 +1628,11 @@
           "title": {
             "title": "Title",
             "type": "string"
+          },
+          "unread_count": {
+            "default": 0,
+            "title": "Unread Count",
+            "type": "integer"
           }
         },
         "required": [
@@ -1939,6 +1960,19 @@
           "main_subject"
         ],
         "title": "TutorOut",
+        "type": "object"
+      },
+      "UnreadOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "count"
+        ],
+        "title": "UnreadOut",
         "type": "object"
       },
       "UploadIn": {
@@ -2903,6 +2937,49 @@
         ]
       }
     },
+    "/conversations/{conversation_id}/read": {
+      "post": {
+        "description": "The caller has the chat on screen: their unread count for it drops to zero.",
+        "operationId": "mark_conversation_read_conversations__conversation_id__read_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Mark Conversation Read",
+        "tags": [
+          "chat",
+          "files"
+        ]
+      }
+    },
     "/files/{file_id}/download": {
       "get": {
         "operationId": "download_task_file_files__file_id__download_get",
@@ -3181,6 +3258,34 @@
         "summary": "Guardian Consent",
         "tags": [
           "profile"
+        ]
+      }
+    },
+    "/me/unread": {
+      "get": {
+        "description": "Unread chat messages across the caller's own conversations (for the nav dot).",
+        "operationId": "my_unread_me_unread_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnreadOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "My Unread",
+        "tags": [
+          "chat",
+          "files"
         ]
       }
     },
