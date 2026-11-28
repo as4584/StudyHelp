@@ -46,7 +46,7 @@ def mint_livekit_token(
         "roomJoin": True,
         "canPublish": True,
         "canSubscribe": True,
-        "canPublishData": False,
+        "canPublishData": True,  # shared-whiteboard strokes between the two parties
         "canPublishSources": PUBLISH_SOURCES,
         "canUpdateOwnMetadata": False,
     }

@@ -136,8 +136,10 @@ async def database() -> AsyncIterator[None]:
 
 TABLES = (
     "audit_logs, ai_usage, ai_messages, ai_chats, disputes, reviews, message_translations, "
-    "messages, conversations, subscriptions, transfers, payment_events, provider_events, tips, "
-    "payments, bids, task_files, video_sessions, tasks, tutor_documents, tutor_profiles, "
+    "conversation_reads, messages, conversations, subscriptions, transfers, payment_events, "
+    "provider_events, tips, "
+    "payments, bids, task_files, video_sessions, task_whiteboards, tasks, tutor_documents, "
+    "tutor_profiles, "
     "policy_acceptances, profiles"
 )
 

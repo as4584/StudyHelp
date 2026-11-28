@@ -19,14 +19,32 @@ export function Chat({ conversationId, meId, myLang }: { conversationId: string;
   const [showOriginal, setShowOriginal] = useState<Record<string, boolean>>({});
   const send = useAction();
   const log = useRef<HTMLDivElement>(null);
+  const input = useRef<HTMLInputElement>(null);
+  const markedFor = useRef<string | null>(null);
 
   const load = useCallback(async () => {
+    let msgs: Message[];
     try {
-      setMessages(await api<Message[]>(`/conversations/${conversationId}/messages`));
+      msgs = await api<Message[]>(`/conversations/${conversationId}/messages`);
     } catch {
       // Offline or a blip: keep what's on screen; the 5-second poll tries again.
+      return;
+    }
+    setMessages(msgs);
+    // The chat is on screen: mark it read once per newest message (not on every poll).
+    const newest = msgs.at(-1)?.id ?? "empty";
+    if (markedFor.current !== newest && document.visibilityState === "visible") {
+      markedFor.current = newest;
+      api(`/conversations/${conversationId}/read`, { body: {} }).catch(() => {
+        markedFor.current = null; // try again on the next poll
+      });
     }
   }, [conversationId]);
+
+  // Arriving from a "Message …" link (#chat): bring the box into view and put the cursor in it.
+  useEffect(() => {
+    if (window.location.hash === "#chat") input.current?.focus();
+  }, []);
 
   useEffect(() => {
     void load();
@@ -154,6 +172,7 @@ export function Chat({ conversationId, meId, myLang }: { conversationId: string;
         }}
       >
         <input
+          ref={input}
           dir="auto"
           aria-label="Message"
           className={inputCls}

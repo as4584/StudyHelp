@@ -284,6 +284,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/conversations/{conversation_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark Conversation Read
+         * @description The caller has the chat on screen: their unread count for it drops to zero.
+         */
+        post: operations["mark_conversation_read_conversations__conversation_id__read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/files/{file_id}/download": {
         parameters: {
             query?: never;
@@ -392,6 +412,26 @@ export interface paths {
          * @description A parent/guardian's consent for a student under 18, given after sign-up.
          */
         post: operations["guardian_consent_me_policy_guardian_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/unread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Unread
+         * @description Unread chat messages across the caller's own conversations (for the nav dot).
+         */
+        get: operations["my_unread_me_unread_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -789,6 +829,24 @@ export interface paths {
         put?: never;
         /** Join Video */
         post: operations["join_video_tasks__task_id__video_join_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tasks/{task_id}/whiteboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Whiteboard */
+        get: operations["get_whiteboard_tasks__task_id__whiteboard_get"];
+        /** Put Whiteboard */
+        put: operations["put_whiteboard_tasks__task_id__whiteboard_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1600,6 +1658,13 @@ export interface components {
             /** Budget Cents */
             budget_cents: number;
             /**
+             * Chat Opened
+             * @default false
+             */
+            chat_opened: boolean;
+            /** Counterpart Name */
+            counterpart_name?: string | null;
+            /**
              * Created At
              * Format: date-time
              */
@@ -1635,6 +1700,11 @@ export interface components {
             subject: string;
             /** Title */
             title: string;
+            /**
+             * Unread Count
+             * @default 0
+             */
+            unread_count: number;
         };
         /** TaskPaymentState */
         TaskPaymentState: {
@@ -1739,6 +1809,11 @@ export interface components {
             /** Years Experience */
             years_experience?: number | null;
         };
+        /** UnreadOut */
+        UnreadOut: {
+            /** Count */
+            count: number;
+        };
         /** UploadIn */
         UploadIn: {
             /** Filename */
@@ -1810,6 +1885,31 @@ export interface components {
              * @enum {string}
              */
             result: "processed" | "duplicate";
+        };
+        /** WhiteboardIn */
+        WhiteboardIn: {
+            /** Base Version */
+            base_version: number;
+            /** Scene */
+            scene: {
+                [key: string]: unknown;
+            };
+        };
+        /** WhiteboardOut */
+        WhiteboardOut: {
+            /**
+             * Read Only
+             * @default false
+             */
+            read_only: boolean;
+            /** Scene */
+            scene: {
+                [key: string]: unknown;
+            } | null;
+            /** Updated At */
+            updated_at: string | null;
+            /** Version */
+            version: number;
         };
     };
     responses: never;
@@ -2306,6 +2406,35 @@ export interface operations {
             };
         };
     };
+    mark_conversation_read_conversations__conversation_id__read_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     download_task_file_files__file_id__download_get: {
         parameters: {
             query?: never;
@@ -2505,6 +2634,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_unread_me_unread_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnreadOut"];
                 };
             };
         };
@@ -3289,6 +3438,88 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["VideoJoinOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_whiteboard_tasks__task_id__whiteboard_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhiteboardOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_whiteboard_tasks__task_id__whiteboard_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WhiteboardIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhiteboardOut"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhiteboardOut"];
+                };
+            };
+            /** @description Request Entity Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

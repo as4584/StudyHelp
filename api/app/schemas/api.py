@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import date, datetime
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import (
     BaseModel,
@@ -226,6 +226,14 @@ class TaskOut(ORM):
     delivery_note: str | None
     created_at: datetime
     reviewed: bool = False  # set on the single-task read: the student has left their review
+    # Set on the "mine" list, only for the caller's own conversations (participants only).
+    unread_count: int = 0  # messages from the other person since the caller last viewed the chat
+    chat_opened: bool = False  # the caller has viewed this chat at least once
+    counterpart_name: str | None = None  # the other participant's display name
+
+
+class UnreadOut(BaseModel):
+    count: int
 
 
 class BidIn(BaseModel):
@@ -433,6 +441,18 @@ class VideoJoinOut(BaseModel):
 class VideoStatusOut(BaseModel):
     status: Literal["none", "created", "active", "ended"]
     joinable: bool
+
+
+class WhiteboardOut(BaseModel):
+    scene: dict[str, Any] | None
+    version: int  # 0 until the first save
+    updated_at: datetime | None
+    read_only: bool = False  # frozen while a dispute is reviewed, kept as evidence
+
+
+class WhiteboardIn(BaseModel):
+    scene: dict[str, Any]
+    base_version: int = Field(ge=0)  # the version this edit was made on; 409 if it moved on
 
 
 class AiAskIn(BaseModel):

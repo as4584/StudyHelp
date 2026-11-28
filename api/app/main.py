@@ -15,7 +15,7 @@ from app.core.limits import BodyLimitMiddleware
 from app.core.security_headers import SecurityHeadersMiddleware
 from app.observability.logging import RequestContextMiddleware, configure_logging, event
 from app.providers.llm import gateway_status
-from app.routers import admin, ai, avatars, chat, demo, me, payments, tasks, video
+from app.routers import admin, ai, avatars, chat, demo, me, payments, tasks, video, whiteboard
 from app.schemas.api import HealthOut
 
 log = logging.getLogger("app")
@@ -105,6 +105,7 @@ def create_app() -> FastAPI:
         admin.router,
         video.router,
         avatars.router,
+        whiteboard.router,
     ):
         app.include_router(r)
     if get_settings().environment == "demo":

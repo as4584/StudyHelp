@@ -5,8 +5,10 @@ import { BookOpen, Inbox, LayoutDashboard, LogOut, Scale, Sparkles, Users } from
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { POLICIES, policyHref } from "@/content/policies";
+import { api } from "@/lib/api";
 import { BUSINESS } from "@/content/site";
 
 import { useAuth } from "./auth";
@@ -44,7 +46,46 @@ function useNav() {
   const path = usePathname();
   const items = (me && NAV[me.profile.role]) || [];
   const isActive = (i: NavItem) => (i.match ? i.match.test(path) : path === i.href);
-  return { items, isActive };
+  const unread = useUnread(!!me && me.profile.role !== "admin", path);
+  // The desk (the item that owns /tasks/) carries the unread dot.
+  const hasDot = (i: NavItem) => unread > 0 && !!i.match?.test("/tasks/x");
+  return { items, isActive, unread, hasDot };
+}
+
+/** Unread chat messages across the user's sessions; refreshed on navigation and every 30s. */
+function useUnread(enabled: boolean, path: string) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (!enabled) return;
+    let live = true;
+    const load = () =>
+      api<{ count: number }>("/me/unread").then(
+        (r) => live && setCount(r.count),
+        () => {}, // the dot is a hint; a failed check just leaves it as it was
+      );
+    void load();
+    const t = setInterval(load, 30_000);
+    return () => {
+      live = false;
+      clearInterval(t);
+    };
+  }, [enabled, path]);
+  return enabled ? count : 0;
+}
+
+function UnreadDot({ count }: { count: number }) {
+  return (
+    <>
+      <span
+        data-testid="nav-unread-dot"
+        aria-hidden
+        className="ml-auto size-2 shrink-0 rounded-full bg-attention-mark"
+      />
+      <span className="sr-only">
+        , {count} unread {count === 1 ? "message" : "messages"}
+      </span>
+    </>
+  );
 }
 
 /** Public pages (landing, auth) render without the workspace chrome. */
@@ -172,7 +213,7 @@ function Account() {
 }
 
 function Sidebar() {
-  const { items, isActive } = useNav();
+  const { items, isActive, unread, hasDot } = useNav();
   return (
     <aside className="sticky top-0 hidden h-dvh flex-col self-start border-r border-rule bg-paper px-4 py-6 lg:flex">
       <Mark className="px-2" />
@@ -190,6 +231,7 @@ function Sidebar() {
             >
               <i.icon size={17} strokeWidth={1.75} aria-hidden />
               {i.label}
+              {hasDot(i) && <UnreadDot count={unread} />}
             </Link>
           );
         })}
@@ -202,12 +244,27 @@ function Sidebar() {
 }
 
 function MobileBar() {
-  const { items, isActive } = useNav();
+  const { items, isActive, unread, hasDot } = useNav();
+  const solo = items.length === 1 ? items[0] : null; // tutors/admins: no tab row on phones
   return (
     <div className="relative z-20 border-b border-rule bg-paper lg:hidden">
       <div className="flex h-14 items-center justify-between px-5 sm:px-8">
         <Mark />
-        <MobileAccount />
+        <span className="flex items-center gap-1">
+          {solo && hasDot(solo) && (
+            <Link
+              href={solo.href}
+              className="tap relative inline-flex size-10 items-center justify-center rounded-[6px] text-ink-2 hover:bg-sunken"
+            >
+              <solo.icon size={18} strokeWidth={1.75} aria-hidden />
+              <span className="sr-only">{solo.label}</span>
+              <span className="absolute top-2 right-2 flex">
+                <UnreadDot count={unread} />
+              </span>
+            </Link>
+          )}
+          <MobileAccount />
+        </span>
       </div>
       {items.length > 1 && (
         // Every tab stays on screen: a 2-column grid on phones (a sideways scroller hid
@@ -225,7 +282,8 @@ function MobileBar() {
                 }`}
               >
                 <i.icon size={16} strokeWidth={1.75} aria-hidden />
-                {i.label}
+                <span className="truncate">{i.label}</span>
+                {hasDot(i) && <UnreadDot count={unread} />}
               </Link>
             );
           })}

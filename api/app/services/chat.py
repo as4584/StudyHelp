@@ -8,13 +8,23 @@ language and surfaced to clients; Realtime only signals clients to refetch via t
 import logging
 import time
 import uuid
+from dataclasses import dataclass
+from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import case, func, or_, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.api.dependencies import CurrentUser
 from app.core.errors import NotFound
-from app.models.entities import Conversation, Message, MessageTranslation, Profile
+from app.models.entities import (
+    Conversation,
+    ConversationRead,
+    Message,
+    MessageTranslation,
+    Profile,
+)
 from app.observability.logging import event
 from app.providers.translation import TranslationError, TranslationProvider
 from app.services import rate_limits
@@ -134,3 +144,86 @@ async def send_message(
         await session.commit()
         results.append(tr)
     return msg, results
+
+
+# ------------------------------------------------------------------ read markers
+
+
+def _unread_filter(user_id: uuid.UUID, read: Any) -> tuple[Any, Any]:
+    return (
+        Message.sender_id != user_id,
+        or_(read.last_read_at.is_(None), Message.created_at > read.last_read_at),
+    )
+
+
+async def mark_read(session: AsyncSession, user: CurrentUser, conversation_id: uuid.UUID) -> None:
+    """Record that this participant has seen the conversation up to now."""
+    conv = await get_conversation(session, user, conversation_id)  # 404 for non-participants
+    stmt = pg_insert(ConversationRead).values(conversation_id=conv.id, user_id=user.id)
+    stmt = stmt.on_conflict_do_update(
+        index_elements=[ConversationRead.conversation_id, ConversationRead.user_id],
+        set_={"last_read_at": func.now()},
+    )
+    await session.execute(stmt)
+    await session.commit()
+
+
+@dataclass
+class ChatSummary:
+    unread: int
+    opened: bool  # this participant has viewed the chat at least once
+    counterpart_name: str
+
+
+async def summaries(
+    session: AsyncSession, user_id: uuid.UUID, task_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, ChatSummary]:
+    """Per-task chat summary for this user, only for conversations they take part in."""
+    if not task_ids:
+        return {}
+    read = aliased(ConversationRead)
+    other = aliased(Profile)
+    other_id = case(
+        (Conversation.student_id == user_id, Conversation.tutor_id), else_=Conversation.student_id
+    )
+    unread = (
+        select(func.count(Message.id))
+        .where(Message.conversation_id == Conversation.id, *_unread_filter(user_id, read))
+        .correlate(Conversation, read)
+        .scalar_subquery()
+    )
+    rows = await session.execute(
+        select(Conversation.task_id, unread, read.last_read_at, other.display_name)
+        .select_from(Conversation)
+        .join(
+            read,
+            (read.conversation_id == Conversation.id) & (read.user_id == user_id),
+            isouter=True,
+        )
+        .join(other, other.id == other_id)
+        .where(
+            Conversation.task_id.in_(task_ids),
+            or_(Conversation.student_id == user_id, Conversation.tutor_id == user_id),
+        )
+    )
+    return {
+        task_id: ChatSummary(int(n or 0), last is not None, name) for task_id, n, last, name in rows
+    }
+
+
+async def unread_total(session: AsyncSession, user_id: uuid.UUID) -> int:
+    read = aliased(ConversationRead)
+    n = await session.scalar(
+        select(func.count(Message.id))
+        .join(Conversation, Conversation.id == Message.conversation_id)
+        .join(
+            read,
+            (read.conversation_id == Conversation.id) & (read.user_id == user_id),
+            isouter=True,
+        )
+        .where(
+            or_(Conversation.student_id == user_id, Conversation.tutor_id == user_id),
+            *_unread_filter(user_id, read),
+        )
+    )
+    return int(n or 0)

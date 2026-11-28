@@ -31,7 +31,7 @@ async function token(page: Page): Promise<string> {
   return JSON.parse(value).access_token as string;
 }
 
-async function call(page: Page, path: string, body?: unknown) {
+export async function call(page: Page, path: string, body?: unknown) {
   const res = await page.request.fetch(`${API}${path}`, {
     method: body === undefined ? "GET" : "POST",
     headers: { Authorization: `Bearer ${await token(page)}` },
@@ -56,6 +56,21 @@ export async function paidSession(student: Page, tutor: Page): Promise<string> {
   const checkout = await call(student, `/tasks/${task.id}/checkout`, {});
   const sessionId = String(checkout.url).split("?")[0].split("/").pop();
   await call(student, `/simulated/checkout/${sessionId}/complete`, {});
+  return task.id as string;
+}
+
+/** Posted -> bid -> hired (not paid yet): the moment both people should start talking. */
+export async function hiredSession(student: Page, tutor: Page): Promise<string> {
+  const task = await call(student, "/tasks", {
+    subject: "Mathematics",
+    level: "college",
+    title: `Help with derivatives ${Date.now()}`,
+    description: "I keep mixing up the chain rule.",
+    budget_cents: 1500,
+    honor_code_ack: true,
+  });
+  const bid = await call(tutor, `/tasks/${task.id}/bids`, { amount_cents: 1500, message: "Happy to help" });
+  await call(student, `/tasks/${task.id}/hire`, { bid_id: bid.id });
   return task.id as string;
 }
 

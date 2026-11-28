@@ -115,7 +115,7 @@ const VARIANTS: Record<Variant, string> = {
 const BTN =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-[7px] px-4 text-[15px] font-semibold whitespace-nowrap transition-[background-color,border-color,color,transform] duration-150 ease-[var(--ease-out)] active:scale-[0.985] disabled:pointer-events-none disabled:opacity-45 sm:min-h-10";
 
-type BtnProps = React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant };
+type BtnProps = React.ComponentProps<"button"> & { variant?: Variant };
 
 /**
  * A button that shows its own work. If onClick returns a promise (our `useAction().run`), only
@@ -303,6 +303,31 @@ export function Badge({ status, label }: { status: string; label?: string }) {
       <span aria-hidden className={cx("size-1.5 rounded-full", TONE_DOT[tone])} />
       <span data-testid="status" className={label ? undefined : "capitalize"}>
         {label ?? status}
+      </span>
+    </span>
+  );
+}
+
+const HONORIFIC = /^(prof|dr|mr|mrs|ms|mx|sr|sra|srta)\.?$/i;
+
+/** First name from a display name, for friendly prompts ("Message Diego", not "Message Prof."). */
+export const firstName = (name: string | null | undefined, fallback: string) =>
+  (name ?? "")
+    .trim()
+    .split(/\s+/)
+    .find((w) => w && !HONORIFIC.test(w)) || fallback;
+
+/** Unread chat messages on a session row; renders nothing at zero. */
+export function UnreadCount({ count }: { count: number | undefined }) {
+  if (!count) return null;
+  return (
+    <span
+      data-testid="unread-count"
+      className="tnum inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-tutor px-1.5 text-[12px] font-semibold text-white"
+    >
+      <span aria-hidden>{count > 99 ? "99+" : count}</span>
+      <span className="sr-only">
+        {count} unread {count === 1 ? "message" : "messages"}
       </span>
     </span>
   );
