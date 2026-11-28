@@ -20,7 +20,12 @@ test("a new hire nudges the tutor to message the student, and unread counts foll
 
   // Tutor desk: a banner for the new hire, linking straight to the chat.
   await tutor.goto("/tutor");
-  const banner = tutor.getByTestId("new-hire").filter({ hasText: "You were hired — message Maya" });
+  // Other specs leave paid sessions behind: pick this session's banner by its title.
+  const { title } = await call(tutor, `/tasks/${taskId}`);
+  const banner = tutor
+    .getByTestId("new-hire")
+    .filter({ hasText: "You were hired — message Maya" })
+    .filter({ hasText: title });
   await expect(banner).toBeVisible();
   await noSideScroll(tutor);
   await banner.getByRole("link", { name: "Message Maya" }).click();
@@ -35,7 +40,7 @@ test("a new hire nudges the tutor to message the student, and unread counts foll
   // The banner is gone once the chat was opened.
   await tutor.goto("/tutor");
   await expect(tutor.getByRole("heading", { name: "Your sessions" })).toBeVisible();
-  await expect(tutor.getByTestId("new-hire").filter({ hasText: "Maya" })).toHaveCount(0);
+  await expect(tutor.getByTestId("new-hire").filter({ hasText: title })).toHaveCount(0);
 
   // Student desk: the tutor's message is unread; the "Message Diego" link sits by the next step.
   await student.goto("/student");
