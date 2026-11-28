@@ -62,6 +62,7 @@ async def tutors(
             .join(Profile, Profile.id == TutorProfile.user_id)
             .where(TutorProfile.status == status)
             .order_by(TutorProfile.created_at)
+            .limit(500)
         )
     ).all()
     return [
@@ -87,7 +88,9 @@ async def decide_tutor(
 
 @router.get("/disputes", response_model=list[DisputeOut])
 async def disputes(_: AdminDep, session: SessionDep) -> list[DisputeOut]:
-    rows = (await session.execute(select(Dispute).order_by(Dispute.created_at.desc()))).scalars()
+    rows = (
+        await session.execute(select(Dispute).order_by(Dispute.created_at.desc()).limit(500))
+    ).scalars()
     return [DisputeOut.model_validate(d) for d in rows]
 
 

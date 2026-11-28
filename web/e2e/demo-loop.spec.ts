@@ -168,7 +168,8 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
   await expect(upgrade.or(student.getByText("AI tutor · Premium"))).toBeVisible();
   if (await upgrade.isVisible()) {
     // Free students can ask a few questions a day before upgrading; the counter tells them.
-    // Earlier device projects share this demo student, so today's 5 may already be used up.
+    // Earlier device projects in the same run share this student and may have used today's
+    // questions up; then the counter correctly says when they reset.
     await expect(student.getByTestId("ai-quota")).toContainText(
       /of 5 free questions left today|Free questions reset in/,
     );
@@ -177,10 +178,10 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
     await student.waitForURL(/\/payments\/return/);
     await expect(student.getByRole("heading", { name: "Premium is on." })).toBeVisible();
   }
-  // Premium shows its plan and price; on the demo a tester can switch back to free.
+  // Premium shows its plan and price.
   await student.goto("/student");
   await expect(student.getByTestId("ai-quota")).toContainText("Premium · $9.99/month");
-  // Ask while Premium: other device projects share this demo student's free daily questions.
+  // Ask while Premium: the free daily questions may already be spent by earlier device runs.
   await student.goto("/assistant");
   await student.getByPlaceholder("Subject (e.g. Calculus)").fill("Physics");
   await student.getByLabel("Question", { exact: true }).fill("Why does a heavier object not fall faster?");
@@ -190,8 +191,7 @@ test("full three-role demo loop", async ({ browser, page: initial }) => {
   await student.waitForURL(/\/student\/tasks\/new\?/);
   await expect(student.getByLabel("Subject")).toHaveValue("Physics");
   await expect(student.getByLabel("Details")).toHaveValue(/heavier object/);
-
-  // On the demo a tester can switch back to the free plan.
+  // On the demo a tester can switch back to free.
   await student.goto("/student");
   await student.getByTestId("demo-cancel-premium").click();
   await expect(student.getByTestId("ai-quota")).toContainText(/of 5 free questions left today|Free questions reset in/);
