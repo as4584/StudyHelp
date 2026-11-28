@@ -167,9 +167,9 @@ why = "ending with no session is 404"
 
 [[mutant]]
 file = "app/providers/video/__init__.py"
-old = '        "canPublishData": False,'
-new = '        "canPublishData": True,'
-why = "no data channel"
+old = '        "canPublishData": True,  # shared-whiteboard strokes between the two parties'
+new = '        "canPublishData": False,  # shared-whiteboard strokes between the two parties'
+why = "call tokens can send whiteboard strokes"
 
 [[mutant]]
 file = "app/providers/video/__init__.py"
@@ -285,9 +285,9 @@ why = "wrong-script output (e.g. pinyin) is refused"
 # ---------------------------------------------------------------- deterministic layer
 [[mutant]]
 file = "app/core/limits.py"
-old = 'cap = MAX_UPLOAD_BYTES if scope.get("path") in UPLOAD_PATHS else MAX_BODY_BYTES'
-new = "cap = MAX_UPLOAD_BYTES"
-why = "only the upload route gets the large body cap"
+old = '    return MAX_BODY_BYTES'
+new = '    return MAX_UPLOAD_BYTES'
+why = "only the upload and whiteboard routes get a larger body cap"
 
 [[mutant]]
 file = "app/services/solver.py"
