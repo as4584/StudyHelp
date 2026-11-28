@@ -1,7 +1,7 @@
 "use client";
 
 import { cancelDemoPremium, QuotaNote, startPremiumCheckout, useAiQuota } from "@/components/ai-quota";
-import { ArrowRight, ArrowUp, Sparkles } from "lucide-react";
+import { ArrowRight, ArrowUp, MessageCircle, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -9,7 +9,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRequireRole } from "@/components/auth";
 import { PolicyGate } from "@/components/policy-gate";
 import { PathHistory, SessionPath } from "@/components/study-path";
-import { Badge, EmptyState, ErrorText, LinkButton, LoadError, Skeleton, TIMELINE, useAction } from "@/components/ui";
+import {
+  Badge,
+  EmptyState,
+  ErrorText,
+  LinkButton,
+  LoadError,
+  Skeleton,
+  TIMELINE,
+  UnreadCount,
+  firstName,
+  useAction,
+} from "@/components/ui";
 import { api, money, type Bid, type Task } from "@/lib/api";
 import { useCapabilities } from "@/lib/capabilities";
 import { isActive, studentNextStep } from "@/lib/next-step";
@@ -153,9 +164,18 @@ function Focus({ task, bids }: { task: Task; bids: number }) {
           <Badge status={task.status} />
           <span className="tnum">Budget {money(task.budget_cents)}</span>
         </span>
-        <LinkButton href={`/tasks/${task.id}`} className="px-5">
-          {step.cta} <ArrowRight size={16} strokeWidth={2} aria-hidden />
-        </LinkButton>
+        <span className="flex flex-wrap items-center gap-2">
+          {task.counterpart_name && ["hired", "paid", "delivered"].includes(task.status) && (
+            <LinkButton href={`/tasks/${task.id}#chat`} variant="secondary" className="px-4">
+              <MessageCircle size={16} strokeWidth={2} aria-hidden /> Message{" "}
+              {firstName(task.counterpart_name, "your tutor")}
+              <UnreadCount count={task.unread_count} />
+            </LinkButton>
+          )}
+          <LinkButton href={`/tasks/${task.id}`} className="px-5">
+            {step.cta} <ArrowRight size={16} strokeWidth={2} aria-hidden />
+          </LinkButton>
+        </span>
       </div>
     </section>
   );
@@ -268,6 +288,7 @@ function Progress({ view }: { view: View }) {
                         {t.subject}
                       </span>
                     </span>
+                    <UnreadCount count={t.unread_count} />
                     <span className="hidden sm:block">
                       <Badge status={t.status} label={STATUS_LABEL[t.status]} />
                     </span>

@@ -98,6 +98,7 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
     }
     throw new ApiError(res.status, detail, code);
   }
+  if (res.status === 204) return undefined as T; // no body (e.g. mark-as-read)
   return (await res.json()) as T;
 }
 

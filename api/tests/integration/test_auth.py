@@ -17,7 +17,7 @@ async def test_health_is_public_and_identifies_release(client: httpx.AsyncClient
     assert {"status", "version", "git_sha", "environment"} <= body.keys()
     assert body["providers"]["payments_mode"] == "demo"  # drives the site's demo labels
     r = await client.get("/ready")
-    assert r.status_code == 200 and r.json()["providers"]["schema"] == "0010_task_whiteboards"
+    assert r.status_code == 200 and r.json()["providers"]["schema"] == "0011_conversation_reads"
 
 
 async def test_no_token(client: httpx.AsyncClient) -> None:

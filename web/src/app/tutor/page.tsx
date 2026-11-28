@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Wallet } from "lucide-react";
+import { ArrowRight, MessageCircle, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -15,11 +15,14 @@ import {
   ErrorText,
   Field,
   FileButton,
+  LinkButton,
   Section,
   Sheet,
   LoadError,
   Skeleton,
   Stars,
+  UnreadCount,
+  firstName,
   inputCls,
   useAction,
 } from "@/components/ui";
@@ -121,6 +124,8 @@ export default function TutorDesk() {
       </header>
 
       <PolicyGate />
+
+      {approved && <NewHires tasks={mine} />}
 
       {tutor?.status === "pending" && (
         <p className="mb-10 max-w-[60ch] font-serif text-[18px] leading-relaxed text-ink-2">
@@ -228,6 +233,37 @@ function Requests({ tasks, error, onRetry }: { tasks: Task[] | null; error: stri
   );
 }
 
+/** Sessions the tutor was just hired for and hasn't opened the chat of yet: say hello first. */
+function NewHires({ tasks }: { tasks: Task[] | null }) {
+  const fresh = (tasks ?? []).filter((t) => ["hired", "paid"].includes(t.status) && !t.chat_opened);
+  if (fresh.length === 0) return null;
+  return (
+    <ul className="mb-10 space-y-3" aria-label="New hires">
+      {fresh.map((t) => {
+        const name = firstName(t.counterpart_name, "your student");
+        return (
+          <li
+            key={t.id}
+            data-testid="new-hire"
+            className="enter flex flex-wrap items-center justify-between gap-4 rounded-[12px] border border-tutor/30 bg-tutor-soft px-5 py-4 sm:px-6"
+          >
+            <span className="min-w-0">
+              <span className="micro block text-tutor">New session</span>
+              <span className="mt-1 block font-serif text-[1.25rem] leading-snug text-ink">
+                You were hired — message {name}
+              </span>
+              <span className="mt-0.5 block truncate text-[13px] text-muted">{t.title}</span>
+            </span>
+            <LinkButton href={`/tasks/${t.id}#chat`} className="w-full sm:w-auto">
+              <MessageCircle size={16} strokeWidth={2} aria-hidden /> Message {name}
+            </LinkButton>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function Sessions({ tasks }: { tasks: Task[] | null }) {
   return (
     <section aria-labelledby="ses-h">
@@ -249,7 +285,10 @@ function Sessions({ tasks }: { tasks: Task[] | null }) {
                   <span className="min-w-0 truncate font-serif text-[1.125rem] text-ink group-hover:text-tutor">
                     {t.title}
                   </span>
-                  <Badge status={t.status} />
+                  <span className="flex shrink-0 items-center gap-3">
+                    <UnreadCount count={t.unread_count} />
+                    <Badge status={t.status} />
+                  </span>
                 </span>
                 <span className="mt-4 block max-w-[28rem]">
                   <PathLine stages={sessionStages(t.status, t.status === "hired" || t.status === "delivered")} dense />

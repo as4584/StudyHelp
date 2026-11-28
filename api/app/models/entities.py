@@ -271,6 +271,21 @@ class Conversation(Base):
     created_at: Mapped[datetime] = _created()
 
 
+class ConversationRead(Base):
+    """When each participant last viewed a chat; internal, never exposed to browser roles."""
+
+    __tablename__ = "conversation_reads"
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("conversations.id"), primary_key=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("profiles.id"), primary_key=True
+    )
+    last_read_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
 class Message(Base):
     __tablename__ = "messages"
     id: Mapped[uuid.UUID] = _pk()

@@ -59,4 +59,19 @@ export async function paidSession(student: Page, tutor: Page): Promise<string> {
   return task.id as string;
 }
 
+/** Posted -> bid -> hired (not paid yet): the moment both people should start talking. */
+export async function hiredSession(student: Page, tutor: Page): Promise<string> {
+  const task = await call(student, "/tasks", {
+    subject: "Mathematics",
+    level: "college",
+    title: `Help with derivatives ${Date.now()}`,
+    description: "I keep mixing up the chain rule.",
+    budget_cents: 1500,
+    honor_code_ack: true,
+  });
+  const bid = await call(tutor, `/tasks/${task.id}/bids`, { amount_cents: 1500, message: "Happy to help" });
+  await call(student, `/tasks/${task.id}/hire`, { bid_id: bid.id });
+  return task.id as string;
+}
+
 export const LIVE_VIDEO = process.env.E2E_LIVE_VIDEO === "1";
