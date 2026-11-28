@@ -308,6 +308,31 @@ export function Badge({ status, label }: { status: string; label?: string }) {
   );
 }
 
+const HONORIFIC = /^(prof|dr|mr|mrs|ms|mx|sr|sra|srta)\.?$/i;
+
+/** First name from a display name, for friendly prompts ("Message Diego", not "Message Prof."). */
+export const firstName = (name: string | null | undefined, fallback: string) =>
+  (name ?? "")
+    .trim()
+    .split(/\s+/)
+    .find((w) => w && !HONORIFIC.test(w)) || fallback;
+
+/** Unread chat messages on a session row; renders nothing at zero. */
+export function UnreadCount({ count }: { count: number | undefined }) {
+  if (!count) return null;
+  return (
+    <span
+      data-testid="unread-count"
+      className="tnum inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-tutor px-1.5 text-[12px] font-semibold text-white"
+    >
+      <span aria-hidden>{count > 99 ? "99+" : count}</span>
+      <span className="sr-only">
+        {count} unread {count === 1 ? "message" : "messages"}
+      </span>
+    </span>
+  );
+}
+
 export function ErrorText({ error }: { error: string | null }) {
   if (!error) return null;
   return (

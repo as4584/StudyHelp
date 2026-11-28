@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, CircleAlert, ShieldCheck } from "lucide-react";
+import { ArrowLeft, CircleAlert, MessageCircle, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -15,6 +15,7 @@ import { VideoSessionCard } from "@/components/video-session";
 import {
   Avatar,
   Badge,
+  firstName,
   Button,
   DemoPaymentNote,
   ErrorText,
@@ -28,6 +29,14 @@ import {
 } from "@/components/ui";
 import { accentFor } from "@/lib/subjects";
 import { api, ApiError, LANGUAGES, LEVELS, money, type Bid, type PaymentState, type Task } from "@/lib/api";
+
+/** Scroll to the conversation and put the cursor in its message box (works on repeat taps). */
+function jumpToChat(e: React.MouseEvent<HTMLAnchorElement>) {
+  e.preventDefault();
+  document.getElementById("chat")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  document.querySelector<HTMLInputElement>('#chat input[aria-label="Message"]')?.focus({ preventScroll: true });
+  history.replaceState(null, "", "#chat");
+}
 
 export default function TaskPage() {
   // Encoded once here: the id goes into API paths, so a crafted link cannot reach other routes.
@@ -81,6 +90,17 @@ export default function TaskPage() {
         {role === "tutor" ? "Tutor desk" : role === "admin" ? "Operations" : "Study desk"}
       </Link>
 
+      {hasChat && (
+        // Phones stack the chat below the next step; one tap gets there.
+        <a
+          href="#chat"
+          onClick={jumpToChat}
+          className="tap mb-6 ml-4 inline-flex items-center gap-1.5 text-[14px] font-semibold text-tutor hover:text-ink lg:hidden"
+        >
+          <MessageCircle size={15} strokeWidth={2} aria-hidden /> Jump to chat
+        </a>
+      )}
+
       <header className="mb-8">
         <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted">
           <span className="flex items-center gap-1.5 font-semibold" style={{ color: accentFor(task.subject).ink }}>
@@ -122,7 +142,10 @@ export default function TaskPage() {
         </div>
 
         {hasChat && (
-          <div className="min-w-0 lg:sticky lg:top-8 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
+          <div
+            id="chat"
+            className="min-w-0 scroll-mt-4 lg:sticky lg:top-8 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start"
+          >
             <Chat conversationId={conversationId!} meId={me.profile.id} myLang={me.profile.preferred_language} />
           </div>
         )}
@@ -356,6 +379,14 @@ function StudentActions({
         <Button className="w-full" disabled={a.pending} onClick={() => router.push(`/tasks/${task.id}/pay`)}>
           Pay {money(accepted?.amount_cents ?? task.budget_cents)} securely
         </Button>
+        <a
+          href="#chat"
+          onClick={jumpToChat}
+          className="tap inline-flex items-center gap-1.5 text-[14px] font-semibold text-tutor hover:text-ink"
+        >
+          <MessageCircle size={15} strokeWidth={2} aria-hidden /> Message{" "}
+          {firstName(accepted?.tutor_name, "your tutor")}
+        </a>
         {pay?.payment?.status === "pending" && (
           <p className="text-[13px] text-muted">
             Checkout started — we confirm the payment directly with the payment provider.
