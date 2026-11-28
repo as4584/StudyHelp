@@ -21,7 +21,7 @@ from app.schemas.api import (
     TaskIn,
     TaskOut,
 )
-from app.services import marketplace
+from app.services import chat, marketplace
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -36,14 +36,38 @@ async def create_task(body: TaskIn, student: StudentDep, session: SessionDep) ->
 async def list_tasks(
     user: UserDep, session: SessionDep, scope: Literal["mine", "open"] = "mine"
 ) -> list[TaskOut]:
-    return [TaskOut.model_validate(t) for t in await marketplace.list_tasks(session, user, scope)]
+    tasks = [TaskOut.model_validate(t) for t in await marketplace.list_tasks(session, user, scope)]
+    if scope != "mine":
+        return tasks
+    # Chat summaries come only from conversations the caller takes part in (never admin views).
+    chats = await chat.summaries(session, user.id, [t.id for t in tasks])
+    return [
+        t.model_copy(
+            update={
+                "unread_count": c.unread,
+                "chat_opened": c.opened,
+                "counterpart_name": c.counterpart_name,
+            }
+        )
+        if (c := chats.get(t.id))
+        else t
+        for t in tasks
+    ]
 
 
 @router.get("/{task_id}", response_model=TaskOut)
 async def get_task(task_id: uuid.UUID, user: UserDep, session: SessionDep) -> TaskOut:
     task = await marketplace.get_visible_task(session, user, task_id)
     reviewed = await session.scalar(select(exists().where(Review.task_id == task.id)))
-    return TaskOut.model_validate(task).model_copy(update={"reviewed": bool(reviewed)})
+    update: dict[str, object] = {"reviewed": bool(reviewed)}
+    # The call page's Chat badge: only for a participant of this session's conversation.
+    if c := (await chat.summaries(session, user.id, [task.id])).get(task.id):
+        update |= {
+            "unread_count": c.unread,
+            "chat_opened": c.opened,
+            "counterpart_name": c.counterpart_name,
+        }
+    return TaskOut.model_validate(task).model_copy(update=update)
 
 
 @router.post("/{task_id}/cancel", response_model=TaskOut)

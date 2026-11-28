@@ -13,20 +13,55 @@ import { Button, DemoTagged, ErrorText, Sheet, inputCls, useAction } from "./ui"
  * is only a change signal (RLS limits who receives it). A slow poll covers a dropped socket.
  * The other person's voice is set in the reading face; yours sits quietly on the right.
  */
-export function Chat({ conversationId, meId, myLang }: { conversationId: string; meId: string; myLang: string }) {
+export function Chat({
+  conversationId,
+  meId,
+  myLang,
+  className,
+  headerAction,
+  autoFocus,
+}: {
+  conversationId: string;
+  meId: string;
+  myLang: string;
+  /** Replaces the default height limits (the call page sizes the panel itself). */
+  className?: string;
+  /** Rendered at the end of the header, e.g. a close button. */
+  headerAction?: React.ReactNode;
+  /** Put the cursor in the message box when the chat appears. */
+  autoFocus?: boolean;
+}) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [body, setBody] = useState("");
   const [showOriginal, setShowOriginal] = useState<Record<string, boolean>>({});
   const send = useAction();
   const log = useRef<HTMLDivElement>(null);
+  const input = useRef<HTMLInputElement>(null);
+  const markedFor = useRef<string | null>(null);
 
   const load = useCallback(async () => {
+    let msgs: Message[];
     try {
-      setMessages(await api<Message[]>(`/conversations/${conversationId}/messages`));
+      msgs = await api<Message[]>(`/conversations/${conversationId}/messages`);
     } catch {
       // Offline or a blip: keep what's on screen; the 5-second poll tries again.
+      return;
+    }
+    setMessages(msgs);
+    // The chat is on screen: mark it read once per newest message (not on every poll).
+    const newest = msgs.at(-1)?.id ?? "empty";
+    if (markedFor.current !== newest && document.visibilityState === "visible") {
+      markedFor.current = newest;
+      api(`/conversations/${conversationId}/read`, { body: {} }).catch(() => {
+        markedFor.current = null; // try again on the next poll
+      });
     }
   }, [conversationId]);
+
+  // Arriving from a "Message …" link (#chat): bring the box into view and put the cursor in it.
+  useEffect(() => {
+    if (autoFocus || window.location.hash === "#chat") input.current?.focus({ preventScroll: !!autoFocus });
+  }, [autoFocus]);
 
   useEffect(() => {
     void load();
@@ -62,11 +97,12 @@ export function Chat({ conversationId, meId, myLang }: { conversationId: string;
   }, [messages.length]);
 
   return (
-    <Sheet className="flex max-h-[min(40rem,80dvh)] min-h-[22rem] flex-col">
+    <Sheet className={className ?? "flex max-h-[min(40rem,80dvh)] min-h-[22rem] flex-col"}>
       <div className="flex items-center justify-between gap-3 border-b border-rule px-5 py-3.5">
         <h2 className="font-serif text-[17px] font-medium text-ink">Conversation</h2>
         <span className="flex items-center gap-1.5 text-[13px] text-muted">
           <Languages size={14} strokeWidth={1.75} aria-hidden /> Shown in {LANGUAGES[myLang] ?? myLang}
+          {headerAction}
         </span>
       </div>
       <div ref={log} className="flex-1 space-y-5 overflow-y-auto px-5 py-5" data-testid="chat-log" aria-live="polite">
@@ -154,6 +190,7 @@ export function Chat({ conversationId, meId, myLang }: { conversationId: string;
         }}
       >
         <input
+          ref={input}
           dir="auto"
           aria-label="Message"
           className={inputCls}

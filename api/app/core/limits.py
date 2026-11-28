@@ -8,6 +8,16 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 MAX_BODY_BYTES = 256 * 1024
 MAX_UPLOAD_BYTES = 4 * 1024 * 1024
 UPLOAD_PATHS = frozenset({"/ai/extract"})
+# Shared whiteboard scenes (PUT /tasks/{id}/whiteboard) may be bigger than other JSON.
+WHITEBOARD_MAX_BYTES = 2 * 1024 * 1024
+
+
+def cap_for(path: str) -> int:
+    if path in UPLOAD_PATHS:
+        return MAX_UPLOAD_BYTES
+    if path.startswith("/tasks/") and path.endswith("/whiteboard"):
+        return WHITEBOARD_MAX_BYTES
+    return MAX_BODY_BYTES
 
 
 class BodyLimitMiddleware:
@@ -18,7 +28,7 @@ class BodyLimitMiddleware:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
-        cap = MAX_UPLOAD_BYTES if scope.get("path") in UPLOAD_PATHS else MAX_BODY_BYTES
+        cap = cap_for(scope.get("path", ""))
         length = dict(scope["headers"]).get(b"content-length")
         if length is not None and length.isdigit() and int(length) > cap:
             await _too_large(send)
