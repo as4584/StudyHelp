@@ -12,6 +12,7 @@ import { Chat } from "@/components/chat";
 import { SessionPath } from "@/components/study-path";
 import { TaskFiles } from "@/components/task-files";
 import { VideoSessionCard } from "@/components/video-session";
+import { WhiteboardCard } from "@/components/whiteboard";
 import {
   Avatar,
   Badge,
@@ -137,6 +138,7 @@ export default function TaskPage() {
       >
         <div className="min-w-0 space-y-6 lg:col-start-1 lg:row-start-1">
           {(isStudent || isTutor) && <VideoSessionCard taskId={task.id} />}
+          {(isStudent || isTutor) && <WhiteboardCard taskId={task.id} status={task.status} />}
           {isStudent && <StudentActions task={task} bids={bids} pay={pay} reload={reload} />}
           {role === "tutor" && <TutorActions task={task} bids={bids} pay={pay} isHired={isTutor} reload={reload} />}
         </div>
