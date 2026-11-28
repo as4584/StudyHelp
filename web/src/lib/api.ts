@@ -101,6 +101,23 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
   return (await res.json()) as T;
 }
 
+/**
+ * A write that still goes out while the page unloads (reload, tab closed). The token must be
+ * known up front: there is no time to await the session. Browsers cap keepalive bodies at 64 KB,
+ * so a bigger body is not sent (returns false).
+ */
+export function sendOnUnload(path: string, method: string, body: unknown, token: string | undefined): boolean {
+  const json = JSON.stringify(body);
+  if (new TextEncoder().encode(json).length > 63_000) return false;
+  fetch(`${API_URL}${path}`, {
+    method,
+    keepalive: true,
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), "Content-Type": "application/json" },
+    body: json,
+  }).catch(() => undefined);
+  return true;
+}
+
 export const money = (cents: number) => (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
 
 export const LEVELS: Record<string, string> = { high_school: "High school", college: "College" };
