@@ -25,8 +25,8 @@ async function openBoard(page: Page, taskId: string, navigate = true) {
 async function drawRect(page: Page, board: Locator, at = 0.3) {
   const canvas = board.locator("canvas.interactive");
   const box = (await canvas.boundingBox())!;
-  await page.keyboard.press("Escape").catch(() => undefined);
-  await canvas.click({ position: { x: box.width * 0.9, y: box.height * 0.9 } });
+  // An empty spot clear of Excalidraw's toolbars on every layout (phones put one at the bottom).
+  await canvas.click({ position: { x: box.width * 0.85, y: box.height * 0.3 } });
   await page.keyboard.press("r");
   const x = box.x + box.width * at;
   const y = box.y + box.height * 0.45;
