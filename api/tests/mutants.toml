@@ -259,8 +259,8 @@ why = "oversized bodies are refused"
 
 [[mutant]]
 file = "app/services/rate_limits.py"
-old = "    if today >= TASKS_PER_DAY:"
-new = "    if today >= 10 * TASKS_PER_DAY:"
+old = "    if today >= limit:"
+new = "    if today >= 10 * limit:"
 why = "students can't flood the request feed"
 
 # ---------------------------------------------------------------- translation guards
