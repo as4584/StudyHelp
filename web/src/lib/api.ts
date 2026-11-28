@@ -65,23 +65,36 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
     const canRetry = method === "GET" && attempt === 0;
     try {
       res = await send();
-    } catch {
+    } catch (e) {
       if (canRetry) continue;
-      throw new ApiError(0, "The server took too long to respond. Please try again.");
+      // Our own timeout vs. never reaching the server (offline, DNS, the API down).
+      throw new ApiError(
+        0,
+        (e as { name?: string } | null)?.name === "TimeoutError"
+          ? "The server took too long to respond. Please try again."
+          : "We couldn't reach StudyHelp. Check your internet connection and try again.",
+      );
     }
     // HTTP and transport failures share the same single retry. Writes never retry.
     if (canRetry && RETRYABLE.has(res.status)) continue;
     break;
   }
   if (!res.ok) {
-    let detail = res.statusText;
+    // A non-JSON error is a proxy or platform page (gateway timeout, outage): never show its
+    // raw status text ("Internal Server Error") to a student.
+    let detail =
+      res.status >= 502 && res.status <= 504
+        ? "StudyHelp is temporarily unavailable. Please try again in a minute."
+        : res.status >= 500
+          ? "Something went wrong on our side. Please try again."
+          : res.statusText || "Something went wrong. Please try again.";
     let code: string | undefined;
     try {
       const j = await res.json();
-      detail = typeof j.detail === "string" ? j.detail : validationMessage(j.detail);
+      if (j.detail !== undefined) detail = typeof j.detail === "string" ? j.detail : validationMessage(j.detail);
       code = typeof j.code === "string" ? j.code : undefined;
     } catch {
-      /* non-JSON error */
+      /* non-JSON error: keep the plain-language message above */
     }
     throw new ApiError(res.status, detail, code);
   }

@@ -34,8 +34,13 @@ class SupabaseStorage:
 
     async def signed_upload(self, bucket: str, path: str) -> SignedUpload:
         url = f"{self._base}/object/upload/sign/{bucket}/{quote(path)}"
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.post(url, headers=self._headers)
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.post(url, headers=self._headers)
+        except httpx.HTTPError as exc:
+            raise ProviderError(
+                "File storage is temporarily unavailable. Please try again in a minute."
+            ) from exc
         if resp.status_code >= 400:
             raise ProviderError(f"storage upload sign failed ({resp.status_code})")
         signed = str(resp.json()["url"])  # "/object/upload/sign/<bucket>/<path>?token=..."
@@ -44,8 +49,13 @@ class SupabaseStorage:
 
     async def signed_download(self, bucket: str, path: str, expires_in: int = 300) -> str:
         url = f"{self._base}/object/sign/{bucket}/{quote(path)}"
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.post(url, headers=self._headers, json={"expiresIn": expires_in})
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.post(url, headers=self._headers, json={"expiresIn": expires_in})
+        except httpx.HTTPError as exc:
+            raise ProviderError(
+                "File storage is temporarily unavailable. Please try again in a minute."
+            ) from exc
         # The upload slot exists but nothing was ever uploaded to it (closed tab, failed upload).
         if resp.status_code in (400, 404) and "not_found" in resp.text:
             raise NotFound("this file was never finished uploading")
