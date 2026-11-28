@@ -15,12 +15,21 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from app.core.config import get_settings
 from app.core.db import get_session
+from app.core.errors import AuthUnavailable
 from app.models.entities import Profile
 from app.observability.logging import event
-from app.security.jwt import InvalidToken, KeySource, RemoteKeySource, TokenClaims, TokenVerifier
+from app.security.jwt import (
+    InvalidToken,
+    KeySource,
+    KeysUnavailable,
+    RemoteKeySource,
+    TokenClaims,
+    TokenVerifier,
+)
 
 log = logging.getLogger("auth")
 _bearer = HTTPBearer(auto_error=False)
@@ -55,9 +64,16 @@ async def get_token_claims(
     if creds is None or creds.scheme.lower() != "bearer" or not creds.credentials:
         raise _unauthorized("missing", request)
     try:
-        return verifier.verify(creds.credentials)
+        # A key fetch is a blocking HTTP call (cold start, key rotation): keep it off the event
+        # loop so one slow fetch doesn't stall every other request on this instance.
+        return await run_in_threadpool(verifier.verify, creds.credentials)
     except InvalidToken as exc:
         raise _unauthorized(str(exc), request) from exc
+    except KeysUnavailable as exc:
+        event(log, "auth.keys_unavailable", logging.ERROR, path=request.url.path)
+        raise AuthUnavailable(
+            "Sign-in is temporarily unavailable. Please try again in a minute."
+        ) from exc
 
 
 ClaimsDep = Annotated[TokenClaims, Depends(get_token_claims)]

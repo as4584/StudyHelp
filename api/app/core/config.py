@@ -95,6 +95,9 @@ class Settings(BaseSettings):
     # Bot check (Cloudflare Turnstile) on sign-up. When unset outside production, Cloudflare's
     # published always-pass test secret is used, so local runs and CI need no real keys.
     turnstile_secret_key: str = ""
+    # Requests a student may post per day (0 = the built-in default). The local E2E gate
+    # raises it: every device project shares the same seeded demo student.
+    tasks_per_day: int = 0
     turnstile_verify_url: str = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
     turnstile_timeout_s: float = 5.0
 

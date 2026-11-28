@@ -41,12 +41,23 @@ export function TaskFiles({
               </span>
               <button
                 className="text-[14px] font-semibold text-tutor underline-offset-4 hover:underline"
-                onClick={() =>
-                  a.run(async () => {
-                    const { url } = await api<{ url: string }>(`/files/${f.id}/download`);
-                    window.open(url, "_blank", "noopener");
-                  })
-                }
+                onClick={() => {
+                  // Open the tab during the tap: Safari (iPhone/iPad) blocks tabs opened after an
+                  // await, so the file would silently never open. Point it at the link once known.
+                  const tab = window.open("", "_blank");
+                  void a.run(async () => {
+                    try {
+                      const { url } = await api<{ url: string }>(`/files/${f.id}/download`);
+                      if (tab) {
+                        tab.opener = null;
+                        tab.location.href = url;
+                      } else window.location.href = url;
+                    } catch (e) {
+                      tab?.close();
+                      throw e;
+                    }
+                  });
+                }}
               >
                 Open
               </button>

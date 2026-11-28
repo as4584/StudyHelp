@@ -46,7 +46,7 @@ function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; chi
 function Step({ n, title, hint, children }: { n: string; title: string; hint?: string; children: React.ReactNode }) {
   return (
     <section className="grid gap-x-6 gap-y-3 border-t border-rule pt-7 sm:grid-cols-[3.5rem_1fr]">
-      <div className="tnum font-serif text-[1.75rem] leading-none font-medium text-rule-strong sm:text-right">{n}</div>
+      <div className="tnum font-serif text-[1.75rem] leading-none font-medium text-muted sm:text-right">{n}</div>
       <div className="min-w-0">
         <h2 className="font-serif text-[1.375rem] leading-snug font-medium tracking-[-0.01em] text-ink">{title}</h2>
         {hint && <p className="mt-1 text-[14px] text-muted">{hint}</p>}
@@ -311,7 +311,7 @@ function NewTaskForm() {
               </span>
             </div>
             <p
-              className={`mt-2 font-serif text-[1.25rem] leading-snug font-medium ${title ? "text-ink" : "text-muted/70 italic"}`}
+              className={`mt-2 font-serif text-[1.25rem] leading-snug font-medium ${title ? "text-ink" : "text-muted italic"}`}
             >
               {title || "What you're trying to understand"}
             </p>

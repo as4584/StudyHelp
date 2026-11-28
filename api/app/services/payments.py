@@ -337,7 +337,8 @@ async def start_tip_checkout(
     amount_cents: int,
 ) -> str:
     validate_tip(amount_cents)
-    task = await get_visible_task(session, student, task_id)
+    # Locked so simultaneous taps queue up and all reuse one pending tip.
+    task = await get_visible_task(session, student, task_id, for_update=True)
     if task.student_id != student.id:
         raise NotFound("task not found")
     if task.status != "completed" or task.hired_tutor_id is None:

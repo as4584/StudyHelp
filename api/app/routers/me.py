@@ -1,9 +1,12 @@
-from fastapi import APIRouter, HTTPException, Request, status
+from typing import Annotated
+
+from fastapi import APIRouter, HTTPException, Query, Request, status
 from sqlalchemy import exists, func, select
 from sqlalchemy.exc import IntegrityError
 
 from app.api.dependencies import ClaimsDep, SessionDep, TutorDep, UserDep
 from app.models.entities import Profile, TutorProfile
+from app.routers.avatars import avatar_link, avatar_version
 from app.schemas.api import (
     GuardianConsentIn,
     MeOut,
@@ -137,13 +140,24 @@ async def submit_application(
 
 @router.get("/tutors", response_model=list[PublicTutorOut])
 async def list_tutors(
-    session: SessionDep, _: UserDep, subject: str | None = None
+    session: SessionDep,
+    _: UserDep,
+    request: Request,
+    subject: str | None = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 100,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[PublicTutorOut]:
     stmt = (
-        select(TutorProfile, Profile.display_name, Profile.avatar_url)
+        select(TutorProfile, Profile.display_name, avatar_version)
         .join(Profile, Profile.id == TutorProfile.user_id)
         .where(TutorProfile.status == "approved", Profile.is_active)
-        .order_by(TutorProfile.rating_avg.desc(), TutorProfile.rating_count.desc())
+        .order_by(
+            TutorProfile.rating_avg.desc(),
+            TutorProfile.rating_count.desc(),
+            TutorProfile.user_id,  # stable order, so pages never repeat or skip a tutor
+        )
+        .limit(limit)
+        .offset(offset)
     )
     if subject and subject.strip():
         # Case-insensitive: "math" finds a tutor who listed "Math".
@@ -158,7 +172,11 @@ async def list_tutors(
     rows = (await session.execute(stmt)).all()
     return [
         PublicTutorOut.model_validate(
-            {**TutorOut.model_validate(tp).model_dump(), "display_name": n, "avatar_url": av}
+            {
+                **TutorOut.model_validate(tp).model_dump(),
+                "display_name": n,
+                "avatar_url": avatar_link(request, tp.user_id, av),
+            }
         )
         for tp, n, av in rows
     ]

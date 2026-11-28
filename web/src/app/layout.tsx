@@ -43,7 +43,18 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const direction = WEBSITE_LANGUAGES.find(({ code }) => code === locale)!.direction;
   return (
     <html lang={locale} dir={direction} className={`${ui.variable} ${read.variable}`}>
+      <head>
+        {/* Every page talks to the API; open that connection while the page is still loading. */}
+        <link rel="preconnect" href={process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000"} crossOrigin="" />
+      </head>
       <body>
+        {/* First stop for keyboard and screen-reader users: jump past the navigation. */}
+        <a
+          href="#main"
+          className="sr-only rounded-[6px] bg-ink px-4 py-3 text-[15px] font-semibold text-paper focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50"
+        >
+          Skip to main content
+        </a>
         <WebsiteLanguageProvider locale={locale} saved={saved}>
           <AuthProvider>
             <ToastProvider>

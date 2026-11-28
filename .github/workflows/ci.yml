@@ -43,7 +43,7 @@ jobs:
         working-directory: web
         run: |
           npm ci
-          npx playwright install --with-deps chromium
+          npx playwright install --with-deps chromium webkit
 
       - name: Start local Supabase (Postgres/Auth/Realtime/Storage) with an ES256 signing key
         run: |

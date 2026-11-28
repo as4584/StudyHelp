@@ -124,7 +124,8 @@ class OnboardIn(BaseModel):
 class ProfilePatch(BaseModel):
     display_name: DisplayName | None = None
     preferred_language: str | None = Field(default=None, pattern=LANG_PATTERN)
-    avatar_url: str | None = Field(default=None, max_length=200000, pattern=AVATAR_PATTERN)
+    # A 256px JPEG from the photo picker is ~15-40 KB; this sits in every bid and tutor card.
+    avatar_url: str | None = Field(default=None, max_length=100000, pattern=AVATAR_PATTERN)
 
 
 class TutorApplicationIn(BaseModel):
@@ -463,6 +464,8 @@ class TaskDraftOut(BaseModel):
 
 class AdminUserOut(ProfileOut):
     created_at: datetime
+    # Photos stay out of the admin list (unused there, and up to ~500 x 30 KB per load).
+    avatar_url: str | None = Field(default=None, exclude=True)
 
 
 class RevenueOut(BaseModel):

@@ -38,6 +38,7 @@ test("student and tutor see each other, then the shared screen", async ({ browse
 
   // Ending from one side closes the room for both.
   await tutor.getByRole("button", { name: "End session" }).click();
+  await tutor.getByRole("button", { name: "End for both of you" }).click();
   await expect(tutor.getByText("This video session has ended")).toBeVisible();
   await expect(student.getByText("This video session has ended")).toBeVisible({ timeout: 30_000 });
 });

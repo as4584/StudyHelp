@@ -91,13 +91,16 @@ async def chat_messages(
     session: AsyncSession, user: CurrentUser, chat_id: uuid.UUID
 ) -> list[AiMessage]:
     chat = await _owned_chat(session, user, chat_id)
-    return list(
-        (
-            await session.execute(
-                select(AiMessage).where(AiMessage.chat_id == chat.id).order_by(AiMessage.created_at)
-            )
-        ).scalars()
-    )
+    # The latest 200, oldest first (a long-lived chat must not grow the response forever).
+    latest = (
+        await session.execute(
+            select(AiMessage)
+            .where(AiMessage.chat_id == chat.id)
+            .order_by(AiMessage.created_at.desc(), AiMessage.id.desc())
+            .limit(200)
+        )
+    ).scalars()
+    return list(latest)[::-1]
 
 
 async def ask(
@@ -176,7 +179,10 @@ async def ask(
         await session.execute(delete(AiMessage).where(AiMessage.id == asked.id))
         await session.commit()
         event(log, "llm.failed", logging.WARNING, provider=llm.name, error=str(exc))
-        raise ProviderError("the AI assistant is temporarily unavailable") from exc
+        raise ProviderError(
+            "The AI assistant is temporarily unavailable. Your question was not counted;"
+            " please try again in a few minutes."
+        ) from exc
     latency = round((time.perf_counter() - start) * 1000)
     reply = AiMessage(
         chat_id=chat.id, role="assistant", content=result.text + solver.checked_lines(facts)

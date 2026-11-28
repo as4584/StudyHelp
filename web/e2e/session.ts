@@ -8,7 +8,8 @@ const API = process.env.E2E_API_URL ?? "http://127.0.0.1:8000";
 export async function login(browser: Browser, email: string, viewport: { width: number; height: number } | null) {
   const ctx = await browser.newContext({
     ...(viewport ? { viewport } : {}),
-    permissions: ["camera", "microphone"],
+    // Firefox takes no camera/microphone grants here; it is set up with fake-media prefs instead.
+    ...(browser.browserType().name() === "firefox" ? {} : { permissions: ["camera", "microphone"] }),
   });
   const page = await ctx.newPage();
   await page.goto("/login");
@@ -16,6 +17,9 @@ export async function login(browser: Browser, email: string, viewport: { width: 
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL(/\/(student|tutor|admin)$/);
+  // Let the desk finish its first loads, so a test's next navigation doesn't cut them off
+  // (Safari reports cut-off requests as errors).
+  await page.waitForLoadState("networkidle");
   return page;
 }
 

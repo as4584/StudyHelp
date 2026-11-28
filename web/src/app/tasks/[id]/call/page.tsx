@@ -231,7 +231,7 @@ export default function CallPage() {
   const back = (
     <Link
       href={`/tasks/${id}`}
-      className="mb-6 inline-flex items-center gap-1.5 text-[14px] font-semibold text-muted hover:text-ink"
+      className="tap mb-6 inline-flex items-center gap-1.5 text-[14px] font-semibold text-muted hover:text-ink"
     >
       <ArrowLeft size={15} strokeWidth={2} aria-hidden /> Back to the session
     </Link>
@@ -330,7 +330,7 @@ export default function CallPage() {
           variant="secondary"
           onClick={toggleCam}
           disabled={!cam}
-          aria-label={camOn ? "Turn camera off" : "Turn camera on"}
+          aria-label={camOn ? "Camera on, turn camera off" : "Camera off, turn camera on"}
         >
           {camOn ? <Video size={17} aria-hidden /> : <VideoOff size={17} aria-hidden />}
           <span className="hidden sm:inline">{camOn ? "Camera on" : "Camera off"}</span>
@@ -339,7 +339,7 @@ export default function CallPage() {
           variant="secondary"
           onClick={toggleMic}
           disabled={!mic}
-          aria-label={micOn ? "Mute microphone" : "Unmute microphone"}
+          aria-label={micOn ? "Mic on, mute microphone" : "Muted, unmute microphone"}
         >
           {micOn ? <Mic size={17} aria-hidden /> : <MicOff size={17} aria-hidden />}
           <span className="hidden sm:inline">{micOn ? "Mic on" : "Muted"}</span>

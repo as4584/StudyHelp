@@ -12,6 +12,11 @@ class InvalidToken(Exception):
     """Raised for any token that must be rejected with 401."""
 
 
+class KeysUnavailable(Exception):
+    """The signing keys couldn't be fetched (Supabase Auth unreachable). Not the user's fault:
+    answering 401 here would tell a signed-in person their session is bad."""
+
+
 @dataclass(frozen=True)
 class TokenClaims:
     sub: str
@@ -45,6 +50,8 @@ class RemoteKeySource:
     def get_key(self, kid: str) -> PyJWK:
         try:
             return self._client.get_signing_key(kid)
+        except jwt.PyJWKClientConnectionError as exc:
+            raise KeysUnavailable("signing keys unreachable") from exc
         except jwt.PyJWKClientError as exc:
             raise InvalidToken("unable to resolve signing key") from exc
 

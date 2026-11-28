@@ -75,7 +75,7 @@ export default function TaskPage() {
     <div>
       <Link
         href={back}
-        className="mb-6 inline-flex items-center gap-1.5 text-[14px] font-semibold text-muted hover:text-ink"
+        className="tap mb-6 inline-flex items-center gap-1.5 text-[14px] font-semibold text-muted hover:text-ink"
       >
         <ArrowLeft size={15} strokeWidth={2} aria-hidden />{" "}
         {role === "tutor" ? "Tutor desk" : role === "admin" ? "Operations" : "Study desk"}
@@ -274,6 +274,7 @@ function StudentActions({
         <textarea
           className={inputCls}
           placeholder="Describe what went wrong"
+          aria-label="What went wrong"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
         />
@@ -429,6 +430,7 @@ function StudentActions({
             <textarea
               className={inputCls}
               placeholder="What helped most? (optional)"
+              aria-label="Review comment (optional)"
               value={comment}
               onChange={(e) => setComment(e.target.value)}
             />
@@ -532,6 +534,7 @@ function TutorActions({
           <textarea
             className={`${inputCls} min-h-24`}
             placeholder="How you'll help — your approach and availability"
+            aria-label="Message to the student"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
           />

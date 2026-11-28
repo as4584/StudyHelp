@@ -53,7 +53,10 @@ test("saved choice survives navigation and reload; Automatic removes it", async 
   await expect(picker).toBeEnabled();
   await expect(picker).toHaveValue("en");
   const cookie = (await context.cookies()).find((item) => item.name === LANGUAGE_COOKIE)!;
-  expect(cookie).toMatchObject({ value: "en", path: "/", httpOnly: true, sameSite: "Lax", secure: true });
+  // Secure exactly when served over HTTPS (all real deploys). Playwright's Windows WebKit build
+  // reports SameSite=Lax cookies as "None", so the attribute is only asserted elsewhere.
+  expect(cookie).toMatchObject({ value: "en", path: "/", httpOnly: true, secure: baseURL!.startsWith("https") });
+  if (browser.browserType().name() !== "webkit") expect(cookie.sameSite).toBe("Lax");
   await page.goto("/login");
   await expect(picker).toHaveValue("en");
   await page.reload();

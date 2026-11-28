@@ -10,9 +10,12 @@ from sqlalchemy import text
 from app.core.config import get_settings
 from app.core.db import get_sessionmaker
 from app.core.errors import DomainError
+from app.core.failsafe import FailsafeMiddleware
 from app.core.limits import BodyLimitMiddleware
+from app.core.security_headers import SecurityHeadersMiddleware
 from app.observability.logging import RequestContextMiddleware, configure_logging, event
-from app.routers import admin, ai, chat, demo, me, payments, tasks, video
+from app.providers.llm import gateway_status
+from app.routers import admin, ai, avatars, chat, demo, me, payments, tasks, video
 from app.schemas.api import HealthOut
 
 log = logging.getLogger("app")
@@ -30,6 +33,8 @@ def create_app() -> FastAPI:
         redoc_url="/redoc" if dev else None,
         openapi_url="/openapi.json" if dev else None,
     )
+    # Added first = innermost: escaped errors become readable JSON *inside* CORS.
+    app.add_middleware(FailsafeMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -37,6 +42,7 @@ def create_app() -> FastAPI:
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["authorization", "content-type", "x-request-id"],
     )
+    app.add_middleware(SecurityHeadersMiddleware, hsts=settings.environment == "production")
     app.add_middleware(RequestContextMiddleware)
     app.add_middleware(BodyLimitMiddleware)
 
@@ -82,6 +88,12 @@ def create_app() -> FastAPI:
             return JSONResponse(_identity("db_unavailable").model_dump(), status_code=503)
         out = _identity("ready")
         out.providers["schema"] = str(rev)
+        # The API still serves everything else when the AI gateway is off, so this does not
+        # fail readiness — it says so, for monitoring and for whoever is checking.
+        gateway = await gateway_status(settings)
+        out.providers["ai_gateway"] = gateway
+        if gateway == "unreachable":
+            event(log, "ready.ai_gateway_unreachable", logging.WARNING)
         return out
 
     for r in (
@@ -92,6 +104,7 @@ def create_app() -> FastAPI:
         ai.router,
         admin.router,
         video.router,
+        avatars.router,
     ):
         app.include_router(r)
     if get_settings().environment == "demo":

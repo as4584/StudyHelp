@@ -80,6 +80,8 @@ async def send_message(
 
 
 MAX_FILES_PER_TASK = 20
+# A resume and a few certificates: enough for any real application, finite for storage.
+MAX_TUTOR_DOCUMENTS = 10
 
 
 def _can_access_task_files(user_id: uuid.UUID, role: str, task: Task) -> bool:
@@ -153,6 +155,11 @@ async def download_task_file(
 async def create_tutor_document(
     body: TutorDocumentIn, tutor: TutorDep, session: SessionDep, storage: StorageDep
 ) -> UploadOut:
+    count = await session.scalar(
+        select(func.count(TutorDocument.id)).where(TutorDocument.tutor_id == tutor.id)
+    )
+    if (count or 0) >= MAX_TUTOR_DOCUMENTS:
+        raise InvalidState(f"you can upload up to {MAX_TUTOR_DOCUMENTS} documents")
     doc_id = uuid.uuid4()
     path = f"{tutor.id}/{doc_id}/{body.filename}"
     signed = await storage.signed_upload(TUTOR_BUCKET, path)

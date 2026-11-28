@@ -13,8 +13,6 @@ import { supabase } from "@/lib/supabase";
 
 export default function SignupPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [sentTo, setSentTo] = useState<string | null>(null);
   const { pending, error, run } = useAction();
   const bot = useBotCheck();
@@ -49,7 +47,7 @@ export default function SignupPage() {
           </p>
           <p className="mt-3">
             Already have an account?{" "}
-            <Link className="font-semibold text-tutor underline-offset-4 hover:underline" href="/login">
+            <Link className="tap font-semibold text-tutor underline-offset-4 hover:underline" href="/login">
               Sign in
             </Link>
           </p>
@@ -60,6 +58,10 @@ export default function SignupPage() {
         className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
+          // Read the boxes themselves so early typing or autofill is never lost (see login).
+          const form = new FormData(e.currentTarget);
+          const email = String(form.get("email") ?? "").trim();
+          const password = String(form.get("password") ?? "");
           void run(async () => {
             // Supabase Auth verifies this token itself once its captcha setting is turned on.
             const { data, error } = await supabase().auth.signUp({
@@ -74,14 +76,7 @@ export default function SignupPage() {
         }}
       >
         <Field label="Email">
-          <input
-            className={inputCls}
-            type="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
+          <input className={inputCls} type="email" autoComplete="email" name="email" required />
         </Field>
         <Field label="Password" hint="At least 8 characters.">
           <input
@@ -89,9 +84,8 @@ export default function SignupPage() {
             type="password"
             autoComplete="new-password"
             minLength={8}
+            name="password"
             required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
           />
         </Field>
         <BotCheck key={bot.key} action="signup" onToken={bot.onToken} />

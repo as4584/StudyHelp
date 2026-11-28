@@ -58,3 +58,10 @@ class TooMany(DomainError):
 class BotCheckFailed(DomainError):
     status_code = 400
     code = "bot_check_failed"
+
+
+class AuthUnavailable(DomainError):
+    """Supabase Auth's signing keys couldn't be reached; the token itself may be fine."""
+
+    status_code = 503
+    code = "auth_unavailable"

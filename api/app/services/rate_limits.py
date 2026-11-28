@@ -8,6 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
+from app.core.config import get_settings
 from app.core.errors import TooMany
 from app.models.entities import Message, Task
 
@@ -43,6 +44,7 @@ async def check_message(session: AsyncSession, user_id: uuid.UUID) -> None:
 
 
 async def check_task(session: AsyncSession, user_id: uuid.UUID) -> None:
+    limit = get_settings().tasks_per_day or TASKS_PER_DAY
     today = await _count(session, Task.created_at, Task.student_id, user_id, timedelta(days=1))
-    if today >= TASKS_PER_DAY:
-        raise TooMany(f"you can post up to {TASKS_PER_DAY} requests a day — try again tomorrow")
+    if today >= limit:
+        raise TooMany(f"you can post up to {limit} requests a day — try again tomorrow")
