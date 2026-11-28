@@ -10,7 +10,8 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui";
-import { api, ApiError, type Schemas } from "@/lib/api";
+import { api, ApiError, sendOnUnload, type Schemas } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 type Board = Schemas["WhiteboardOut"];
 type Elements = readonly ExcalidrawElement[];
@@ -162,6 +163,28 @@ export function WhiteboardDialog({
     }, POLL_MS);
     return () => clearInterval(t);
   }, [initial, taskId, apply]);
+
+  // Reload or tab close inside the save delay: React never unmounts, so the close-time flush
+  // doesn't run. Send the pending scene with a keepalive request (needs the token in hand).
+  const token = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const sb = supabase();
+    void sb.auth.getSession().then(({ data }) => (token.current = data.session?.access_token));
+    const { data } = sb.auth.onAuthStateChange((_e, s) => (token.current = s?.access_token));
+    const flush = () => {
+      const ex = excal.current;
+      if (!dirty.current || !ex) return;
+      if (timer.current) clearTimeout(timer.current);
+      const scene = { elements: ex.getSceneElementsIncludingDeleted(), files: ex.getFiles() };
+      if (sendOnUnload(`/tasks/${taskId}/whiteboard`, "PUT", { scene, base_version: version.current }, token.current))
+        dirty.current = false;
+    };
+    window.addEventListener("pagehide", flush);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      data.subscription.unsubscribe();
+    };
+  }, [taskId]);
 
   // A save that failed (offline, blip) is retried when the connection returns and on each poll,
   // so the board saves without the person having to draw again.
