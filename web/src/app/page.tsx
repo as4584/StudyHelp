@@ -39,7 +39,7 @@ export default function Home() {
             </Link>
             <Link
               href="/login"
-              className="px-2 text-[16px] font-semibold text-ink-2 underline-offset-4 hover:text-ink hover:underline"
+              className="tap px-2 text-[16px] font-semibold text-ink-2 underline-offset-4 hover:text-ink hover:underline"
             >
               I already have an account
             </Link>
@@ -102,11 +102,14 @@ export default function Home() {
         <div className="flex flex-col gap-2 text-[17px] sm:flex-row sm:flex-wrap sm:gap-x-8" data-testid="home-contact">
           <a
             href={`mailto:${BUSINESS.email}`}
-            className="font-semibold break-all text-ink underline-offset-4 hover:underline"
+            className="tap justify-start! font-semibold break-all text-ink underline-offset-4 hover:underline"
           >
             {BUSINESS.email}
           </a>
-          <a href={`tel:${BUSINESS.tel}`} className="font-semibold text-ink underline-offset-4 hover:underline">
+          <a
+            href={`tel:${BUSINESS.tel}`}
+            className="tap justify-start! font-semibold text-ink underline-offset-4 hover:underline"
+          >
             {BUSINESS.phone}
           </a>
         </div>

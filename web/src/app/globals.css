@@ -244,3 +244,40 @@ p {
     transition-duration: 1ms !important;
   }
 }
+
+/*
+ * Touch screens: every control a thumb has to hit is at least 44x44 CSS px (Apple HIG,
+ * WCAG 2.5.5). Only for coarse pointers, so mouse layouts keep their density. Links inside
+ * running text keep their size, as WCAG allows. Checked by e2e/touch-targets.spec.ts.
+ */
+@media (pointer: coarse) {
+  button,
+  select,
+  summary,
+  [role="button"],
+  [role="tab"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  summary {
+    display: flex;
+    align-items: center;
+  }
+  header a,
+  nav a,
+  footer a,
+  address a,
+  a.tap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+  }
+  label:has(> input[type="checkbox"]),
+  label:has(> input[type="radio"]) {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+  }
+}
