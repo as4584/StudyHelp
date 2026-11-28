@@ -3,17 +3,6 @@
     "schemas": {
       "AdminUserOut": {
         "properties": {
-          "avatar_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avatar Url"
-          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -1127,7 +1116,7 @@
           "avatar_url": {
             "anyOf": [
               {
-                "maxLength": 200000,
+                "maxLength": 100000,
                 "pattern": "^(|data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+)$",
                 "type": "string"
               },
@@ -4498,6 +4487,29 @@
                 }
               ],
               "title": "Subject"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
             }
           }
         ],

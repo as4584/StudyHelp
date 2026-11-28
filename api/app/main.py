@@ -12,9 +12,10 @@ from app.core.db import get_sessionmaker
 from app.core.errors import DomainError
 from app.core.failsafe import FailsafeMiddleware
 from app.core.limits import BodyLimitMiddleware
+from app.core.security_headers import SecurityHeadersMiddleware
 from app.observability.logging import RequestContextMiddleware, configure_logging, event
 from app.providers.llm import gateway_status
-from app.routers import admin, ai, chat, demo, me, payments, tasks, video
+from app.routers import admin, ai, avatars, chat, demo, me, payments, tasks, video
 from app.schemas.api import HealthOut
 
 log = logging.getLogger("app")
@@ -41,6 +42,7 @@ def create_app() -> FastAPI:
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["authorization", "content-type", "x-request-id"],
     )
+    app.add_middleware(SecurityHeadersMiddleware, hsts=settings.environment == "production")
     app.add_middleware(RequestContextMiddleware)
     app.add_middleware(BodyLimitMiddleware)
 
@@ -102,6 +104,7 @@ def create_app() -> FastAPI:
         ai.router,
         admin.router,
         video.router,
+        avatars.router,
     ):
         app.include_router(r)
     if get_settings().environment == "demo":
